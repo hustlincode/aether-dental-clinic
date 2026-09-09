@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+/* ─── ProSmile Color Scheme — Light Theme (default fallback) ─── */
+:root {
+  --background: #f5f5f4;
+  --background-alt: #e7e5e4;
+  --surface: #ffffff;
+  --surface-alt: #fafaf9;
+  --text: #0e0f10;
+  --text-secondary: #44403c;
+  --text-muted: #9ca3af;
+  --accent: #D4AF37;
+  --accent-hover: #E6C76B;
+  --accent-soft: rgba(212, 175, 55, 0.10);
+  --cream: #FFF8E7;
+  --border: rgba(14, 15, 16, 0.10);
+  --border-strong: rgba(14, 15, 16, 0.18);
+  --border-accent: rgba(212, 175, 55, 0.40);
+  --ring: rgba(212, 175, 55, 0.30);
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
+
+  /* Hero gradient — light */
+  --hero-start: #f5f5f4;
+  --hero-end: #e7e5e4;
+
+  /* Semantic status — light */
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --warning: #d97706;
+  --warning-bg: #fef3c7;
+  --error: #dc2626;
+  --error-bg: #fee2e2;
+  --info: #2563eb;
+  --info-bg: #dbeafe;
+  --neutral: #6b7280;
+  --neutral-bg: #f3f4f6;
+
+  /* Sidebar (admin) — light */
+  --sidebar-bg: #fafaf9;
+  --sidebar-surface: #ffffff;
+  --sidebar-text: #0e0f10;
+  --sidebar-text-muted: #6b7280;
+  --sidebar-hover: rgba(212, 175, 55, 0.10);
+  --sidebar-border: rgba(14, 15, 16, 0.08);
+}
+
+/* ─── Dark Theme (ProSmile default) ─── */
+[data-theme="dark"] {
+  --background: #0E0F10;
+  --background-alt: #141516;
+  --surface: #1F2326;
+  --surface-alt: #262a2e;
+  --text: #F8F9FA;
+  --text-secondary: #D1D5DB;
+  --text-muted: #4B5563;
+  --accent: #D4AF37;
+  --accent-hover: #E6C76B;
+  --accent-soft: rgba(212, 175, 55, 0.12);
+  --cream: #FFF8E7;
+  --border: rgba(248, 249, 250, 0.10);
+  --border-strong: rgba(248, 249, 250, 0.18);
+  --border-accent: rgba(212, 175, 55, 0.45);
+  --ring: rgba(212, 175, 55, 0.25);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.2);
+
+  /* Hero gradient — dark */
+  --hero-start: #0E0F10;
+  --hero-end: #1F2326;
+
+  /* Semantic status — dark */
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.12);
+  --info: #60a5fa;
+  --info-bg: rgba(96, 165, 250, 0.12);
+  --neutral: #9ca3af;
+  --neutral-bg: rgba(156, 163, 175, 0.12);
+
+  /* Sidebar (admin) */
+  --sidebar-bg: #0E0F10;
+  --sidebar-surface: #1F2326;
+  --sidebar-text: #F8F9FA;
+  --sidebar-text-muted: #4B5563;
+  --sidebar-hover: rgba(212, 175, 55, 0.10);
+  --sidebar-border: rgba(248, 249, 250, 0.08);
+}
+
+/* ─── Tailwind v4 Theme Tokens ─── */
+@theme inline {
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-cream: var(--cream);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-accent: var(--border-accent);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-error: var(--error);
+  --color-error-bg: var(--error-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-neutral-c: var(--neutral);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-surface: var(--sidebar-surface);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-muted: var(--sidebar-text-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Animation tokens */
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.3s ease-out;
+  --animate-pulse-gold: pulse-gold 2s ease-in-out infinite;
+}
+
+/* ─── Keyframes ─── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Base ─── */
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ─── Smooth theme transition ─── */
+[data-theme] * {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Disable transitions on initial load to prevent flash */
+.no-transition,
+.no-transition * {
+  transition: none !important;
+}
+
+/* ─── Focus ring — gold accent ─── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Gold gradient utility ─── */
+.gradient-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #E6C76B 100%);
+}
+
+.gradient-gold-text {
+  background: linear-gradient(135deg, #D4AF37 0%, #E6C76B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Theme-aware hero gradient */
+.gradient-hero {
+  background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-end) 100%);
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ─── Animated hamburger menu ─── */
+.burger {
+  position: relative;
+  display: block;
+  height: 16px;
+  width: 20px;
+}
+
+.burger-line {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 9999px;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.burger-line--top    { transform: translateY(-7px); }
+.burger-line--middle { transform: translateY(0); }
+.burger-line--bottom { transform: translateY(7px); }
+
+.burger--open .burger-line--top    { transform: translateY(0) rotate(45deg); }
+.burger--open .burger-line--middle { opacity: 0; }
+.burger--open .burger-line--bottom { transform: translateY(0) rotate(-45deg); }

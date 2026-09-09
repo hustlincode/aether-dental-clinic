@@ -1,0 +1,51 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { Toaster } from "@/components/ui/toast";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Aether Dental — Dental Clinic Booking & Management",
+  description: "Book dental appointments and manage your clinic with Aether Dental.",
+};
+
+// Inline script to prevent flash of wrong theme on load.
+// Reads the user's stored theme (aether-theme) or falls back to OS preference.
+const themeScript = `
+(function() {
+  try {
+    var theme = localStorage.getItem('aether-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})()
+`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="h-full">
+        <ThemeProvider>
+          <Toaster>{children}</Toaster>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
