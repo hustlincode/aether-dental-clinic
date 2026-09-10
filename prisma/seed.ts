@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AppointmentStatus, DayOfWeek, ServiceStatus, DentistStatus, PatientStatus } from "@prisma/client";
+import { PrismaClient, Role, AppointmentStatus, DayOfWeek, ServiceStatus, DentistStatus, PatientStatus, NotificationType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -54,6 +54,8 @@ async function main() {
 
   // --- Clean existing data (idempotent re-run) ---
   await prisma.emailLog.deleteMany();
+  await prisma.followUp.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.activity.deleteMany();
   await prisma.blockedDate.deleteMany();
   await prisma.appointment.deleteMany();
@@ -168,20 +170,21 @@ async function main() {
   const INACTIVE_INDICES = new Set([3, 9, 14, 20]);
 
   const patientIds: string[] = [];
-  const usedEmails = new Set<string>();
   for (let i = 0; i < 25; i++) {
     const fn = firstNames[i % firstNames.length];
     const ln = lastNames[i % lastNames.length];
-    let email = `${fn.toLowerCase()}.${ln.toLowerCase().replace(/ /g, "")}${i}@gmail.com`;
-    if (usedEmails.has(email)) email = `${fn.toLowerCase()}.${i}@yahoo.com`;
-    usedEmails.add(email);
+    // NOTE: patients are seeded WITHOUT an email address so no real-looking
+    // addresses ever exist in the database and no emails can be sent to them.
     const patient = await prisma.patient.create({
       data: {
         firstName: fn,
         lastName: ln,
-        email,
+        email: null,
         phone: `${phones[i % phones.length]}${String(1000000 + i * 137).padStart(7, "0")}`,
         status: INACTIVE_INDICES.has(i) ? PatientStatus.INACTIVE : PatientStatus.ACTIVE,
+        // A mix of follow-up preferences for demo purposes
+        followUpEnabled: i % 9 !== 5,
+        followUpDays: 1 + (i % 3),
       },
     });
     patientIds.push(patient.id);
@@ -189,19 +192,18 @@ async function main() {
 
   // --- Extra patients with ZERO appointments (for demoing "No appointments" filter & empty state) ---
   const extraPatients = [
-    { firstName: "Ria", lastName: "Bernal", email: "ria.bernal@gmail.com", phone: "09170000001" },
-    { firstName: "Troy", lastName: "Lim", email: "troy.lim@gmail.com", phone: "09180000002" },
-    { firstName: "Celine", lastName: "Gutierrez", email: "celine.gutierrez@gmail.com", phone: "09270000003" },
-    { firstName: "Derek", lastName: "Pascual", email: "derek.pascual@gmail.com", phone: "09080000004" },
+    { firstName: "Ria", lastName: "Bernal", phone: "09170000001" },
+    { firstName: "Troy", lastName: "Lim", phone: "09180000002" },
+    { firstName: "Celine", lastName: "Gutierrez", phone: "09270000003" },
+    { firstName: "Derek", lastName: "Pascual", phone: "09080000004" },
   ];
 
   for (const ep of extraPatients) {
-    usedEmails.add(ep.email);
     const patient = await prisma.patient.create({
       data: {
         firstName: ep.firstName,
         lastName: ep.lastName,
-        email: ep.email,
+        email: null,
         phone: ep.phone,
         status: PatientStatus.ACTIVE,
       },
@@ -285,6 +287,172 @@ async function main() {
   }
   console.log(`Created ${aptCount} appointments`);
 
+  // --- Follow-ups (demo data for the dashboard panel) ---
+  // Schedule follow-ups for the most recent completed appointments using each
+  // patient's follow-up preference. Some are SENT / FAILED to show statuses.
+  const completedAppts = await prisma.appointment.findMany({
+    where: { status: "COMPLETED" },
+    include: { patient: true },
+    orderBy: { appointmentDate: "desc" },
+    take: 12,
+  });
+
+  let followUpCount = 0;
+  for (let i = 0; i < completedAppts.length; i++) {
+    const a = completedAppts[i];
+    if (!a.patient.email || !a.patient.followUpEnabled) continue;
+
+    const scheduledFor = new Date(a.appointmentDate);
+    scheduledFor.setUTCDate(scheduledFor.getUTCDate() + a.patient.followUpDays);
+    scheduledFor.setUTCHours(9, 0, 0, 0);
+
+    const data: {
+      patientId: string;
+      appointmentId: string;
+      scheduledFor: Date;
+      status: "SCHEDULED" | "SENT" | "FAILED";
+      sentAt?: Date;
+      error?: string;
+    } = {
+      patientId: a.patientId,
+      appointmentId: a.id,
+      scheduledFor,
+      status: "SCHEDULED",
+    };
+
+    if (i % 4 === 2) {
+      data.status = "SENT";
+      data.sentAt = new Date(scheduledFor.getTime() - 60 * 60 * 1000);
+    } else if (i % 7 === 3) {
+      data.status = "FAILED";
+      data.error = "Connection reset by remote server (demo).";
+    }
+
+    await prisma.followUp.create({ data });
+    followUpCount++;
+  }
+  console.log(`Created ${followUpCount} follow-ups`);
+
+  // --- Notifications (demo data for the bell + notification history) ---
+  // Staff-facing only (Admin + Receptionist); created_at is spread over recent
+  // days so the relative-timestamp UI has something to show.
+  const demoAppts = await prisma.appointment.findMany({
+    include: { patient: true, dentist: true, service: true },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+  });
+
+  let notifCount = 0;
+  if (demoAppts.length > 0) {
+    const [a0, a1, a2, a3, a4, a5] = demoAppts;
+    const pn = (p: { firstName: string; lastName: string }) => `${p.firstName} ${p.lastName}`;
+
+    const notificationDefs: {
+      userId: string;
+      type: NotificationType;
+      title: string;
+      message: string;
+      entityType: string;
+      entityId: string;
+      createdAt: Date;
+    }[] = [
+      {
+        userId: adminUser.id,
+        type: NotificationType.APPOINTMENT_CREATED,
+        title: "New appointment",
+        message: `${pn(a0.patient)} booked ${a0.service.name} for ${fmtMonthDay(a0.appointmentDate)} at ${fmtClock(a0.startTime)}.`,
+        entityType: "appointment",
+        entityId: a0.id,
+        createdAt: minutesAgo(12),
+      },
+      {
+        userId: receptionistUser.id,
+        type: NotificationType.APPOINTMENT_CREATED,
+        title: "New appointment",
+        message: `${pn(a0.patient)} booked ${a0.service.name} for ${fmtMonthDay(a0.appointmentDate)} at ${fmtClock(a0.startTime)}.`,
+        entityType: "appointment",
+        entityId: a0.id,
+        createdAt: minutesAgo(12),
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.APPOINTMENT_CONFIRMED,
+        title: "Appointment confirmed",
+        message: `${pn(a1.patient)}'s appointment has been confirmed for ${fmtMonthDay(a1.appointmentDate)} at ${fmtClock(a1.startTime)}.`,
+        entityType: "appointment",
+        entityId: a1.id,
+        createdAt: hoursAgo(3),
+      },
+      {
+        userId: receptionistUser.id,
+        type: NotificationType.PATIENT_CHECKED_IN,
+        title: "Patient checked in",
+        message: `${pn(a2.patient)} has checked in for the ${fmtClock(a2.startTime)} appointment.`,
+        entityType: "appointment",
+        entityId: a2.id,
+        createdAt: hoursAgo(5),
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.APPOINTMENT_COMPLETED,
+        title: "Appointment completed",
+        message: `${pn(a3.patient)}'s appointment with ${a3.dentist.name} has been completed.`,
+        entityType: "appointment",
+        entityId: a3.id,
+        createdAt: hoursAgo(8),
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: "Appointment reminder",
+        message: `${pn(a4.patient)} has an appointment tomorrow at ${fmtClock(a4.startTime)}.`,
+        entityType: "appointment",
+        entityId: a4.id,
+        createdAt: hoursAgo(26),
+      },
+      {
+        userId: receptionistUser.id,
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: "Appointment reminder",
+        message: `${pn(a4.patient)} has an appointment tomorrow at ${fmtClock(a4.startTime)}.`,
+        entityType: "appointment",
+        entityId: a4.id,
+        createdAt: hoursAgo(26),
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.APPOINTMENT_CANCELLED,
+        title: "Appointment cancelled",
+        message: `${pn(a5.patient)} cancelled the ${a5.service.name} appointment scheduled for ${fmtMonthDay(a5.appointmentDate)}.`,
+        entityType: "appointment",
+        entityId: a5.id,
+        createdAt: hoursAgo(30),
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.PATIENT_CREATED,
+        title: "New patient",
+        message: `${pn(a5.patient)} has been registered as a new patient.`,
+        entityType: "patient",
+        entityId: a5.patientId,
+        createdAt: daysAgo(2),
+      },
+    ];
+
+    // A few already-read rows so the read/unread distinction is visible.
+    for (const def of notificationDefs) {
+      await prisma.notification.create({ data: def });
+      notifCount++;
+    }
+    for (const def of notificationDefs.slice(0, 3)) {
+      await prisma.notification.updateMany({
+        where: { userId: def.userId, entityId: def.entityId, type: def.type },
+        data: { isRead: true, readAt: minutesAgo(5) },
+      });
+    }
+  }
+  console.log(`Created ${notifCount} notifications`);
+
   // --- Blocked dates (a couple of future dates) ---
   await prisma.blockedDate.createMany({
     data: [
@@ -301,6 +469,29 @@ function addDays(n: number): Date {
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + n);
   return d;
+}
+
+function fmtClock(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 === 0 ? 12 : h % 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function fmtMonthDay(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+function minutesAgo(n: number): Date {
+  return new Date(Date.now() - n * 60 * 1000);
+}
+
+function hoursAgo(n: number): Date {
+  return new Date(Date.now() - n * 60 * 60 * 1000);
+}
+
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
 main()

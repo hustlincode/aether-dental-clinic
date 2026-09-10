@@ -25,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/dentists", label: "Dentists", roles: ["ADMIN"] },
     { href: "/admin/services", label: "Services", roles: ["ADMIN"] },
     { href: "/admin/reports", label: "Reports", roles: ["ADMIN"] },
+    { href: "/admin/notifications", label: "Notifications", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"] },
   ].filter((n) => n.roles.includes(role));
 
   return (

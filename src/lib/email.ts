@@ -8,7 +8,8 @@ import { prisma } from "@/lib/db";
 export type EmailEvent =
   | "appointment_confirmation"
   | "appointment_cancellation"
-  | "appointment_rescheduling";
+  | "appointment_pending"
+  | "appointment_followup";
 
 export interface AppointmentEmailData {
   patientName: string;
@@ -45,10 +46,51 @@ function clinicName() {
 }
 
 // ---------------------------------------------------------------------------
-// HTML templates
+// Email templates
 // ---------------------------------------------------------------------------
 
-function confirmationTemplate(d: AppointmentEmailData): string {
+/**
+ * Wraps email content in a complete, well-formed HTML document. Full documents
+ * with a matching plain-text alternative are scored as less spammy by mail
+ * providers than bare fragments.
+ */
+function layout(contentHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${clinicName()}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f2ef;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f2ef;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
+          <tr>
+            <td style="background-color:#0E0F10;padding:24px 32px;">
+              <span style="color:#ffffff;font-size:18px;font-weight:700;font-family:Arial,Helvetica,sans-serif;">${clinicName()}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:15px;line-height:1.6;">
+              ${contentHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;font-family:Arial,Helvetica,sans-serif;">
+              ${clinicName()}<br />This is an automated message. Please contact the clinic for any questions.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function detailRows(d: AppointmentEmailData): string {
   const rows = [
     ["Appointment Reference:", d.referenceNumber],
     ["Service:", d.serviceName],
@@ -56,45 +98,85 @@ function confirmationTemplate(d: AppointmentEmailData): string {
     ["Date:", d.date],
     ["Time:", d.time],
   ];
-  const rowsHtml = rows
+  return rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:8px 0;color:#6b7280;width:180px;">${label}</td><td style="padding:8px 0;font-weight:600;color:#111827;">${value}</td></tr>`
+        `<tr><td style="padding:8px 0;color:#6b7280;width:180px;vertical-align:top;">${label}</td><td style="padding:8px 0;font-weight:600;color:#111827;">${value}</td></tr>`
     )
     .join("");
-
-  return `
-    <p>Hello <strong>${d.patientName}</strong>,</p>
-    <p>Your dental appointment has been <strong>confirmed</strong>. Here are the details:</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-      ${rowsHtml}
-    </table>
-    <p>If you need to reschedule or cancel, please contact us at your earliest convenience.</p>
-    <p style="margin-top:24px;">We look forward to seeing you!</p>
-  `;
 }
 
-function cancellationTemplate(d: AppointmentEmailData): string {
-  return `
-    <p>Hello <strong>${d.patientName}</strong>,</p>
-    <p>Your dental appointment has been <strong>cancelled</strong>.</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-      <tr><td style="padding:8px 0;color:#6b7280;width:180px;">Appointment Reference:</td><td style="padding:8px 0;font-weight:600;color:#111827;">${d.referenceNumber}</td></tr>
-    </table>
-    <p>If this was unexpected, please contact the clinic to reschedule.</p>
-  `;
+function textDetails(d: AppointmentEmailData): string {
+  return [
+    `Appointment Reference: ${d.referenceNumber}`,
+    `Service: ${d.serviceName}`,
+    `Dentist: ${d.dentistName}`,
+    `Date: ${d.date}`,
+    `Time: ${d.time}`,
+  ].join("\n");
 }
 
-function subjectFor(event: EmailEvent): string {
-  switch (event) {
-    case "appointment_confirmation":
-      return "Appointment Confirmed";
-    case "appointment_cancellation":
-      return "Appointment Cancelled";
-    case "appointment_rescheduling":
-      return "Appointment Rescheduled";
-  }
-}
+const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmailData) => string; text: (d: AppointmentEmailData) => string }> = {
+  appointment_pending: {
+    subject: "Appointment Request Received",
+    html: (d) =>
+      layout(`
+        <p>Hello <strong>${d.patientName}</strong>,</p>
+        <p>We have received your appointment request. Here are the details:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          ${detailRows(d)}
+        </table>
+        <p>Your request is <strong>pending confirmation</strong>. We will notify you as soon as the clinic confirms your appointment.</p>
+        <p style="margin-top:24px;">Thank you for choosing ${clinicName()}!</p>
+      `),
+    text: (d) =>
+      `Hello ${d.patientName},\n\nWe have received your appointment request:\n\n${textDetails(d)}\n\nYour request is pending confirmation. We will notify you as soon as the clinic confirms your appointment.\n\nThank you for choosing ${clinicName()}!`,
+  },
+  appointment_confirmation: {
+    subject: "Appointment Confirmed",
+    html: (d) =>
+      layout(`
+        <p>Hello <strong>${d.patientName}</strong>,</p>
+        <p>Your dental appointment has been <strong>confirmed</strong>. Here are the details:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          ${detailRows(d)}
+        </table>
+        <p>If you need to reschedule or cancel, please contact us at your earliest convenience.</p>
+        <p style="margin-top:24px;">We look forward to seeing you!</p>
+      `),
+    text: (d) =>
+      `Hello ${d.patientName},\n\nYour dental appointment has been confirmed:\n\n${textDetails(d)}\n\nIf you need to reschedule or cancel, please contact us at your earliest convenience.\n\nWe look forward to seeing you!`,
+  },
+  appointment_cancellation: {
+    subject: "Appointment Cancelled",
+    html: (d) =>
+      layout(`
+        <p>Hello <strong>${d.patientName}</strong>,</p>
+        <p>Your dental appointment has been <strong>cancelled</strong>.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          <tr><td style="padding:8px 0;color:#6b7280;width:180px;vertical-align:top;">Appointment Reference:</td><td style="padding:8px 0;font-weight:600;color:#111827;">${d.referenceNumber}</td></tr>
+        </table>
+        <p>If this was unexpected, please contact the clinic to reschedule.</p>
+      `),
+    text: (d) =>
+      `Hello ${d.patientName},\n\nYour dental appointment has been cancelled. Appointment Reference: ${d.referenceNumber}.\n\nIf this was unexpected, please contact the clinic to reschedule.`,
+  },
+  appointment_followup: {
+    subject: "How was your visit?",
+    html: (d) =>
+      layout(`
+        <p>Hello <strong>${d.patientName}</strong>,</p>
+        <p>We hope your recent appointment on <strong>${d.date}</strong> went well. Your health and comfort are important to us, so if you have any concerns about your treatment, please do not hesitate to reach out.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          ${detailRows(d)}
+        </table>
+        <p>If you would like to book your next visit, contact the clinic or book online at your convenience.</p>
+        <p style="margin-top:24px;">We look forward to seeing you again!</p>
+      `),
+    text: (d) =>
+      `Hello ${d.patientName},\n\nWe hope your recent appointment on ${d.date} went well. Your health and comfort are important to us, so if you have any concerns about your treatment, please do not hesitate to reach out.\n\n${textDetails(d)}\n\nIf you would like to book your next visit, contact the clinic or book online at your convenience.\n\nWe look forward to seeing you again!`,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Send + log
@@ -109,14 +191,11 @@ export async function sendAppointmentEmail(
   event: EmailEvent,
   to: string,
   data: AppointmentEmailData
-): Promise<{ ok: boolean; status: string }> {
-  const subject = subjectFor(event);
-  const html =
-    event === "appointment_confirmation"
-      ? confirmationTemplate(data)
-      : event === "appointment_cancellation"
-        ? cancellationTemplate(data)
-        : confirmationTemplate(data);
+): Promise<{ ok: boolean; status: string; error?: string }> {
+  const template = templates[event];
+  const subject = template.subject;
+  const html = template.html(data);
+  const text = template.text(data);
 
   try {
     // Preview mode: skip SMTP, log as SKIPPED (for local/demo without SMTP)
@@ -130,15 +209,20 @@ export async function sendAppointmentEmail(
           error: PREVIEW_MODE ? "Email preview mode enabled (no SMTP)." : "SMTP not configured.",
         },
       });
-      console.log(`[email:${statusFor(PREVIEW_MODE)}] ${event} -> ${to} (${subject})`);
-      return { ok: PREVIEW_MODE, status: PREVIEW_MODE ? "SKIPPED" : "FAILED" };
+      console.log(`[email:${PREVIEW_MODE ? "SKIPPED" : "FAILED"}] ${event} -> ${to} (${subject})`);
+      return {
+        ok: PREVIEW_MODE,
+        status: PREVIEW_MODE ? "SKIPPED" : "FAILED",
+        error: PREVIEW_MODE ? "Email preview mode enabled (no SMTP)." : "SMTP not configured.",
+      };
     }
 
     await getTransporter()!.sendMail({
-      from: process.env.SMTP_FROM || `${clinicName()} <no-reply@aetherdental.local>`,
+      from: process.env.SMTP_FROM || `${clinicName()} <no-reply@${process.env.SMTP_HOST || "aetherdental.local"}>`,
       to,
       subject,
       html,
+      text,
     });
 
     await prisma.emailLog.create({
@@ -161,21 +245,10 @@ export async function sendAppointmentEmail(
     } catch {
       // log failure itself failed; ignore
     }
-    return { ok: false, status: "FAILED" };
+    return {
+      ok: false,
+      status: "FAILED",
+      error: err instanceof Error ? err.message : "Unknown email error",
+    };
   }
-}
-
-function statusFor(preview: boolean): string {
-  return preview ? "SKIPPED" : "FAILED";
-}
-
-/**
- * Sends the confirmation email after a new appointment is created.
- * The appointment must already exist; failures are logged not thrown.
- */
-export async function sendConfirmationEmail(
-  to: string,
-  data: AppointmentEmailData
-): Promise<{ ok: boolean; status: string }> {
-  return sendAppointmentEmail("appointment_confirmation", to, data);
 }

@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
 import { requireAuth, getSessionUser } from "@/lib/api";
 import { generateAppointmentReference } from "@/lib/reference";
 import { isSlotAvailable } from "@/lib/scheduling";
-import { sendConfirmationEmail } from "@/lib/email";
+import { sendAppointmentEmail } from "@/lib/email";
+import { notifyAppointmentCreated } from "@/lib/notifications";
 
 // --- Public booking payload ---
 const bookingSchema = z.object({
@@ -174,7 +175,9 @@ export async function POST(req: Request) {
 
     // Email delivery is decoupled from appointment creation.
     // Failures are logged and never roll back the appointment.
-    const emailResult = await sendConfirmationEmail(patient!.email || email, {
+    // New bookings are PENDING, so we send a "request received" email here.
+    // The actual confirmation email is sent only when staff confirms the status.
+    const emailResult = await sendAppointmentEmail("appointment_pending", patient!.email || email, {
       patientName: `${firstName} ${lastName}`,
       referenceNumber,
       serviceName: service.name,
@@ -183,12 +186,20 @@ export async function POST(req: Request) {
       time: fmtTime(startTime),
     });
 
+    // In-app notifications are created only after the DB transaction succeeded
+    // and are never allowed to fail the booking.
+    try {
+      await notifyAppointmentCreated(appointment);
+    } catch (e) {
+      console.error("Failed to create appointment notification:", e);
+    }
+
     return NextResponse.json(
       {
         success: true,
         message: emailResult.ok
-          ? "Your appointment has been booked!"
-          : "Your appointment was created successfully, but the confirmation email could not be sent.",
+          ? "Your appointment request has been received! We will confirm it shortly."
+          : "Your appointment was created successfully, but we could not send a confirmation email.",
         data: {
           referenceNumber,
           appointmentId: appointment.id,
@@ -202,6 +213,7 @@ export async function POST(req: Request) {
             time: fmtTime(startTime),
             status: appointment.status,
           },
+          email: emailResult,
         },
       },
       { status: 201 }

@@ -4,6 +4,13 @@ import { AppointmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/api";
 import { sendAppointmentEmail } from "@/lib/email";
+import { scheduleFollowUpForAppointment } from "@/lib/followups";
+import {
+  notifyAppointmentCancelled,
+  notifyAppointmentCompleted,
+  notifyAppointmentConfirmed,
+  notifyPatientCheckedIn,
+} from "@/lib/notifications";
 
 const statusSchema = z.object({
   status: z.nativeEnum(AppointmentStatus),
@@ -61,29 +68,50 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
     });
 
+    // Schedule a follow-up email when the visit is completed (respects the
+    // patient's follow-up preference). Schedule failures never block the status update.
+    if (status === "COMPLETED") {
+      try {
+        await scheduleFollowUpForAppointment(existing.id);
+      } catch (e) {
+        console.error("Failed to schedule follow-up for appointment:", e);
+      }
+    }
+
+    // In-app notifications (role-aware; never allowed to fail the status update).
+    try {
+      if (status === "CONFIRMED") await notifyAppointmentConfirmed(updated);
+      else if (status === "CANCELLED") await notifyAppointmentCancelled(updated);
+      else if (status === "CHECKED_IN") await notifyPatientCheckedIn(updated);
+      else if (status === "COMPLETED") await notifyAppointmentCompleted(updated);
+    } catch (e) {
+      console.error("Failed to create appointment notification:", e);
+    }
+
     // Send cancellation / confirmation emails
+    let emailResult: { ok: boolean; status: string } | null = null;
     if (status === "CANCELLED" && existing.patient?.email) {
-      await sendAppointmentEmail("appointment_cancellation", existing.patient.email, {
+      emailResult = await sendAppointmentEmail("appointment_cancellation", existing.patient.email, {
         patientName: `${existing.patient.firstName} ${existing.patient.lastName}`,
         referenceNumber: existing.referenceNumber,
         serviceName: existing.service.name,
         dentistName: existing.dentist.name,
-        date: existing.appointmentDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+        date: fmtDate(existing.appointmentDate),
         time: fmtTime(existing.startTime),
       });
     }
     if (status === "CONFIRMED" && existing.patient?.email) {
-      await sendAppointmentEmail("appointment_confirmation", existing.patient.email, {
+      emailResult = await sendAppointmentEmail("appointment_confirmation", existing.patient.email, {
         patientName: `${existing.patient.firstName} ${existing.patient.lastName}`,
         referenceNumber: existing.referenceNumber,
         serviceName: existing.service.name,
         dentistName: existing.dentist.name,
-        date: existing.appointmentDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+        date: fmtDate(existing.appointmentDate),
         time: fmtTime(existing.startTime),
       });
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true, data: updated, email: emailResult });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, message: "Invalid status value." }, { status: 422 });
@@ -98,4 +126,10 @@ function fmtTime(hhmm: string): string {
   const period = h >= 12 ? "PM" : "AM";
   const hr = h % 12 === 0 ? 12 : h % 12;
   return `${hr}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function fmtDate(d: Date): string {
+  // appointmentDate is stored as @db.Date (midnight UTC); format in UTC so the
+  // email date always matches the booked date regardless of server timezone.
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }

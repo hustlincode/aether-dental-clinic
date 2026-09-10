@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
+import { NotificationBell } from "@/components/admin/notification-bell";
 
 /* ─── Page title map ─── */
 const pageTitleMap: Record<string, string> = {
@@ -14,6 +15,7 @@ const pageTitleMap: Record<string, string> = {
   "/admin/dentists": "Dentists",
   "/admin/services": "Services",
   "/admin/reports": "Reports",
+  "/admin/notifications": "Notifications",
 };
 
 /* ─── Props ─── */
@@ -74,8 +76,9 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
         </div>
       </div>
 
-      {/* Right: theme toggle + user menu */}
+      {/* Right: notifications + theme toggle + user menu */}
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <ThemeToggle />
         <div className="relative" ref={dropdownRef}>
           <button

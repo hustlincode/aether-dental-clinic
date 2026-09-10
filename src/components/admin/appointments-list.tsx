@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarX, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { StatusBadge } from "./status-badge";
+import { useToast } from "@/components/ui/toast";
 
 interface Appt {
   id: string;
@@ -47,6 +48,7 @@ function getPageItems(current: number, totalPages: number): (number | "...")[] {
 }
 
 export function AppointmentsList({ role }: { role: string }) {
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [params, setParams] = useState({ page: 1, status: "", search: "" });
   const [appts, setAppts] = useState<Appt[]>([]);
@@ -134,8 +136,12 @@ export function AppointmentsList({ role }: { role: string }) {
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
       setAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status: next } : a)));
+      toast(`Appointment marked as ${next.replace("_", " ").toLowerCase()}.`, "success");
+      if (body.email && !body.email.ok) {
+        toast("Status updated, but the notification email could not be sent. Check SMTP settings.", "error");
+      }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Unable to update the appointment.");
+      toast(e instanceof Error ? e.message : "Unable to update the appointment.", "error");
     }
   }
 

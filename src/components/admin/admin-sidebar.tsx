@@ -10,6 +10,7 @@ import {
   BriefcaseMedical,
   FileBarChart2,
   PanelLeftClose,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -23,6 +24,7 @@ const iconMap: Record<string, LucideIcon> = {
   Dentists: Stethoscope,
   Services: BriefcaseMedical,
   Reports: FileBarChart2,
+  Notifications: Bell,
 };
 
 /* ─── Props ─── */

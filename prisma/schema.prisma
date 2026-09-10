@@ -53,6 +53,26 @@ enum PatientStatus {
   INACTIVE
 }
 
+enum FollowUpStatus {
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum NotificationType {
+  APPOINTMENT_CREATED
+  APPOINTMENT_CONFIRMED
+  APPOINTMENT_REMINDER
+  APPOINTMENT_RESCHEDULED
+  APPOINTMENT_CANCELLED
+  PATIENT_CHECKED_IN
+  APPOINTMENT_COMPLETED
+  PATIENT_CREATED
+  PATIENT_UPDATED
+}
+
 // ---------------------------------------------------------------------------
 // Users (staff accounts with role-based access control)
 // ---------------------------------------------------------------------------
@@ -69,6 +89,7 @@ model User {
 
   activities  Activity[]
   createdAppointments Appointment[] @relation("created_appointments")
+  notifications Notification[]
 
   @@map("users")
 }
@@ -85,10 +106,13 @@ model Patient {
   phone          String
   notes          String?
   status         PatientStatus @default(ACTIVE)
+  followUpEnabled Boolean  @default(true) @map("follow_up_enabled")
+  followUpDays   Int      @default(1) @map("follow_up_days")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   appointments Appointment[]
+  followUps    FollowUp[]
 
   @@index([lastName, firstName])
   @@index([status])
@@ -164,6 +188,7 @@ model Appointment {
   createdById String? @map("created_by")
 
   activities Activity[] @relation("appointment_activity")
+  followUp   FollowUp?
 
   @@index([appointmentDate])
   @@index([dentistId, appointmentDate])
@@ -171,6 +196,30 @@ model Appointment {
   @@index([status])
   @@index([serviceId])
   @@map("appointments")
+}
+
+// ---------------------------------------------------------------------------
+// Follow-up emails (automated / manual patient follow-ups after appointments)
+// ---------------------------------------------------------------------------
+
+model FollowUp {
+  id            String         @id @default(cuid())
+  patientId     String         @map("patient_id")
+  appointmentId String         @map("appointment_id")
+  scheduledFor  DateTime       @map("scheduled_for") // when the email should be sent
+  status        FollowUpStatus @default(SCHEDULED)
+  sentAt        DateTime?      @map("sent_at")
+  error         String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@unique([appointmentId])
+  @@index([status, scheduledFor])
+  @@index([patientId])
+  @@map("follow_ups")
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +281,29 @@ model ClinicSetting {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("clinic_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (role-aware in-app notifications; distinct from Activity log)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String           @map("user_id")
+  type       NotificationType
+  title      String
+  message    String
+  entityType String           @map("entity_type") // appointment | patient | dentist
+  entityId   String?          @map("entity_id")
+  isRead     Boolean          @default(false) @map("is_read")
+  readAt     DateTime?        @map("read_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 // ---------------------------------------------------------------------------

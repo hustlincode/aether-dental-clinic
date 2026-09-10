@@ -12,6 +12,8 @@ export interface PatientFormValues {
   phone: string;
   notes: string;
   status: "ACTIVE" | "INACTIVE";
+  followUpEnabled: boolean;
+  followUpDays: number;
 }
 
 export interface PatientFormInitialData {
@@ -22,6 +24,8 @@ export interface PatientFormInitialData {
   phone: string;
   notes: string | null;
   status: "ACTIVE" | "INACTIVE";
+  followUpEnabled: boolean;
+  followUpDays: number;
 }
 
 type FormErrors = Record<string, string>;
@@ -33,6 +37,8 @@ const EMPTY_FORM: PatientFormValues = {
   phone: "",
   notes: "",
   status: "ACTIVE",
+  followUpEnabled: true,
+  followUpDays: 1,
 };
 
 function mapDetailsToErrors(details: unknown): FormErrors {
@@ -73,6 +79,8 @@ export function PatientFormModal({
           phone: initialData.phone,
           notes: initialData.notes || "",
           status: initialData.status,
+          followUpEnabled: initialData.followUpEnabled,
+          followUpDays: initialData.followUpDays,
         }
       : { ...EMPTY_FORM },
   );
@@ -123,6 +131,8 @@ export function PatientFormModal({
         phone: form.phone.trim(),
         notes: form.notes.trim(),
         status: form.status,
+        followUpEnabled: form.followUpEnabled,
+        followUpDays: form.followUpDays,
       });
     } catch (err) {
       // Map server-side 422 details (if any) to per-field errors. The parent
@@ -252,6 +262,56 @@ export function PatientFormModal({
               </div>
             </div>
           )}
+
+          {/* Follow-up emails */}
+          <div className="rounded-lg border border-border bg-surface-alt p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-text">Follow-up emails</p>
+                <p className="mt-0.5 text-xs text-text-muted">
+                  Send an automated follow-up after each completed appointment.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, followUpEnabled: !f.followUpEnabled }))}
+                aria-pressed={form.followUpEnabled}
+                className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                  form.followUpEnabled
+                    ? "border-border-accent bg-accent-soft text-accent"
+                    : "border-border text-text-muted"
+                }`}
+              >
+                {form.followUpEnabled ? (
+                  <ToggleRight size={18} className="text-accent" />
+                ) : (
+                  <ToggleLeft size={18} />
+                )}
+                {form.followUpEnabled ? "Enabled" : "Disabled"}
+              </button>
+            </div>
+
+            {form.followUpEnabled && (
+              <div className="mt-3 flex items-center gap-3">
+                <label htmlFor="patient-follow-up-days" className="text-sm text-text-secondary">
+                  Send after
+                </label>
+                <input
+                  id="patient-follow-up-days"
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.followUpDays}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setForm((f) => ({ ...f, followUpDays: Number.isNaN(v) ? 0 : Math.max(0, Math.min(60, v)) }));
+                  }}
+                  className="w-20 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                />
+                <span className="text-sm text-text-muted">{form.followUpDays === 1 ? "day" : "days"} after the visit</span>
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">

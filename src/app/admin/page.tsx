@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { FollowUpsPanel } from "@/components/admin/follow-ups-panel";
+import { processDueFollowUps, getPendingFollowUpCount } from "@/lib/followups";
+import { processUpcomingAppointmentReminders } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +30,28 @@ export default async function AdminDashboard() {
   }
   const dentistFilter = dentistId ? { dentistId } : {};
 
+  // Automation: flush due follow-up emails when an admin/receptionist opens the
+  // dashboard (SCHEDULED follow-ups whose scheduledFor has passed are sent).
+  // Appointment reminders for tomorrow are also generated here.
+  if (user.role === "ADMIN" || user.role === "RECEPTIONIST") {
+    try {
+      await processDueFollowUps();
+    } catch (err) {
+      console.error("Background follow-up processing failed:", err);
+    }
+    try {
+      await processUpcomingAppointmentReminders();
+    } catch (err) {
+      console.error("Background reminder processing failed:", err);
+    }
+  }
+
   const [
     todayCount,
     upcomingCount,
     totalPatients,
     completedThisMonth,
+    pendingFollowUps,
     todayAppointments,
   ] = await Promise.all([
     prisma.appointment.count({ where: { appointmentDate: today, ...dentistFilter } }),
@@ -49,6 +70,7 @@ export default async function AdminDashboard() {
         ...dentistFilter,
       },
     }),
+    getPendingFollowUpCount(),
     prisma.appointment.findMany({
       where: { appointmentDate: today, status: { notIn: ["CANCELLED", "NO_SHOW"] }, ...dentistFilter },
       include: { patient: true, dentist: true, service: true },
@@ -83,49 +105,62 @@ export default async function AdminDashboard() {
       </p>
 
       {/* Stat cards */}
-      <div className="mt-6 grid gap-4 animate-fade-in sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 animate-fade-in sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Today's Appointments" value={todayCount} />
         <StatCard label="Upcoming" value={upcomingCount} />
         <StatCard label="Total Patients" value={totalPatients} />
         <StatCard label="Completed This Month" value={completedThisMonth} />
+        <StatCard label="Follow-ups Pending" value={pendingFollowUps} />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-8 grid items-stretch gap-6 lg:grid-cols-3">
         {/* Today's schedule */}
-        <div className="lg:col-span-2">
+        <div className="flex flex-col lg:col-span-2">
           <h2 className="text-lg font-semibold text-text">Today&apos;s Schedule</h2>
-          <div className="mt-3 overflow-hidden rounded-xl border border-border bg-surface shadow">
+          <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow">
             {todayAppointments.length === 0 ? (
-              <div className="px-6 py-12 text-center text-sm text-text-muted">
+              <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-text-muted">
                 No appointments scheduled for today.
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Time</th>
-                    <th className="px-4 py-3 font-semibold">Patient</th>
-                    <th className="hidden px-4 py-3 font-semibold sm:table-cell">Dentist</th>
-                    <th className="hidden px-4 py-3 font-semibold sm:table-cell">Service</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {todayAppointments.map((a) => (
-                    <tr key={a.id} className="hover:bg-accent-soft transition-colors">
-                      <td className="px-4 py-3 font-medium text-text">{fmtTime(a.startTime)}</td>
-                      <td className="px-4 py-3 text-text">
-                        {a.patient.firstName} {a.patient.lastName}
-                      </td>
-                      <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.dentist.name}</td>
-                      <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.service.name}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={a.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <>
+                <div className="flex-1 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Time</th>
+                        <th className="px-4 py-3 font-semibold">Patient</th>
+                        <th className="hidden px-4 py-3 font-semibold sm:table-cell">Dentist</th>
+                        <th className="hidden px-4 py-3 font-semibold sm:table-cell">Service</th>
+                        <th className="px-4 py-3 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {todayAppointments.map((a) => (
+                        <tr key={a.id} className="hover:bg-accent-soft transition-colors">
+                          <td className="px-4 py-3 font-medium text-text">{fmtTime(a.startTime)}</td>
+                          <td className="px-4 py-3 text-text">
+                            {a.patient.firstName} {a.patient.lastName}
+                          </td>
+                          <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.dentist.name}</td>
+                          <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.service.name}</td>
+                          <td className="px-4 py-3">
+                            <StatusBadge status={a.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between border-t border-border bg-background-alt px-4 py-2.5 text-xs text-text-muted">
+                  <span>
+                    Showing {todayAppointments.length} appointment{todayAppointments.length === 1 ? "" : "s"} today
+                  </span>
+                  <Link href="/admin/appointments" className="font-medium text-accent hover:underline">
+                    View all appointments &rarr;
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -170,6 +205,9 @@ export default async function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Follow-ups */}
+      <FollowUpsPanel role={user.role} />
     </div>
   );
 }

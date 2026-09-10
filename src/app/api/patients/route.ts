@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole, ok, fail } from "@/lib/api";
+import { notifyPatientCreated } from "@/lib/notifications";
 
 // ─── Zod schema for creating a patient ───────────────────────────────────────
 const createPatientSchema = z.object({
@@ -11,6 +12,8 @@ const createPatientSchema = z.object({
   phone: z.string().trim().min(7, "Please provide a valid phone number."),
   notes: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+  followUpEnabled: z.boolean().optional(),
+  followUpDays: z.number().int().min(0).max(60).optional(),
 });
 
 function parsePositiveInt(raw: string | null, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
@@ -68,6 +71,8 @@ export async function GET(req: Request) {
           phone: true,
           notes: true,
           status: true,
+          followUpEnabled: true,
+          followUpDays: true,
           createdAt: true,
           updatedAt: true,
           _count: { select: { appointments: true } },
@@ -118,6 +123,8 @@ export async function POST(req: Request) {
         phone: body.phone.trim(),
         notes: body.notes?.trim() || null,
         status: body.status ?? "ACTIVE",
+        followUpEnabled: body.followUpEnabled ?? true,
+        followUpDays: body.followUpDays ?? 1,
       },
     });
 
@@ -130,6 +137,13 @@ export async function POST(req: Request) {
         userId: user.id,
       },
     });
+
+    // In-app notification (never allowed to fail the patient creation).
+    try {
+      await notifyPatientCreated(patient);
+    } catch (e) {
+      console.error("Failed to create patient notification:", e);
+    }
 
     return ok(patient, 201);
   } catch (err: unknown) {

@@ -181,6 +181,8 @@ export function PatientsManager({ role }: { role: string }) {
           phone: data.phone,
           notes: data.notes || null,
           status: data.status,
+          followUpEnabled: data.followUpEnabled,
+          followUpDays: data.followUpDays,
         }),
       });
       const body = await res.json();
@@ -212,6 +214,8 @@ export function PatientsManager({ role }: { role: string }) {
           phone: data.phone,
           notes: data.notes || null,
           status: data.status,
+          followUpEnabled: data.followUpEnabled,
+          followUpDays: data.followUpDays,
         }),
       });
       const body = await res.json();
@@ -417,6 +421,21 @@ export function PatientsManager({ role }: { role: string }) {
                               </span>
                               <span className="block max-w-[180px] truncate text-xs text-text-muted">
                                 {patient.email || "No email on file"}
+                              </span>
+                              <span
+                                className={`mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium ${
+                                  patient.followUpEnabled ? "text-success" : "text-text-muted"
+                                }`}
+                                title={
+                                  patient.followUpEnabled
+                                    ? `Follow-up email ${patient.followUpDays === 1 ? "1 day" : `${patient.followUpDays} days`} after each visit`
+                                    : "Follow-up emails disabled"
+                                }
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${patient.followUpEnabled ? "bg-success" : "bg-neutral-c"}`} />
+                                {patient.followUpEnabled
+                                  ? `Follow-up ${patient.followUpDays === 1 ? "1 day" : `${patient.followUpDays} days`}`
+                                  : "Follow-ups off"}
                               </span>
                             </span>
                           </button>

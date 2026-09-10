@@ -31,6 +31,8 @@ interface PatientDetail {
   phone: string;
   notes: string | null;
   status: "ACTIVE" | "INACTIVE";
+  followUpEnabled?: boolean;
+  followUpDays?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -222,6 +224,15 @@ export function PatientDetails({
                   label="Last Appointment"
                   value={stats.lastAppointment ? fmtDate(stats.lastAppointment.appointmentDate) : "—"}
                   sub={stats.lastAppointment ? `${fmtTime(stats.lastAppointment.startTime)} · ${stats.lastAppointment.service.name}` : "No past visits"}
+                />
+                <StatCard
+                  label="Follow-up Email"
+                  value={patient.followUpEnabled === false ? "Off" : "On"}
+                  sub={
+                    patient.followUpEnabled === false
+                      ? "Will not be contacted"
+                      : `${patient.followUpDays ?? 1} day${(patient.followUpDays ?? 1) === 1 ? "" : "s"} after each visit`
+                  }
                 />
               </div>
 

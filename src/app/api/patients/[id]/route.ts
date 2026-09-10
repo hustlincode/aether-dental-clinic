@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole, ok, fail } from "@/lib/api";
+import { notifyPatientUpdated } from "@/lib/notifications";
 
 // ─── Zod schema for updating a patient (partial, at least one field required) ─
 const updatePatientSchema = z
@@ -11,6 +12,8 @@ const updatePatientSchema = z
     phone: z.string().trim().min(7, "Please provide a valid phone number.").optional(),
     notes: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    followUpEnabled: z.boolean().optional(),
+    followUpDays: z.number().int().min(0).max(60).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided.",
@@ -42,6 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         phone: true,
         notes: true,
         status: true,
+        followUpEnabled: true,
+        followUpDays: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -147,6 +152,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.phone !== undefined) data.phone = body.phone.trim();
     if (body.notes !== undefined) data.notes = body.notes.trim() || null;
     if (body.status !== undefined) data.status = body.status;
+    if (body.followUpEnabled !== undefined) data.followUpEnabled = body.followUpEnabled;
+    if (body.followUpDays !== undefined) data.followUpDays = body.followUpDays;
 
     const updated = await prisma.patient.update({
       where: { id },
@@ -162,6 +169,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         userId: user.id,
       },
     });
+
+    // Only notify staff when a *meaningful* field changes (contact info or
+    // status). Minor fields such as notes are excluded to reduce noise.
+    const meaningfulChanges: string[] = [];
+    if (body.email !== undefined) meaningfulChanges.push("email changed");
+    if (body.phone !== undefined) meaningfulChanges.push("phone number changed");
+    if (body.status !== undefined) meaningfulChanges.push(`status changed to ${body.status.replace("_", " ").toLowerCase()}`);
+    if (meaningfulChanges.length > 0) {
+      try {
+        await notifyPatientUpdated(updated, meaningfulChanges.join(", "));
+      } catch (e) {
+        console.error("Failed to create patient update notification:", e);
+      }
+    }
 
     return ok(updated);
   } catch (err: unknown) {
