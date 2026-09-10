@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 // ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ type Step = "service" | "dentist" | "date" | "time" | "info" | "review" | "succe
 
 const peso = (v: string | number | { toString(): string }) => {
   const n = typeof v === "object" && v !== null ? Number(v.toString()) : Number(v);
-  return "₱" + n.toLocaleString("en-PH", { minimumFractionDigits: 0 });
+  return "â‚±" + n.toLocaleString("en-PH", { minimumFractionDigits: 0 });
 };
 
 const formatTime = (hhmm: string) => {
@@ -70,7 +70,6 @@ const formatLongDate = (iso: string) => {
 // ---------------------------------------------------------------------------
 
 export default function BookPage() {
-  const { toast } = useToast();
 
   const [step, setStep] = useState<Step>("service");
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -116,12 +115,12 @@ export default function BookPage() {
         setServices(svcRes.data || []);
         setDentists(dentRes.data || []);
       } catch {
-        toast("Unable to load booking options. Please try again.", "error");
+        toast.error("Unable to load booking options. Please try again.");
       } finally {
         setLoadingInitial(false);
       }
     })();
-  }, [toast]);
+  }, []);
 
   const selectedDentist = useMemo(
     () => (dentist ? dentists.find((d) => d.id === dentist.id) || dentist : null),
@@ -143,7 +142,7 @@ export default function BookPage() {
         if (!cancelled) setAvailableDates(res.data || []);
       })
       .catch(() => {
-        if (!cancelled) toast("Unable to load available dates.", "error");
+        if (!cancelled) toast.error("Unable to load available dates.");
       })
       .finally(() => {
         if (!cancelled) setLoadingDates(false);
@@ -151,7 +150,7 @@ export default function BookPage() {
     return () => {
       cancelled = true;
     };
-  }, [dentist, service, toast]);
+  }, [dentist, service]);
 
   // Fetch slots when date changes
   useEffect(() => {
@@ -166,7 +165,7 @@ export default function BookPage() {
         if (!cancelled) setSlots(res.data || []);
       })
       .catch(() => {
-        if (!cancelled) toast("Unable to load time slots.", "error");
+        if (!cancelled) toast.error("Unable to load time slots.");
       })
       .finally(() => {
         if (!cancelled) setLoadingSlots(false);
@@ -174,7 +173,7 @@ export default function BookPage() {
     return () => {
       cancelled = true;
     };
-  }, [dentist, service, date, toast]);
+  }, [dentist, service, date]);
 
   // Calendar helpers
   const calDays = useMemo(() => {
@@ -246,13 +245,13 @@ export default function BookPage() {
       });
       const body = await res.json();
       if (!res.ok) {
-        toast(body.message || "Unable to book the appointment.", "error");
+        toast.error(body.message || "Unable to book the appointment.");
         return;
       }
       setResult(body.data.subject);
       setStep("success");
     } catch {
-      toast("Unable to book the appointment. Please try again.", "error");
+      toast.error("Unable to book the appointment. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -387,7 +386,7 @@ function StepIndicator({ step }: { step: Step }) {
                     : "bg-surface text-text-muted border border-border"
               }`}
             >
-              <span>{done ? "✓" : i + 1}</span>
+              <span>{done ? "âœ“" : i + 1}</span>
               {l.label}
             </div>
             {i < labels.length - 1 && <div className="h-px w-4 bg-border" />}
@@ -417,7 +416,7 @@ function LoadingBlock() {
 
 function SelectService({ services, onSelect }: { services: Service[]; onSelect: (s: Service) => void }) {
   if (services.length === 0) {
-    return <EmptyState title="No services available" message="Please check back later." icon="🦷" />;
+    return <EmptyState title="No services available" message="Please check back later." icon="ðŸ¦·" />;
   }
   return (
     <div className="space-y-3 animate-slide-up">
@@ -436,7 +435,7 @@ function SelectService({ services, onSelect }: { services: Service[]; onSelect: 
           </div>
           <div className="ml-4 text-right">
             <div className="font-bold text-accent">{peso(s.price)}</div>
-            <div className="mt-1 text-xs font-medium text-text-muted">Select →</div>
+            <div className="mt-1 text-xs font-medium text-text-muted">Select â†’</div>
           </div>
         </button>
       ))}
@@ -456,7 +455,7 @@ function SelectDentist({ dentists, service, onSelect, onBack }: { dentists: Dent
         Choose a dentist{service ? ` for ${service.name}` : ""}
       </p>
       {dentists.length === 0 ? (
-        <EmptyState title="No dentists available" message="Please check back later." icon="🩺" />
+        <EmptyState title="No dentists available" message="Please check back later." icon="ðŸ©º" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {dentists.map((d) => (
@@ -501,9 +500,9 @@ function SelectDate({
       <BackLink onClick={onBack} label="Change dentist" />
       <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow">
         <div className="flex items-center justify-between">
-          <button onClick={() => shiftMonth(-1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">←</button>
+          <button onClick={() => shiftMonth(-1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">â†</button>
           <div className="font-semibold text-text">{monthLabel}</div>
-          <button onClick={() => shiftMonth(1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">→</button>
+          <button onClick={() => shiftMonth(1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">â†’</button>
         </div>
         <div className="mt-2 grid grid-cols-7 gap-1 text-center text-xs font-medium text-text-muted">
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <div key={d} className="py-1">{d}</div>)}
@@ -550,7 +549,7 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
       {loading ? (
         <div className="py-10 text-center text-sm text-text-muted">Loading available times...</div>
       ) : slots.length === 0 ? (
-        <EmptyState title="No slots available" message="This day has no remaining openings. Please pick another date." icon="⏰" />
+        <EmptyState title="No slots available" message="This day has no remaining openings. Please pick another date." icon="â°" />
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {slots.map((s) => (
@@ -703,7 +702,7 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
   return (
     <div className="animate-scale-in rounded-2xl border border-border-accent bg-surface p-6 text-center shadow-lg">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-3xl text-success">
-        ✓
+        âœ“
       </div>
       <h2 className="mt-4 text-xl font-bold text-text">Appointment Booked!</h2>
       <p className="mt-1 text-sm text-text-muted">
@@ -741,7 +740,7 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
 function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button onClick={onClick} className="text-sm font-medium text-accent hover:text-accent-hover transition-colors duration-200">
-      ← {label}
+      â† {label}
     </button>
   );
 }

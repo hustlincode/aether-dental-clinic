@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
+  Calendar,
   Users,
   Stethoscope,
   BriefcaseMedical,
@@ -20,6 +21,7 @@ import { SignOutButton } from "@/components/admin/sign-out";
 const iconMap: Record<string, LucideIcon> = {
   Dashboard: LayoutDashboard,
   Appointments: CalendarDays,
+  Calendar: Calendar,
   Patients: Users,
   Dentists: Stethoscope,
   Services: BriefcaseMedical,

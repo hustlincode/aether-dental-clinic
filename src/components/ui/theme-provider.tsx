@@ -38,7 +38,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Adopt the stored theme or OS preference only after hydration.
   useEffect(() => {
-    setTheme(resolveStoredTheme());
+    const id = window.setTimeout(() => setTheme(resolveStoredTheme()), 0);
+    return () => window.clearTimeout(id);
   }, []);
 
   // Sync <html data-theme> and localStorage on user changes (skips the initial default render).

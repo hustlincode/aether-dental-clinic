@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef } from "react";
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Stethoscope } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Service {
   id: string;
@@ -35,7 +35,7 @@ const EMPTY_FORM: FormData = {
   status: "ACTIVE",
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatPrice(price: string | number): string {
   const num = typeof price === "string" ? Number(price) : price;
@@ -49,7 +49,7 @@ function formatDuration(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// ─── Service Modal ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Service Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ServiceModal({
   open,
@@ -185,7 +185,7 @@ function ServiceModal({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-text-secondary">
-                Price (₱) <span className="text-error">*</span>
+                Price (â‚±) <span className="text-error">*</span>
               </label>
               <input
                 type="number"
@@ -244,10 +244,9 @@ function ServiceModal({
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ServicesManager() {
-  const { toast } = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -261,7 +260,7 @@ export function ServicesManager() {
   const [searchInput, setSearchInput] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ─── Data fetching ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -291,7 +290,7 @@ export function ServicesManager() {
         if (!cancelled) setServices(body.data || []);
       })
       .catch((err) => {
-        if (!cancelled) toast(err instanceof Error ? err.message : "Unable to load services.", "error");
+        if (!cancelled) toast.error(err instanceof Error ? err.message : "Unable to load services.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -300,7 +299,7 @@ export function ServicesManager() {
     return () => {
       cancelled = true;
     };
-  }, [search, statusFilter, toast, reloadKey]);
+  }, [search, statusFilter, reloadKey]);
 
   // Debounced search handler
   function handleSearchInput(value: string) {
@@ -312,7 +311,7 @@ export function ServicesManager() {
     }, 300);
   }
 
-  // ─── CRUD handlers ──────────────────────────────────────────────────────
+  // â”€â”€â”€ CRUD handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function handleCreate(data: FormData) {
     try {
@@ -329,11 +328,11 @@ export function ServicesManager() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      toast("Service created successfully.", "success");
+      toast.success("Service created successfully.");
       setModalOpen(false);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to create service.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to create service.");
       throw err;
     }
   }
@@ -354,12 +353,12 @@ export function ServicesManager() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      toast("Service updated successfully.", "success");
+      toast.success("Service updated successfully.");
       setModalOpen(false);
       setEditingService(null);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to update service.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to update service.");
       throw err;
     }
   }
@@ -374,14 +373,14 @@ export function ServicesManager() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      toast(`Service ${newStatus === "ACTIVE" ? "activated" : "deactivated"} successfully.`, "success");
+      toast.success(`Service ${newStatus === "ACTIVE" ? "activated" : "deactivated"} successfully.`);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to update service status.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to update service status.");
     }
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <div>

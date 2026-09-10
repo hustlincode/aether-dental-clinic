@@ -1,15 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,14 +22,14 @@ export default function LoginPage() {
       const res = await signIn("credentials", { redirect: false, email, password });
       if (res?.error) {
         setError("Invalid email or password.");
-        toast("Invalid credentials. Please try again.", "error");
+        toast.error("Invalid credentials. Please try again.");
       } else {
         router.push("/admin");
         router.refresh();
       }
     } catch {
       setError("Unable to sign in. Please try again.");
-      toast("Unable to sign in.", "error");
+      toast.error("Unable to sign in.");
     } finally {
       setLoading(false);
     }
@@ -87,7 +86,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               />
             </div>
             <button
@@ -117,7 +116,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-text-muted">
-          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-200">← Back to home</Link>
+          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-200">â† Back to home</Link>
         </p>
       </div>
     </div>

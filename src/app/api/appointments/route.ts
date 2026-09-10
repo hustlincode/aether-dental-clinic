@@ -244,14 +244,28 @@ export async function GET(req: Request) {
     const search = searchParams.get("search")?.trim() || undefined;
     const sort = searchParams.get("sort"); // "date:asc" (default) | "date:desc"
 
-    const page = parsePositiveInt(searchParams.get("page"), 1);
-    const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20, 100);
+    // Validate from/to date range params (YYYY-MM-DD)
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (from && !dateRe.test(from)) {
+      return NextResponse.json({ success: false, message: "Invalid 'from' date. Use YYYY-MM-DD format." }, { status: 400 });
+    }
+    if (to && !dateRe.test(to)) {
+      return NextResponse.json({ success: false, message: "Invalid 'to' date. Use YYYY-MM-DD format." }, { status: 400 });
+    }
+
+    const hasDateRange = Boolean(from || to);
+
+    // Calendar mode: when from/to are present, allow larger pageSize and skip pagination
+    const page = hasDateRange ? 1 : parsePositiveInt(searchParams.get("page"), 1);
+    const pageSize = hasDateRange
+      ? parsePositiveInt(searchParams.get("pageSize"), 500, 500)
+      : parsePositiveInt(searchParams.get("pageSize"), 20, 100);
 
     const where: Prisma.AppointmentWhereInput = {};
-    if (date) where.appointmentDate = new Date(`${date}T00:00:00.000Z`);
+    if (date && !hasDateRange) where.appointmentDate = new Date(`${date}T00:00:00.000Z`);
     if (status) where.status = status as AppointmentStatus;
     if (dentistId) where.dentistId = dentistId;
-    if (from || to) {
+    if (hasDateRange) {
       where.appointmentDate = {
         ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
         ...(to ? { lte: new Date(`${to}T00:00:00.000Z`) } : {}),
@@ -289,7 +303,8 @@ export async function GET(req: Request) {
         where,
         include: { patient: true, dentist: true, service: true },
         orderBy,
-        skip: (page - 1) * pageSize,
+        // When fetching a date range for the calendar, skip pagination
+        ...(hasDateRange ? {} : { skip: (page - 1) * pageSize }),
         take: pageSize,
       }),
       prisma.appointment.count({ where }),

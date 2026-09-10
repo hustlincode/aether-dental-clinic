@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, RefreshCw, Search, ToggleLeft, ToggleRight, UserX, Users } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { StatusBadge } from "./status-badge";
 import { PatientFormModal, type PatientFormValues, type PatientFormInitialData } from "./patient-form-modal";
 import { PatientDetails } from "./patient-details";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Patient extends PatientFormInitialData {
   createdAt: string;
@@ -26,7 +26,7 @@ interface PatientListResponse {
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 350;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getPageItems(current: number, totalPages: number): (number | "...")[] {
   if (totalPages <= 7) {
@@ -63,10 +63,9 @@ function fmtTime(hhmm: string): string {
   return `${hr}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function PatientsManager({ role }: { role: string }) {
-  const { toast } = useToast();
   const canManage = role === "ADMIN" || role === "RECEPTIONIST";
 
   // List state
@@ -95,7 +94,7 @@ export function PatientsManager({ role }: { role: string }) {
     };
   }, []);
 
-  // ─── Data fetching ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     let cancelled = false;
@@ -126,7 +125,7 @@ export function PatientsManager({ role }: { role: string }) {
     return () => {
       cancelled = true;
     };
-  }, [page, statusFilter, hasAppointmentsFilter, search, refreshKey, toast]);
+  }, [page, statusFilter, hasAppointmentsFilter, search, refreshKey]);
 
   /* Loading is toggled by user actions (never synchronously inside the effect
      body), so the initial state starts as true and every interaction re-shows it. */
@@ -167,7 +166,7 @@ export function PatientsManager({ role }: { role: string }) {
     beginLoad();
   }
 
-  // ─── CRUD handlers ──────────────────────────────────────────────────────
+  // â”€â”€â”€ CRUD handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function handleCreate(data: PatientFormValues) {
     try {
@@ -191,12 +190,12 @@ export function PatientsManager({ role }: { role: string }) {
         err.details = body.details;
         throw err;
       }
-      toast("Patient added successfully.", "success");
+      toast.success("Patient added successfully.");
       setModalOpen(false);
       setEditingPatient(null);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to create patient.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to create patient.");
       throw err;
     }
   }
@@ -224,12 +223,12 @@ export function PatientsManager({ role }: { role: string }) {
         err.details = body.details;
         throw err;
       }
-      toast("Patient updated successfully.", "success");
+      toast.success("Patient updated successfully.");
       setModalOpen(false);
       setEditingPatient(null);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to update patient.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to update patient.");
       throw err;
     }
   }
@@ -244,14 +243,14 @@ export function PatientsManager({ role }: { role: string }) {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      toast(`Patient ${next === "ACTIVE" ? "activated" : "deactivated"} successfully.`, "success");
+      toast.success(`Patient ${next === "ACTIVE" ? "activated" : "deactivated"} successfully.`);
       reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to update patient status.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to update patient status.");
     }
   }
 
-  // ─── Render helpers ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Render helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const hasFilters = Boolean(search || statusFilter || hasAppointmentsFilter);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -448,12 +447,12 @@ export function PatientsManager({ role }: { role: string }) {
                           {lastAppt ? (
                             <div className="flex flex-col items-start gap-1">
                               <span className="text-text-secondary">
-                                {fmtDate(lastAppt.appointmentDate)} · {fmtTime(lastAppt.startTime)}
+                                {fmtDate(lastAppt.appointmentDate)} Â· {fmtTime(lastAppt.startTime)}
                               </span>
                               <StatusBadge status={lastAppt.status} />
                             </div>
                           ) : (
-                            <span className="text-text-muted">—</span>
+                            <span className="text-text-muted">â€”</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -512,7 +511,7 @@ export function PatientsManager({ role }: { role: string }) {
             {total > 0 && (
               <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row">
                 <p className="text-sm text-text-muted">
-                  Showing {start}–{end} of {total}
+                  Showing {start}â€“{end} of {total}
                 </p>
                 <div className="flex items-center gap-1">
                   <button
@@ -526,7 +525,7 @@ export function PatientsManager({ role }: { role: string }) {
                   {getPageItems(page, totalPages).map((item, i) =>
                     item === "..." ? (
                       <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-text-muted">
-                        …
+                        â€¦
                       </span>
                     ) : (
                       <button

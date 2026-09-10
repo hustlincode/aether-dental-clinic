@@ -1,9 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarX, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
+import { createColumnHelper } from "@tanstack/react-table";
 import { StatusBadge } from "./status-badge";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
+import { DataTable, type DataTableFeatures } from "./data-table";
 
 interface Appt {
   id: string;
@@ -47,8 +49,9 @@ function getPageItems(current: number, totalPages: number): (number | "...")[] {
   return items;
 }
 
+const columnHelper = createColumnHelper<DataTableFeatures, Appt>();
+
 export function AppointmentsList({ role }: { role: string }) {
-  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [params, setParams] = useState({ page: 1, status: "", search: "" });
   const [appts, setAppts] = useState<Appt[]>([]);
@@ -136,14 +139,94 @@ export function AppointmentsList({ role }: { role: string }) {
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
       setAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status: next } : a)));
-      toast(`Appointment marked as ${next.replace("_", " ").toLowerCase()}.`, "success");
+      toast.success(`Appointment marked as ${next.replace("_", " ").toLowerCase()}.`);
       if (body.email && !body.email.ok) {
-        toast("Status updated, but the notification email could not be sent. Check SMTP settings.", "error");
+        toast.error("Status updated, but the notification email could not be sent. Check SMTP settings.");
       }
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Unable to update the appointment.", "error");
+      toast.error(e instanceof Error ? e.message : "Unable to update the appointment.");
     }
   }
+
+  const columns = columnHelper.columns([
+    columnHelper.accessor("referenceNumber", {
+      header: "Ref",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="font-mono text-xs text-text-muted">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor((row) => `${row.patient.firstName} ${row.patient.lastName}`.trim(), {
+      id: "patient",
+      header: "Patient",
+      cell: (info) => {
+        const patient = info.row.original.patient;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium text-text">
+              {patient.firstName} {patient.lastName}
+            </span>
+            {patient.phone ? <span className="text-xs text-text-muted">{patient.phone}</span> : null}
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor("appointmentDate", {
+      header: "Date",
+      meta: { cellClassName: "hidden md:table-cell" },
+      cell: (info) => (
+        <span className="text-text-secondary">{fmtDate(info.getValue())}</span>
+      ),
+    }),
+    columnHelper.accessor("startTime", {
+      header: "Time",
+      enableSorting: false,
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <span className="text-text">
+            {fmtTime(row.startTime)}
+            {row.endTime ? ` \u2013 ${fmtTime(row.endTime)}` : ""}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor((row) => row.service.name, {
+      id: "service",
+      header: "Service",
+      enableSorting: false,
+      meta: { cellClassName: "hidden lg:table-cell" },
+      cell: (info) => (
+        <span className="text-text-secondary">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor((row) => row.dentist.name, {
+      id: "dentist",
+      header: "Dentist",
+      enableSorting: false,
+      meta: { cellClassName: "hidden lg:table-cell" },
+      cell: (info) => (
+        <span className="text-text-secondary">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.display({
+      id: "status",
+      header: "Status",
+      cell: (info) => <StatusBadge status={info.row.original.status} />,
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: () => <span className="block text-right">Actions</span>,
+      meta: { cellClassName: "text-right" },
+      cell: (info) => (
+        <StatusActions
+          status={info.row.original.status}
+          role={role}
+          onChange={(s) => changeStatus(info.row.original.id, s)}
+        />
+      ),
+    }),
+  ]);
 
   const start = pagination && pagination.total > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
   const end = pagination ? Math.min(pagination.page * pagination.pageSize, pagination.total) : 0;
@@ -202,38 +285,7 @@ export function AppointmentsList({ role }: { role: string }) {
               className={`max-h-[60vh] overflow-x-auto overflow-y-auto ${loading ? "opacity-60 transition-opacity" : ""}`}
               aria-busy={loading}
             >
-              <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Ref</th>
-                    <th className="px-4 py-3 font-semibold">Patient</th>
-                    <th className="hidden px-4 py-3 font-semibold md:table-cell">Date</th>
-                    <th className="px-4 py-3 font-semibold">Time</th>
-                    <th className="hidden px-4 py-3 font-semibold lg:table-cell">Service</th>
-                    <th className="hidden px-4 py-3 font-semibold lg:table-cell">Dentist</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {appts.map((a) => (
-                    <tr key={a.id} className="transition-colors hover:bg-accent-soft">
-                      <td className="px-4 py-3 font-mono text-xs text-text-muted">{a.referenceNumber}</td>
-                      <td className="px-4 py-3 font-medium text-text">
-                        {a.patient.firstName} {a.patient.lastName}
-                      </td>
-                      <td className="hidden px-4 py-3 text-text-secondary md:table-cell">{fmtDate(a.appointmentDate)}</td>
-                      <td className="px-4 py-3 text-text">{fmtTime(a.startTime)}</td>
-                      <td className="hidden px-4 py-3 text-text-secondary lg:table-cell">{a.service.name}</td>
-                      <td className="hidden px-4 py-3 text-text-secondary lg:table-cell">{a.dentist.name}</td>
-                      <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-                      <td className="px-4 py-3 text-right">
-                        <StatusActions status={a.status} role={role} onChange={(s) => changeStatus(a.id, s)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable columns={columns} data={appts} getRowId={(row) => row.id} />
             </div>
 
             {pagination && appts.length > 0 && (

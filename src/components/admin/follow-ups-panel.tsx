@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { MailCheck, MailX, Play, RefreshCw, Send } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 interface FollowUpItem {
   id: string;
@@ -46,7 +46,6 @@ function fmtTime(hhmm: string): string {
 }
 
 export function FollowUpsPanel({ role }: { role: string }) {
-  const { toast } = useToast();
   const canManage = role === "ADMIN" || role === "RECEPTIONIST";
 
   const [items, setItems] = useState<FollowUpItem[]>([]);
@@ -97,10 +96,10 @@ export function FollowUpsPanel({ role }: { role: string }) {
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
       const s = body.data || {};
-      toast(`Processed ${s.processed ?? 0} follow-up${(s.processed ?? 0) === 1 ? "" : "s"} (${s.sent ?? 0} sent).`, "success");
+      toast.success(`Processed ${s.processed ?? 0} follow-up${(s.processed ?? 0) === 1 ? "" : "s"} (${s.sent ?? 0} sent).`);
       load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Unable to process follow-ups.", "error");
+      toast.error(e instanceof Error ? e.message : "Unable to process follow-ups.");
     } finally {
       setProcessing(false);
     }
@@ -112,10 +111,10 @@ export function FollowUpsPanel({ role }: { role: string }) {
       const res = await fetch(`/api/followups/${id}/send`, { method: "POST" });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      toast("Follow-up email sent.", "success");
+      toast.success("Follow-up email sent.");
       load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Unable to send follow-up.", "error");
+      toast.error(e instanceof Error ? e.message : "Unable to send follow-up.");
     } finally {
       setSendingId(null);
     }
@@ -201,10 +200,10 @@ export function FollowUpsPanel({ role }: { role: string }) {
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <p className="text-text-secondary">
-                        {fmtDate(f.appointment.appointmentDate)} · {fmtTime(f.appointment.startTime)}
+                        {fmtDate(f.appointment.appointmentDate)} Â· {fmtTime(f.appointment.startTime)}
                       </p>
                       <p className="text-xs text-text-muted">
-                        {f.appointment.referenceNumber} · {f.appointment.service.name}
+                        {f.appointment.referenceNumber} Â· {f.appointment.service.name}
                       </p>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-text-secondary">

@@ -2,8 +2,10 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { format } from "date-fns";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { FollowUpsPanel } from "@/components/admin/follow-ups-panel";
+import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import { processDueFollowUps, getPendingFollowUpCount } from "@/lib/followups";
 import { processUpcomingAppointmentReminders } from "@/lib/notifications";
 
@@ -96,6 +98,37 @@ export default async function AdminDashboard() {
   const serviceIds = popularServices.map((s) => s.serviceId);
   const services = await prisma.service.findMany({ where: { id: { in: serviceIds } } });
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+
+  // Analytic aggregates for the dashboard charts.
+  // Statuses are zero-filled so every chart slice is always present.
+  const STATUS_ORDER = ["PENDING", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED", "NO_SHOW"] as const;
+  const statusCounts = STATUS_ORDER.map((name) => ({
+    name,
+    value: statusGroups.find((g) => g.status === name)?._count._all ?? 0,
+  }));
+
+  // Appointments per calendar day for the last 7 days (including today).
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - 6);
+
+  const dailyGroups = await prisma.appointment.groupBy({
+    by: ["appointmentDate"],
+    _count: { _all: true },
+    where: {
+      appointmentDate: { gte: weekStart, lte: upcoming },
+      ...dentistFilter,
+    },
+  });
+  const countsByDate = new Map(
+    dailyGroups.map((g) => [g.appointmentDate.toISOString().slice(0, 10), g._count._all]),
+  );
+  const dailyCounts: { label: string; count: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(weekStart);
+    day.setDate(weekStart.getDate() + i);
+    const key = day.toISOString().slice(0, 10);
+    dailyCounts.push({ label: format(day, "EEE M/d"), count: countsByDate.get(key) ?? 0 });
+  }
 
   return (
     <div>
@@ -205,6 +238,9 @@ export default async function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Analytics charts */}
+      <DashboardCharts daily={dailyCounts} status={statusCounts} />
 
       {/* Follow-ups */}
       <FollowUpsPanel role={user.role} />

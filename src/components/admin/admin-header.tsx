@@ -11,6 +11,7 @@ import { NotificationBell } from "@/components/admin/notification-bell";
 const pageTitleMap: Record<string, string> = {
   "/admin": "Dashboard",
   "/admin/appointments": "Appointments",
+  "/admin/calendar": "Calendar",
   "/admin/patients": "Patients",
   "/admin/dentists": "Dentists",
   "/admin/services": "Services",

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ─── ProSmile Color Scheme — Light Theme (default fallback) ─── */
 :root {
@@ -43,6 +44,28 @@
   --sidebar-text-muted: #6b7280;
   --sidebar-hover: rgba(212, 175, 55, 0.10);
   --sidebar-border: rgba(14, 15, 16, 0.08);
+
+  /* shadcn/ui aliases — mapped to the ProSmile palette */
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #0e0f10;
+  --secondary: var(--background-alt);
+  --secondary-foreground: var(--text-secondary);
+  --muted: var(--surface-alt);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--text);
+  --destructive: var(--error);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* ─── Dark Theme (ProSmile default) ─── */
@@ -88,6 +111,28 @@
   --sidebar-text-muted: #4B5563;
   --sidebar-hover: rgba(212, 175, 55, 0.10);
   --sidebar-border: rgba(248, 249, 250, 0.08);
+
+  /* shadcn/ui aliases — mapped to the ProSmile palette */
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #0e0f10;
+  --secondary: var(--background-alt);
+  --secondary-foreground: var(--text-secondary);
+  --muted: var(--surface-alt);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--text);
+  --destructive: var(--error);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* ─── Tailwind v4 Theme Tokens ─── */
@@ -107,6 +152,21 @@
   --color-border-strong: var(--border-strong);
   --color-border-accent: var(--border-accent);
   --color-ring: var(--ring);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
   --color-warning: var(--warning);
@@ -261,3 +321,13 @@ body {
 .burger--open .burger-line--top    { transform: translateY(0) rotate(45deg); }
 .burger--open .burger-line--middle { opacity: 0; }
 .burger--open .burger-line--bottom { transform: translateY(0) rotate(-45deg); }
+
+/* ─── shadcn/ui base layer ─── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
