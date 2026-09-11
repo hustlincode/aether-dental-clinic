@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { format } from "date-fns";
-import { StatusBadge } from "@/components/admin/status-badge";
 import { FollowUpsPanel } from "@/components/admin/follow-ups-panel";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import { processDueFollowUps, getPendingFollowUpCount } from "@/lib/followups";
@@ -48,14 +46,7 @@ export default async function AdminDashboard() {
     }
   }
 
-  const [
-    todayCount,
-    upcomingCount,
-    totalPatients,
-    completedThisMonth,
-    pendingFollowUps,
-    todayAppointments,
-  ] = await Promise.all([
+  const [todayCount, upcomingCount, totalPatients, completedThisMonth, pendingFollowUps] = await Promise.all([
     prisma.appointment.count({ where: { appointmentDate: today, ...dentistFilter } }),
     prisma.appointment.count({
       where: {
@@ -73,11 +64,6 @@ export default async function AdminDashboard() {
       },
     }),
     getPendingFollowUpCount(),
-    prisma.appointment.findMany({
-      where: { appointmentDate: today, status: { notIn: ["CANCELLED", "NO_SHOW"] }, ...dentistFilter },
-      include: { patient: true, dentist: true, service: true },
-      orderBy: { startTime: "asc" },
-    }),
   ]);
 
   // Analytics by status
@@ -86,18 +72,6 @@ export default async function AdminDashboard() {
     _count: { _all: true },
     where: { ...dentistFilter },
   });
-
-  // Popular services
-  const popularServices = await prisma.appointment.groupBy({
-    by: ["serviceId"],
-    _count: { _all: true },
-    where: { ...dentistFilter },
-    orderBy: { _count: { serviceId: "desc" } },
-    take: 5,
-  });
-  const serviceIds = popularServices.map((s) => s.serviceId);
-  const services = await prisma.service.findMany({ where: { id: { in: serviceIds } } });
-  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
   // Analytic aggregates for the dashboard charts.
   // Statuses are zero-filled so every chart slice is always present.
@@ -146,99 +120,6 @@ export default async function AdminDashboard() {
         <StatCard label="Follow-ups Pending" value={pendingFollowUps} />
       </div>
 
-      <div className="mt-8 grid items-stretch gap-6 lg:grid-cols-3">
-        {/* Today's schedule */}
-        <div className="flex flex-col lg:col-span-2">
-          <h2 className="text-lg font-semibold text-text">Today&apos;s Schedule</h2>
-          <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow">
-            {todayAppointments.length === 0 ? (
-              <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-text-muted">
-                No appointments scheduled for today.
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Time</th>
-                        <th className="px-4 py-3 font-semibold">Patient</th>
-                        <th className="hidden px-4 py-3 font-semibold sm:table-cell">Dentist</th>
-                        <th className="hidden px-4 py-3 font-semibold sm:table-cell">Service</th>
-                        <th className="px-4 py-3 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {todayAppointments.map((a) => (
-                        <tr key={a.id} className="hover:bg-accent-soft transition-colors">
-                          <td className="px-4 py-3 font-medium text-text">{fmtTime(a.startTime)}</td>
-                          <td className="px-4 py-3 text-text">
-                            {a.patient.firstName} {a.patient.lastName}
-                          </td>
-                          <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.dentist.name}</td>
-                          <td className="hidden px-4 py-3 text-text-secondary sm:table-cell">{a.service.name}</td>
-                          <td className="px-4 py-3">
-                            <StatusBadge status={a.status} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex items-center justify-between border-t border-border bg-background-alt px-4 py-2.5 text-xs text-text-muted">
-                  <span>
-                    Showing {todayAppointments.length} appointment{todayAppointments.length === 1 ? "" : "s"} today
-                  </span>
-                  <Link href="/admin/appointments" className="font-medium text-accent hover:underline">
-                    View all appointments &rarr;
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Analytics */}
-        <div>
-          <h2 className="text-lg font-semibold text-text">Appointments Analytics</h2>
-          <div className="mt-3 rounded-xl border border-border bg-surface p-5 shadow">
-            {statusGroups.map((g) => {
-              const total = statusGroups.reduce((s, x) => s + x._count._all, 0) || 1;
-              const pct = Math.round((g._count._all / total) * 100);
-              return (
-                <div key={g.status} className="mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-text">{g.status.replace("_", " ")}</span>
-                    <span className="text-text-muted">{g._count._all}</span>
-                  </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-background-alt">
-                    <div className={`h-full rounded-full ${barColor(g.status)}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Popular services */}
-          <h2 className="mt-6 text-lg font-semibold text-text">Popular Services</h2>
-          <div className="mt-3 rounded-xl border border-border bg-surface p-5 shadow">
-            {popularServices.length === 0 ? (
-              <p className="text-sm text-text-muted">No data yet.</p>
-            ) : (
-              popularServices.map((s, i) => (
-                <div key={s.serviceId} className="flex items-center justify-between border-b border-border py-2 last:border-0">
-                  <span className="text-sm text-text">
-                    <span className="mr-2 text-xs text-text-muted">{i + 1}.</span>
-                    {serviceMap.get(s.serviceId) || "Service"}
-                  </span>
-                  <span className="text-sm font-semibold text-accent">{s._count._all}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Analytics charts */}
       <DashboardCharts daily={dailyCounts} status={statusCounts} />
 
@@ -246,25 +127,6 @@ export default async function AdminDashboard() {
       <FollowUpsPanel role={user.role} />
     </div>
   );
-}
-
-function fmtTime(hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
-  const p = h >= 12 ? "PM" : "AM";
-  const hr = h % 12 === 0 ? 12 : h % 12;
-  return `${hr}:${String(m).padStart(2, "0")} ${p}`;
-}
-
-function barColor(status: string) {
-  switch (status) {
-    case "COMPLETED": return "bg-success";
-    case "CONFIRMED": return "bg-info";
-    case "PENDING": return "bg-warning";
-    case "CANCELLED": return "bg-error";
-    case "NO_SHOW": return "bg-neutral-c";
-    case "CHECKED_IN": return "bg-accent";
-    default: return "bg-neutral-c";
-  }
 }
 
 function StatCard({ label, value }: { label: string; value: number | string }) {

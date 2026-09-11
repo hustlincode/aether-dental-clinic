@@ -1,11 +1,21 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarX, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
+import { CalendarX, ChevronLeft, ChevronRight, Pencil, RefreshCw, Search } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { StatusBadge } from "./status-badge";
+import { CancelAppointmentDialog } from "./cancel-appointment-dialog";
+import { statusActionLabel } from "@/lib/status-labels";
 import { toast } from "sonner";
 import { DataTable, type DataTableFeatures } from "./data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Appt {
   id: string;
@@ -15,8 +25,11 @@ interface Appt {
   endTime: string;
   status: string;
   patient: { firstName: string; lastName: string; phone: string | null; email: string | null };
-  dentist: { name: string };
-  service: { name: string };
+  dentist: { name: string; id: string };
+  service: { name: string; id: string };
+  dentistId: string;
+  serviceId: string;
+  notes?: string | null;
 }
 
 interface Pagination {
@@ -59,6 +72,8 @@ export function AppointmentsList({ role }: { role: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editing, setEditing] = useState<Appt | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Appt | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { page, status: statusFilter, search: searchFilter } = params;
@@ -129,16 +144,16 @@ export function AppointmentsList({ role }: { role: string }) {
     beginLoad();
   }
 
-  async function changeStatus(id: string, next: string) {
+  async function changeStatus(id: string, next: string, notes?: string) {
     try {
       const res = await fetch(`/api/appointments/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ status: next, ...(notes !== undefined ? { notes } : {}) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
-      setAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status: next } : a)));
+      setAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status: next, notes: notes ?? a.notes } : a)));
       toast.success(`Appointment marked as ${next.replace("_", " ").toLowerCase()}.`);
       if (body.email && !body.email.ok) {
         toast.error("Status updated, but the notification email could not be sent. Check SMTP settings.");
@@ -146,6 +161,21 @@ export function AppointmentsList({ role }: { role: string }) {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Unable to update the appointment.");
     }
+  }
+
+  // Append the cancellation remark (with a date stamp) to any existing notes so
+  // the reason is never lost and existing clinical notes are preserved.
+  function handleCancelConfirm(remarks: string) {
+    if (!cancelTarget) return;
+    const existing = cancelTarget.notes?.trim() || "";
+    const stamp = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    const merged = remarks
+      ? existing
+        ? `${existing}\n[Cancelled ${stamp}] ${remarks}`
+        : `[Cancelled ${stamp}] ${remarks}`
+      : existing;
+    changeStatus(cancelTarget.id, "CANCELLED", merged);
+    setCancelTarget(null);
   }
 
   const columns = columnHelper.columns([
@@ -218,13 +248,29 @@ export function AppointmentsList({ role }: { role: string }) {
       id: "actions",
       header: () => <span className="block text-right">Actions</span>,
       meta: { cellClassName: "text-right" },
-      cell: (info) => (
-        <StatusActions
-          status={info.row.original.status}
-          role={role}
-          onChange={(s) => changeStatus(info.row.original.id, s)}
-        />
-      ),
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              onClick={() => setEditing(row)}
+              title="Edit appointment"
+              aria-label={`Edit appointment ${row.referenceNumber}`}
+              className="rounded-md border border-border bg-surface p-1.5 text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <StatusActions
+              status={row.status}
+              role={role}
+              onChange={(s) => {
+                if (s === "CANCELLED") setCancelTarget(row);
+                else changeStatus(row.id, s);
+              }}
+            />
+          </div>
+        );
+      },
     }),
   ]);
 
@@ -232,6 +278,7 @@ export function AppointmentsList({ role }: { role: string }) {
   const end = pagination ? Math.min(pagination.page * pagination.pageSize, pagination.total) : 0;
 
   return (
+    <>
     <div>
       <h1 className="text-2xl font-bold text-text">Appointments</h1>
 
@@ -335,6 +382,23 @@ export function AppointmentsList({ role }: { role: string }) {
         )}
       </div>
     </div>
+    {editing && (
+      <EditAppointmentDialog
+        key={editing.id}
+        appointment={editing}
+        role={role}
+        onClose={() => setEditing(null)}
+        onSaved={() => { setEditing(null); refresh(); }}
+      />
+    )}
+    <CancelAppointmentDialog
+      open={cancelTarget !== null}
+      patientName={cancelTarget ? `${cancelTarget.patient.firstName} ${cancelTarget.patient.lastName}` : ""}
+      referenceNumber={cancelTarget?.referenceNumber ?? ""}
+      onConfirm={handleCancelConfirm}
+      onCancel={() => setCancelTarget(null)}
+    />
+    </>
   );
 
   function fmtTime(hhmm: string) {
@@ -364,16 +428,332 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
   if (actions.length === 0) return <span className="text-xs text-text-muted">—</span>;
 
   return (
-    <div className="flex justify-end gap-1">
-      {actions.map((a) => (
-        <button
-          key={a}
-          onClick={() => onChange(a)}
-          className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-        >
-          {a.replace("_", " ")}
-        </button>
-      ))}
+    <div className="flex justify-end gap-1.5">
+      {actions.map((a, i) => {
+        const isCancel = a === "CANCELLED";
+        const isPrimary = i === 0 && !isCancel;
+        return (
+          <button
+            key={a}
+            onClick={() => onChange(a)}
+            className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+              isCancel
+                ? "border-destructive/30 bg-destructive text-white hover:bg-destructive/90"
+                : isPrimary
+                  ? "border-accent bg-accent text-[#0E0F10] hover:bg-accent-hover"
+                  : "border-border bg-accent-soft text-accent hover:bg-accent hover:text-[#0E0F10]"
+            }`}
+          >
+            {statusActionLabel(a)}
+          </button>
+        );
+      })}
     </div>
   );
+}
+
+interface SelectOption {
+  id: string;
+  name: string;
+  status: string;
+}
+
+function localDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function EditAppointmentDialog({
+  appointment,
+  role,
+  onClose,
+  onSaved,
+}: {
+  appointment: Appt;
+  role: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const canEditPatient = role !== "DENTIST";
+
+  const [firstName, setFirstName] = useState(appointment.patient.firstName);
+  const [lastName, setLastName] = useState(appointment.patient.lastName);
+  const [email, setEmail] = useState(appointment.patient.email || "");
+  const [phone, setPhone] = useState(appointment.patient.phone || "");
+  const [notes, setNotes] = useState(appointment.notes || "");
+  const [serviceId, setServiceId] = useState(appointment.serviceId);
+  const [dentistId, setDentistId] = useState(appointment.dentistId);
+  const [date, setDate] = useState(appointment.appointmentDate.slice(0, 10));
+  const [time, setTime] = useState(appointment.startTime);
+
+  const [services, setServices] = useState<SelectOption[]>([]);
+  const [dentists, setDentists] = useState<SelectOption[]>([]);
+  const [slots, setSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Initial selection, used to decide whether the user actively changed the
+  // date/service/dentist (in which case we auto-pick the first free slot).
+  const initialKeyRef = useRef(
+    `${appointment.appointmentDate.slice(0, 10)}|${appointment.serviceId}|${appointment.dentistId}`
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/services?all=true").then(async (r) => ({ ok: r.ok, body: await r.json() })),
+      fetch("/api/dentists?all=true").then(async (r) => ({ ok: r.ok, body: await r.json() })),
+    ])
+      .then(([svc, dent]) => {
+        if (cancelled) return;
+        if (svc.ok && Array.isArray(svc.body?.data)) setServices(svc.body.data);
+        if (dent.ok && Array.isArray(dent.body?.data)) setDentists(dent.body.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dentistId || !serviceId || !date) return;
+    let cancelled = false;
+    // Same deferred-setState pattern as the booking page: the loading flag is
+    // flipped inside a timer so we never set state synchronously in the effect.
+    const timer = setTimeout(() => setLoadingSlots(true), 0);
+    const qs = new URLSearchParams({ dentistId, serviceId, date, excludeAppointmentId: appointment.id });
+    fetch(`/api/availability/slots?${qs.toString()}`)
+      .then(async (res) => ({ ok: res.ok, body: await res.json() }))
+      .then(({ ok, body }) => {
+        if (cancelled) return;
+        const list: string[] = ok && Array.isArray(body?.data) ? body.data.map((s: { start: string }) => s.start) : [];
+        setSlots(list);
+        if (`${date}|${serviceId}|${dentistId}` !== initialKeyRef.current) {
+          // User picked a new date/service/dentist: jump to the first free slot.
+          setTime(list[0] || "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          clearTimeout(timer);
+          setLoadingSlots(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [dentistId, serviceId, date, appointment.id]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    try {
+      if (!time) {
+        setError("Please select a time.");
+        return;
+      }
+      if (!serviceId || !dentistId || !date) {
+        setError("Please fill in the dentist, service, and date.");
+        return;
+      }
+      const payload: Record<string, unknown> = {
+        appointmentDate: date,
+        startTime: time,
+        serviceId,
+        dentistId,
+        notes: notes.trim() || null,
+        ...(canEditPatient
+          ? {
+              patient: {
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim(),
+                phone: phone.trim(),
+              },
+            }
+          : {}),
+      };
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || "Unable to update the appointment.");
+      toast.success("Appointment updated.");
+      if (body.email && !body.email.ok) {
+        toast.error("Appointment updated, but the notification email could not be sent. Check SMTP settings.");
+      }
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update the appointment.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const minDate = localDateKey(new Date());
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit appointment</DialogTitle>
+          <DialogDescription>
+            {appointment.referenceNumber} · {appointment.patient.firstName} {appointment.patient.lastName}
+          </DialogDescription>
+        </DialogHeader>
+
+        {error && (
+          <div className="rounded-lg border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>
+        )}
+
+        <div className="grid gap-4">
+          <fieldset className="grid gap-3 sm:grid-cols-2">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-text-muted">Schedule</legend>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-date" className="text-sm font-medium text-text">Date</label>
+              <input
+                id="edit-date"
+                type="date"
+                min={minDate}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-dentist" className="text-sm font-medium text-text">Dentist</label>
+              <select
+                id="edit-dentist"
+                value={dentistId}
+                disabled={!canEditPatient}
+                onChange={(e) => setDentistId(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-60"
+              >
+                {dentists.length === 0 && <option value={dentistId}>{appointment.dentist.name}</option>}
+                {dentists.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}{d.status !== "ACTIVE" ? " (inactive)" : ""}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-service" className="text-sm font-medium text-text">Service</label>
+              <select
+                id="edit-service"
+                value={serviceId}
+                onChange={(e) => setServiceId(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+              >
+                {services.length === 0 && <option value={serviceId}>{appointment.service.name}</option>}
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}{s.status !== "ACTIVE" ? " (inactive)" : ""}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-time" className="text-sm font-medium text-text">Time</label>
+              <select
+                id="edit-time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+              >
+                <option value="" disabled>Select a time</option>
+                {slots.map((s) => (
+                  <option key={s} value={s}>{fmtTime(s)}</option>
+                ))}
+              </select>
+              {loadingSlots && <span className="text-xs text-text-muted">Checking availability...</span>}
+              {!loadingSlots && slots.length === 0 && (
+                <span className="text-xs text-text-muted">No available slots for this selection.</span>
+              )}
+            </div>
+          </fieldset>
+
+          {canEditPatient && (
+            <fieldset className="grid gap-3 sm:grid-cols-2">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-text-muted">Patient</legend>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-first" className="text-sm font-medium text-text">First name</label>
+                <input
+                  id="edit-first"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-last" className="text-sm font-medium text-text">Last name</label>
+                <input
+                  id="edit-last"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-email" className="text-sm font-medium text-text">Email</label>
+                <input
+                  id="edit-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-phone" className="text-sm font-medium text-text">Phone</label>
+                <input
+                  id="edit-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                />
+              </div>
+            </fieldset>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="edit-notes" className="text-sm font-medium text-text">Notes</label>
+            <textarea
+              id="edit-notes"
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+              placeholder="Optional internal notes about this appointment..."
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-[#0E0F10] transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function fmtTime(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const p = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 === 0 ? 12 : h % 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${p}`;
 }

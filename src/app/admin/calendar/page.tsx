@@ -2,15 +2,6 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { CalendarView } from "@/components/admin/calendar-view";
 
-/* FullCalendar CSS — verified from installed packages:
- *  @fullcalendar/react v7.1.0 ships skeleton.css + theme CSS in themes/*
- *  @fullcalendar/core|daygrid|timegrid v6.1.21 ship NO CSS files.
- */
-import "@fullcalendar/react/skeleton.css";
-import "@fullcalendar/react/themes/classic/theme.css";
-import "@fullcalendar/react/themes/classic/palette.css";
-import "./calendar.css";
-
 export const dynamic = "force-dynamic";
 
 export default async function AdminCalendarPage() {

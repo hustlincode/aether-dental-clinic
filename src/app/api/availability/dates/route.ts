@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getAvailableSlots } from "@/lib/scheduling";
+import { getAvailableDates } from "@/lib/scheduling";
 
 // GET /api/availability/dates?dentistId=&serviceId=&daysAhead=30
 // Returns a list of ISO dates (YYYY-MM-DD) that are selectable (have ≥1 slot).
@@ -20,18 +20,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, message: "Service not found." }, { status: 404 });
     }
 
-    const dates: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < daysAhead; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
-      const slots = await getAvailableSlots(dentistId, service, d);
-      if (slots && slots.length > 0) {
-        dates.push(d.toISOString().slice(0, 10));
-      }
-    }
+    const dates = await getAvailableDates(dentistId, service, today, daysAhead);
 
     return NextResponse.json({ success: true, data: dates });
   } catch (err) {

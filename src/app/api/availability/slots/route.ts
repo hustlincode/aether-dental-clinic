@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAvailableSlots } from "@/lib/scheduling";
 
-// GET /api/availability/slots?dentistId=&serviceId=&date=YYYY-MM-DD
+// GET /api/availability/slots?dentistId=&serviceId=&date=YYYY-MM-DD[&excludeAppointmentId=]
 // Returns the available time slots for a dentist + service on a date.
+// excludeAppointmentId omits one appointment from the busy check (used when
+// rescheduling an existing appointment from the admin UI).
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const dentistId = searchParams.get("dentistId");
     const serviceId = searchParams.get("serviceId");
     const dateParam = searchParams.get("date");
+    const excludeAppointmentId = searchParams.get("excludeAppointmentId") || undefined;
 
     if (!dentistId || !serviceId || !dateParam) {
       return NextResponse.json({ success: false, message: "dentistId, serviceId, and date are required." }, { status: 400 });
@@ -25,7 +28,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, message: "Service not found." }, { status: 404 });
     }
 
-    const slots = await getAvailableSlots(dentistId, service, date);
+    const slots = await getAvailableSlots(dentistId, service, date, excludeAppointmentId);
 
     return NextResponse.json({
       success: true,

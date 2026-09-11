@@ -122,14 +122,16 @@ export async function notifyAppointmentRescheduled(
   const dentistUserId = await getDentistUserId(appt.dentist.email);
   if (dentistUserId) userIds.push(dentistUserId);
 
-  const detail = previous?.time
-    ? `${fmtDate(previous.date ?? appt.appointmentDate)} at ${fmtTime(previous.time)}`
-    : `${fmtDate(appt.appointmentDate)} at ${fmtTime(appt.startTime)}`;
+  const newDetail = `${fmtDate(appt.appointmentDate)} at ${fmtTime(appt.startTime)}`;
+  const message =
+    previous?.time && previous.date
+      ? `${patientName(appt.patient)}'s appointment was moved from ${fmtDate(previous.date)} at ${fmtTime(previous.time)} to ${newDetail}.`
+      : `${patientName(appt.patient)}'s appointment was moved to ${newDetail}.`;
 
   return notifyUsers(userIds, {
     type: NotificationType.APPOINTMENT_RESCHEDULED,
     title: "Appointment rescheduled",
-    message: `${patientName(appt.patient)}'s appointment was moved to ${detail}.`,
+    message,
     entityType: "appointment",
     entityId: appt.id,
   });

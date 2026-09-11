@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
@@ -42,6 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="h-full">
+        {/* The theme script is injected by Next.js at the HTML level
+            (strategy="beforeInteractive"), so it runs before first paint
+            without being handed to React's client renderer — avoiding the
+            "Encountered a script tag while rendering React component" warning. */}
+        <Script id="theme-script" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
           {children}
           <Toaster position="bottom-right" richColors />

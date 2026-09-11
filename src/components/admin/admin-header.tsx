@@ -69,7 +69,7 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
           open={!collapsed}
           onClick={onToggleCollapse}
           label="Collapse sidebar"
-          className="hidden md:inline-flex"
+          className="max-md:hidden"
         />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-text">{title}</span>
@@ -95,20 +95,25 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
             </div>
           </button>
 
-          {/* Dropdown */}
-          {dropdownOpen && (
-            <div className="animate-scale-in absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-surface py-1 shadow-lg">
-              {/* User info on mobile */}
-              <div className="border-b border-border px-4 py-3 md:hidden">
-                <div className="text-sm font-semibold text-text">{user.name}</div>
-                <div className="text-xs text-text-muted">{roleLabel}</div>
-              </div>
-
-              <div className="border-t border-border px-2 py-1">
-                <SignOutButton className="w-full justify-start" />
-              </div>
+          {/* Dropdown — always mounted and merely hidden, so the sign-out
+              confirm dialog survives the outside-click (mousedown) close that
+              would otherwise unmount it before the confirm click fires. */}
+          <div
+            className={`absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-surface shadow-lg ${
+              dropdownOpen ? "block" : "hidden"
+            }`}
+          >
+            {/* User info on mobile */}
+            <div className="px-4 py-3 md:hidden">
+              <div className="truncate text-sm font-semibold text-text">{user.name}</div>
+              <div className="text-xs text-text-muted">{roleLabel}</div>
             </div>
-          )}
+
+            {/* Sign out */}
+            <div className="border-t border-border px-2 py-2 md:border-t-0 md:pt-1">
+              <SignOutButton variant="header" className="w-full justify-start" />
+            </div>
+          </div>
         </div>
       </div>
     </header>

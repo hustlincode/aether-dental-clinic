@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
       {/* Gold gradient glow behind card */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="gradient-gold absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 opacity-5 blur-3xl" />
+        <div className="gradient-gold absolute left-1/2 top-1/2 h-150 w-150 -translate-x-1/2 -translate-y-1/2 opacity-5 blur-3xl" />
       </div>
 
       {/* Theme toggle */}
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
               />
             </div>
             <button
@@ -116,7 +116,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-text-muted">
-          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-200">â† Back to home</Link>
+          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-200">← Back to home</Link>
         </p>
       </div>
     </div>

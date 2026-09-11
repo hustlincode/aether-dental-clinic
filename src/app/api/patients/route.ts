@@ -29,6 +29,7 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
+    const all = searchParams.get("all") === "true" || searchParams.get("all") === "1";
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 10, 50);
     const search = searchParams.get("search")?.trim() || searchParams.get("q")?.trim() || "";
@@ -61,8 +62,10 @@ export async function GET(req: Request) {
       prisma.patient.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        // all=true returns every row so the client can run TanStack search,
+        // filters, sorting, and pagination locally.
+        skip: all ? undefined : (page - 1) * pageSize,
+        take: all ? undefined : pageSize,
         select: {
           id: true,
           firstName: true,
@@ -86,7 +89,7 @@ export async function GET(req: Request) {
       prisma.patient.count({ where }),
     ]);
 
-    return ok({ patients, total, page, pageSize });
+    return ok({ patients, total, page, pageSize, all });
   } catch (err) {
     console.error("GET /api/patients failed:", err);
     return fail("Unable to load patients.", 500);

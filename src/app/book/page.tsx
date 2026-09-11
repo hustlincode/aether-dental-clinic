@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -50,7 +50,7 @@ type Step = "service" | "dentist" | "date" | "time" | "info" | "review" | "succe
 
 const peso = (v: string | number | { toString(): string }) => {
   const n = typeof v === "object" && v !== null ? Number(v.toString()) : Number(v);
-  return "â‚±" + n.toLocaleString("en-PH", { minimumFractionDigits: 0 });
+  return "₱" + n.toLocaleString("en-PH", { minimumFractionDigits: 0 });
 };
 
 const formatTime = (hhmm: string) => {
@@ -96,6 +96,14 @@ export default function BookPage() {
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Data privacy consent (Data Privacy Act of 2012)
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentSignature, setConsentSignature] = useState("");
+  const [consentAt, setConsentAt] = useState<Date | null>(null);
+  // Incremented on every open so the modal remounts with fresh local state
+  const [consentModalKey, setConsentModalKey] = useState(0);
+
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookingResult | null>(null);
 
@@ -131,13 +139,16 @@ export default function BookPage() {
   useEffect(() => {
     if (!dentist || !service) return;
     let cancelled = false;
+    // Defer the state resets (established pattern for react-hooks/set-state-in-effect)
+    const timer = setTimeout(() => {
+      setLoadingDates(true);
+      setAvailableDates([]);
+      setDate(null);
+      setSlots([]);
+      setTime(null);
+    }, 0);
     fetch(`/api/availability/dates?dentistId=${dentist.id}&serviceId=${service.id}&daysAhead=45`)
       .then(async (r) => {
-        setLoadingDates(true);
-        setAvailableDates([]);
-        setDate(null);
-        setSlots([]);
-        setTime(null);
         const res = await r.json();
         if (!cancelled) setAvailableDates(res.data || []);
       })
@@ -149,6 +160,7 @@ export default function BookPage() {
       });
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [dentist, service]);
 
@@ -156,11 +168,13 @@ export default function BookPage() {
   useEffect(() => {
     if (!dentist || !service || !date) return;
     let cancelled = false;
+    const timer = setTimeout(() => {
+      setLoadingSlots(true);
+      setSlots([]);
+      setTime(null);
+    }, 0);
     fetch(`/api/availability/slots?dentistId=${dentist.id}&serviceId=${service.id}&date=${date}`)
       .then(async (r) => {
-        setLoadingSlots(true);
-        setSlots([]);
-        setTime(null);
         const res = await r.json();
         if (!cancelled) setSlots(res.data || []);
       })
@@ -172,6 +186,7 @@ export default function BookPage() {
       });
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [dentist, service, date]);
 
@@ -222,7 +237,17 @@ export default function BookPage() {
   };
 
   const goReview = () => {
+    if (!consentAccepted) {
+      toast.error("Please review and accept the Data Privacy Policy to continue.");
+      openConsentModal();
+      return;
+    }
     if (validateInfo()) setStep("review");
+  };
+
+  const openConsentModal = () => {
+    setConsentModalKey((k) => k + 1);
+    setConsentOpen(true);
   };
 
   const submit = async () => {
@@ -241,6 +266,8 @@ export default function BookPage() {
           email,
           phone,
           notes: notes || undefined,
+          dataPrivacyConsent: true,
+          dataPrivacySignature: `${firstName} ${lastName}`.trim(),
         }),
       });
       const body = await res.json();
@@ -282,6 +309,9 @@ export default function BookPage() {
             Aether Dental
           </Link>
           <div className="flex items-center gap-3">
+            <Link href="/privacy-policy" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
+              Privacy Policy
+            </Link>
             <Link href="/login" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
               Staff login
             </Link>
@@ -324,6 +354,10 @@ export default function BookPage() {
               onChange={setField}
               onContinue={goReview}
               onBack={() => setStep("time")}
+              consentAccepted={consentAccepted}
+              consentSignature={consentSignature}
+              consentAt={consentAt}
+              onOpenConsent={openConsentModal}
             />
           ) : step === "review" ? (
             <Review
@@ -340,8 +374,24 @@ export default function BookPage() {
           ) : null}
         </div>
       </main>
+
+      <PrivacyConsentModal
+        key={consentModalKey}
+        open={consentOpen}
+        fullName={`${firstName} ${lastName}`.trim()}
+        onOpenChange={setConsentOpen}
+        onAccept={onConsentAccept}
+      />
     </div>
   );
+
+  function onConsentAccept(signature: string) {
+    setConsentSignature(signature);
+    setConsentAt(new Date());
+    setConsentAccepted(true);
+    setConsentOpen(false);
+    toast.success("Data privacy consent recorded.");
+  }
 
   function setField(field: string, value: string) {
     switch (field) {
@@ -350,6 +400,13 @@ export default function BookPage() {
       case "email": setEmail(value); break;
       case "phone": setPhone(value); break;
       case "notes": setNotes(value); break;
+    }
+    // The electronic signature must match the patient's full name.
+    // If the name changes after consent was given, require consent again.
+    if ((field === "firstName" || field === "lastName") && consentAccepted) {
+      setConsentAccepted(false);
+      setConsentSignature("");
+      setConsentAt(null);
     }
   }
 }
@@ -386,7 +443,7 @@ function StepIndicator({ step }: { step: Step }) {
                     : "bg-surface text-text-muted border border-border"
               }`}
             >
-              <span>{done ? "âœ“" : i + 1}</span>
+              <span>{done ? "✓" : i + 1}</span>
               {l.label}
             </div>
             {i < labels.length - 1 && <div className="h-px w-4 bg-border" />}
@@ -416,7 +473,7 @@ function LoadingBlock() {
 
 function SelectService({ services, onSelect }: { services: Service[]; onSelect: (s: Service) => void }) {
   if (services.length === 0) {
-    return <EmptyState title="No services available" message="Please check back later." icon="ðŸ¦·" />;
+    return <EmptyState title="No services available" message="Please check back later." icon="🦷" />;
   }
   return (
     <div className="space-y-3 animate-slide-up">
@@ -435,7 +492,7 @@ function SelectService({ services, onSelect }: { services: Service[]; onSelect: 
           </div>
           <div className="ml-4 text-right">
             <div className="font-bold text-accent">{peso(s.price)}</div>
-            <div className="mt-1 text-xs font-medium text-text-muted">Select â†’</div>
+            <div className="mt-1 text-xs font-medium text-text-muted">Select →</div>
           </div>
         </button>
       ))}
@@ -455,7 +512,7 @@ function SelectDentist({ dentists, service, onSelect, onBack }: { dentists: Dent
         Choose a dentist{service ? ` for ${service.name}` : ""}
       </p>
       {dentists.length === 0 ? (
-        <EmptyState title="No dentists available" message="Please check back later." icon="ðŸ©º" />
+        <EmptyState title="No dentists available" message="Please check back later." icon="🩺" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {dentists.map((d) => (
@@ -500,9 +557,9 @@ function SelectDate({
       <BackLink onClick={onBack} label="Change dentist" />
       <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow">
         <div className="flex items-center justify-between">
-          <button onClick={() => shiftMonth(-1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">â†</button>
+          <button onClick={() => shiftMonth(-1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">←</button>
           <div className="font-semibold text-text">{monthLabel}</div>
-          <button onClick={() => shiftMonth(1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">â†’</button>
+          <button onClick={() => shiftMonth(1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">→</button>
         </div>
         <div className="mt-2 grid grid-cols-7 gap-1 text-center text-xs font-medium text-text-muted">
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <div key={d} className="py-1">{d}</div>)}
@@ -549,7 +606,7 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
       {loading ? (
         <div className="py-10 text-center text-sm text-text-muted">Loading available times...</div>
       ) : slots.length === 0 ? (
-        <EmptyState title="No slots available" message="This day has no remaining openings. Please pick another date." icon="â°" />
+        <EmptyState title="No slots available" message="This day has no remaining openings. Please pick another date." icon="⏰" />
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {slots.map((s) => (
@@ -577,13 +634,19 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
 
 function PatientInfo({
   values, errors, onChange, onContinue, onBack,
+  consentAccepted, consentSignature, consentAt, onOpenConsent,
 }: {
   values: { firstName: string; lastName: string; email: string; phone: string; notes: string };
   errors: Record<string, string>;
   onChange: (f: string, v: string) => void;
   onContinue: () => void;
   onBack: () => void;
+  consentAccepted: boolean;
+  consentSignature: string;
+  consentAt: Date | null;
+  onOpenConsent: () => void;
 }) {
+  const fullName = `${values.firstName} ${values.lastName}`.trim();
   return (
     <div className="animate-slide-up">
       <BackLink onClick={onBack} label="Change time" />
@@ -605,13 +668,69 @@ function PatientInfo({
             placeholder="Any concerns or preferences..."
           />
         </div>
-        <button
-          onClick={onContinue}
-          className="gradient-gold w-full rounded-lg py-3 font-semibold text-[#0E0F10] shadow transition-all duration-200 hover:opacity-90"
-        >
-          Continue to review
-        </button>
       </div>
+
+      {consentAccepted ? (
+        <div className="mt-4 rounded-xl border border-border-accent bg-success-bg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-sm text-white">✓</div>
+            <div className="text-sm">
+              <div className="font-semibold text-text">Data privacy consent recorded</div>
+              <p className="mt-1 text-text-secondary">
+                You consented to the processing of your personal information in accordance with Republic Act No. 10173
+                (Data Privacy Act of 2012).
+              </p>
+              <p className="mt-2 text-xs text-text-muted">
+                Signed electronically as <span className="font-semibold text-text">{consentSignature}</span>
+                {consentAt ? ` • ${consentAt.toLocaleString("en-PH")}` : ""}
+              </p>
+              <button
+                onClick={onOpenConsent}
+                className="mt-2 text-xs font-medium text-accent hover:text-accent-hover transition-colors duration-200"
+              >
+                View policy &amp; consent details
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">i</div>
+            <div className="text-sm">
+              <div className="font-semibold text-text">Data Privacy Consent</div>
+              <p className="mt-1 text-text-secondary">
+                Under the Philippine Data Privacy Act (RA 10173), we collect your personal information (including
+                health-related details, which are considered sensitive) only with your explicit consent.
+              </p>
+              {fullName.length > 0 && (
+                <p className="mt-1 text-xs text-text-muted">
+                  Your electronic signature will be recorded as <span className="font-medium text-text">{fullName}</span>.
+                </p>
+              )}
+              <button
+                onClick={onOpenConsent}
+                className="mt-2 rounded-lg border border-accent bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition-colors duration-200 hover:bg-accent hover:text-[#0E0F10]"
+              >
+                Review privacy policy &amp; give consent
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={onContinue}
+        disabled={!consentAccepted}
+        className="gradient-gold mt-4 w-full rounded-lg py-3 font-semibold text-[#0E0F10] shadow transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Continue to review
+      </button>
+      {!consentAccepted && (
+        <p className="mt-2 text-center text-xs text-text-muted">
+          Please review and accept the privacy policy to continue.
+        </p>
+      )}
     </div>
   );
 }
@@ -702,7 +821,7 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
   return (
     <div className="animate-scale-in rounded-2xl border border-border-accent bg-surface p-6 text-center shadow-lg">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-3xl text-success">
-        âœ“
+        ✓
       </div>
       <h2 className="mt-4 text-xl font-bold text-text">Appointment Booked!</h2>
       <p className="mt-1 text-sm text-text-muted">
@@ -734,13 +853,185 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
 }
 
 // ---------------------------------------------------------------------------
+// Data Privacy Consent modal (RA 10173)
+// ---------------------------------------------------------------------------
+
+function PrivacyConsentModal({
+  open, fullName, onOpenChange, onAccept,
+}: {
+  open: boolean;
+  fullName: string;
+  onOpenChange: (open: boolean) => void;
+  onAccept: (signature: string) => void;
+}) {
+  const [checked, setChecked] = useState(false);
+  const [signature, setSignature] = useState("");
+  const [attempted, setAttempted] = useState(false);
+
+  if (!open) return null;
+
+  const signatureMatches =
+    fullName.trim().length > 0 &&
+    fullName.replace(/\s+/g, " ").trim().toLowerCase() === signature.replace(/\s+/g, " ").trim().toLowerCase();
+
+  const handleAccept = () => {
+    if (!checked || !signatureMatches) {
+      setAttempted(true);
+      return;
+    }
+    onAccept(signature.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-consent-title"
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border-accent bg-surface shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 id="privacy-consent-title" className="text-base font-bold text-text">
+            Data Privacy Consent
+          </h2>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="rounded-lg px-2 py-1 text-text-muted transition-colors duration-200 hover:bg-background-alt hover:text-text"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-text-secondary">
+          <p>
+            Before completing your booking, please review how <span className="font-semibold text-text">Aether Dental Clinic</span>{" "}
+            handles your personal information under the Philippine <strong>Data Privacy Act of 2012 (RA 10173)</strong>.
+          </p>
+
+          <div>
+            <h3 className="font-semibold text-text">What we collect</h3>
+            <p className="mt-1">
+              Your name, email, phone number, booking details, and any health-related notes you provide. Health-related
+              information is classified as <em>sensitive personal information</em> and receives enhanced protection.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-text">Why we collect it</h3>
+            <p className="mt-1">
+              To arrange, confirm, and deliver your dental care; to contact you about your appointment; and to maintain
+              patient records — all based on your explicit consent.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-text">Who we share it with</h3>
+            <p className="mt-1">
+              Only authorized clinic personnel on a need-to-know basis, contracted service providers bound by
+              confidentiality, and government bodies when required by law. We never sell your data.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-text">How long we keep it</h3>
+            <p className="mt-1">
+              Only as long as needed — no longer than five (5) years after your last transaction, unless the law
+              requires longer.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-text">Your rights</h3>
+            <p className="mt-1">
+              You may access, correct, or request deletion of your data; object to processing; withdraw consent; or
+              file a complaint with the National Privacy Commission. Contact us at{" "}
+              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent hover:text-accent-hover">
+                privacy@aetherdental.ph
+              </a>
+              .
+            </p>
+          </div>
+
+          <Link
+            href="/privacy-policy"
+            onClick={() => onOpenChange(false)}
+            className="inline-block rounded-lg border border-border bg-background-alt px-3 py-1.5 text-xs font-semibold text-accent transition-colors duration-200 hover:text-accent-hover"
+          >
+            Read the full privacy policy →
+          </Link>
+
+          <div className="space-y-3 border-t border-border pt-4">
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#E4B90F]"
+              />
+              <span>
+                I have read and understood the privacy policy and give my consent to the collection and processing of
+                my personal information, including sensitive health-related information, for the purposes described.
+              </span>
+            </label>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">
+                Electronic signature — type your full name
+              </label>
+              <input
+                type="text"
+                value={signature}
+                onChange={(e) => setSignature(e.target.value)}
+                placeholder={fullName || "e.g. John Doe"}
+                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="mt-1 text-xs text-text-muted">
+                Your typed full name acts as your electronic signature and will be recorded with the date and time of consent.
+              </p>
+            </div>
+
+            {attempted && !checked && (
+              <p className="text-xs text-error">Please read and check the consent box to continue.</p>
+            )}
+            {attempted && checked && !signatureMatches && (
+              <p className="text-xs text-error">
+                {fullName
+                  ? `Your signature must match your full name (${fullName}).`
+                  : "Please enter your full name in the form above first."}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t border-border px-5 py-4">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="flex-1 rounded-lg border border-border bg-background-alt py-2.5 text-sm font-medium text-text-secondary transition-colors duration-200 hover:text-text"
+          >
+            Not now
+          </button>
+          <button
+            onClick={handleAccept}
+            className="flex-1 rounded-lg bg-accent py-2.5 text-sm font-semibold text-[#0E0F10] transition-colors duration-200 hover:bg-accent-hover"
+          >
+            I agree
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Shared
 // ---------------------------------------------------------------------------
 
 function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button onClick={onClick} className="text-sm font-medium text-accent hover:text-accent-hover transition-colors duration-200">
-      â† {label}
+      ← {label}
     </button>
   );
 }

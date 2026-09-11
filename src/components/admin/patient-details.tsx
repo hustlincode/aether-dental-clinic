@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AlertCircle, CalendarX, RefreshCw, X } from "lucide-react";
+import { createColumnHelper } from "@tanstack/react-table";
+import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./data-table";
 import { StatusBadge } from "./status-badge";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -61,6 +63,40 @@ function initials(first: string, last: string): string {
   return `${(first[0] || "").toUpperCase()}${(last[0] || "").toUpperCase()}`;
 }
 
+// ─── Appointment History Columns ─────────────────────────────────────────────
+
+const columnHelper = createColumnHelper<FilterableDataTableFeatures, AppointmentRecord>();
+
+const columns = columnHelper.columns([
+  columnHelper.accessor((a) => a.appointmentDate, {
+    id: "date",
+    header: "Date",
+    cell: (info) => <span className="whitespace-nowrap text-text">{fmtDate(info.getValue())}</span>,
+  }),
+  columnHelper.accessor((a) => a.startTime, {
+    id: "time",
+    header: "Time",
+    cell: (info) => <span className="whitespace-nowrap text-text-secondary">{fmtTime(info.getValue())}</span>,
+  }),
+  columnHelper.accessor((a) => a.service?.name ?? "", {
+    id: "service",
+    header: "Service",
+    meta: { cellClassName: "hidden sm:table-cell" },
+    cell: (info) => <span className="text-text-secondary">{info.row.original.service.name}</span>,
+  }),
+  columnHelper.accessor((a) => a.dentist?.name ?? "", {
+    id: "dentist",
+    header: "Dentist",
+    meta: { cellClassName: "hidden sm:table-cell" },
+    cell: (info) => <span className="text-text-secondary">{info.row.original.dentist.name}</span>,
+  }),
+  columnHelper.accessor((a) => a.status, {
+    id: "status",
+    header: "Status",
+    cell: (info) => <StatusBadge status={info.getValue()} />,
+  }),
+]);
+
 // ─── Patient Details Drawer ──────────────────────────────────────────────────
 
 export function PatientDetails({
@@ -76,6 +112,13 @@ export function PatientDetails({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const table = useDataTable({
+    columns,
+    data: data?.history ?? [],
+    getRowId: (row, index) => `${row.appointmentDate}-${row.startTime}-${index}`,
+    options: { initialState: { pagination: { pageIndex: 0, pageSize: 100000 } } },
+  });
 
   // Fetch patient details whenever the drawer opens. Loading starts as true via
   // remount (parent keys this component by patient id), so no synchronous
@@ -247,28 +290,7 @@ export function PatientDetails({
                   </div>
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-xl border border-border">
-                    <table className="w-full text-left text-sm">
-                      <thead className="border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
-                        <tr>
-                          <th className="px-3 py-2.5 font-semibold">Date</th>
-                          <th className="px-3 py-2.5 font-semibold">Time</th>
-                          <th className="hidden px-3 py-2.5 font-semibold sm:table-cell">Service</th>
-                          <th className="hidden px-3 py-2.5 font-semibold sm:table-cell">Dentist</th>
-                          <th className="px-3 py-2.5 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {data.history.map((a, i) => (
-                          <tr key={`${a.appointmentDate}-${a.startTime}-${i}`} className="transition-colors hover:bg-accent-soft">
-                            <td className="whitespace-nowrap px-3 py-2.5 text-text">{fmtDate(a.appointmentDate)}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-text-secondary">{fmtTime(a.startTime)}</td>
-                            <td className="hidden px-3 py-2.5 text-text-secondary sm:table-cell">{a.service.name}</td>
-                            <td className="hidden px-3 py-2.5 text-text-secondary sm:table-cell">{a.dentist.name}</td>
-                            <td className="px-3 py-2.5"><StatusBadge status={a.status} /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <DataTable table={table} />
                   </div>
                 )}
                 {data.history.length > 0 && (

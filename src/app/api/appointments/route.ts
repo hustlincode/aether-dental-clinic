@@ -19,6 +19,10 @@ const bookingSchema = z.object({
   email: z.string().email("Please provide a valid email address."),
   phone: z.string().min(7, "Please provide a valid phone number."),
   notes: z.string().optional(),
+  // Data Privacy Act (RA 10173): explicit, informed consent is required before
+  // collecting/processing personal information (health-related data is sensitive).
+  dataPrivacyConsent: z.boolean().optional(),
+  dataPrivacySignature: z.string().optional(),
 });
 
 function fmtTime(hhmm: string): string {
@@ -62,6 +66,23 @@ export async function POST(req: Request) {
   }
 
   const { serviceId, dentistId, date, startTime, firstName, lastName, email, phone, notes } = body;
+
+  // Data Privacy Act (RA 10173) consent gate: no appointment without explicit
+  // consent. The signature must match the patient's full name (electronic signature).
+  if (body.dataPrivacyConsent !== true) {
+    return NextResponse.json(
+      { success: false, message: "Please accept the Data Privacy Policy before booking." },
+      { status: 400 }
+    );
+  }
+  const expectedSignature = `${firstName} ${lastName}`.replace(/\s+/g, " ").trim().toLowerCase();
+  const providedSignature = (body.dataPrivacySignature || "").replace(/\s+/g, " ").trim();
+  if (!providedSignature || providedSignature.toLowerCase() !== expectedSignature) {
+    return NextResponse.json(
+      { success: false, message: "Your electronic signature must match your full name." },
+      { status: 400 }
+    );
+  }
 
   try {
     const appointmentDate = new Date(`${date}T00:00:00.000Z`);
@@ -152,6 +173,9 @@ export async function POST(req: Request) {
           status: "PENDING",
           price: service.price,
           notes: notes || null,
+          dataPrivacyConsent: true,
+          dataPrivacyConsentAt: new Date(),
+          dataPrivacyConsentSignature: providedSignature,
           patientId: patient!.id,
           dentistId,
           serviceId,

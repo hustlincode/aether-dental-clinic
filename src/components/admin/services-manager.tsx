@@ -1,10 +1,18 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Stethoscope } from "lucide-react";
+import { Plus, Pencil, ToggleLeft, ToggleRight, X, Stethoscope } from "lucide-react";
+import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+  type FilterableDataTableFeatures,
+  useDataTable,
+} from "./data-table";
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Service {
   id: string;
@@ -35,7 +43,7 @@ const EMPTY_FORM: FormData = {
   status: "ACTIVE",
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatPrice(price: string | number): string {
   const num = typeof price === "string" ? Number(price) : price;
@@ -49,7 +57,11 @@ function formatDuration(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// â”€â”€â”€ Service Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Columns (module-scope for referential stability) ────────────────────────
+
+const columnHelper = createColumnHelper<FilterableDataTableFeatures, Service>();
+
+// ─── Service Modal ───────────────────────────────────────────────────────────
 
 function ServiceModal({
   open,
@@ -185,7 +197,7 @@ function ServiceModal({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-text-secondary">
-                Price (â‚±) <span className="text-error">*</span>
+                Price (₱) <span className="text-error">*</span>
               </label>
               <input
                 type="number"
@@ -244,23 +256,17 @@ function ServiceModal({
   );
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export function ServicesManager() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "ACTIVE" | "INACTIVE">("all");
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  // Debounced search
-  const [searchInput, setSearchInput] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // â”€â”€â”€ Data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Data fetching ───────────────────────────────────────────────────────
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -273,17 +279,8 @@ export function ServicesManager() {
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams();
-    if (statusFilter === "all") {
-      params.set("all", "true");
-    } else {
-      params.set("status", statusFilter);
-    }
-    if (search.trim()) {
-      params.set("search", search.trim());
-    }
 
-    fetch(`/api/services?${params.toString()}`)
+    fetch("/api/services?all=true")
       .then(async (res) => {
         const body = await res.json();
         if (!res.ok) throw new Error(body.message);
@@ -299,19 +296,9 @@ export function ServicesManager() {
     return () => {
       cancelled = true;
     };
-  }, [search, statusFilter, reloadKey]);
+  }, [reloadKey]);
 
-  // Debounced search handler
-  function handleSearchInput(value: string) {
-    setSearchInput(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearch(value);
-      reload();
-    }, 300);
-  }
-
-  // â”€â”€â”€ CRUD handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── CRUD handlers ──────────────────────────────────────────────────────
 
   async function handleCreate(data: FormData) {
     try {
@@ -380,7 +367,94 @@ export function ServicesManager() {
     }
   }
 
-  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Table columns ──────────────────────────────────────────────────────
+
+  const columns = columnHelper.columns([
+    columnHelper.accessor((s) => s.name, {
+      id: "name",
+      header: "Service",
+      cell: (info) => <span className="font-medium text-text">{info.getValue()}</span>,
+    }),
+    columnHelper.accessor((s) => s.description ?? "", {
+      id: "description",
+      header: "Description",
+      meta: { cellClassName: "hidden md:table-cell" },
+      cell: (info) => (
+        <span className="max-w-[200px] truncate text-text-secondary">
+          {info.row.original.description || <span className="text-text-muted italic">No description</span>}
+        </span>
+      ),
+    }),
+    columnHelper.accessor((s) => s.durationMin, {
+      id: "durationMin",
+      header: "Duration",
+      cell: (info) => <span className="text-text-secondary">{formatDuration(info.getValue())}</span>,
+    }),
+    columnHelper.accessor((s) => Number(s.price), {
+      id: "price",
+      header: "Price",
+      cell: (info) => <span className="font-medium text-text">{formatPrice(info.getValue())}</span>,
+    }),
+    columnHelper.accessor((s) => s.status, {
+      id: "status",
+      header: "Status",
+      filterFn: "equalsString",
+      cell: (info) => (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            info.getValue() === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
+          }`}
+        >
+          {info.getValue() === "ACTIVE" ? "Active" : "Inactive"}
+        </span>
+      ),
+    }),
+    columnHelper.accessor(() => "", {
+      id: "actions",
+      header: () => <span className="block text-right">Actions</span>,
+      meta: { cellClassName: "text-right" },
+      enableSorting: false,
+      cell: (info) => {
+        const service = info.row.original;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => {
+                setEditingService(service);
+                setModalOpen(true);
+              }}
+              title="Edit service"
+              className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              onClick={() => handleToggleStatus(service)}
+              title={service.status === "ACTIVE" ? "Deactivate service" : "Activate service"}
+              className={`rounded-lg p-2 transition ${
+                service.status === "ACTIVE"
+                  ? "text-text-muted hover:bg-error-bg hover:text-error"
+                  : "text-text-muted hover:bg-success-bg hover:text-success"
+              }`}
+            >
+              {service.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+            </button>
+          </div>
+        );
+      },
+    }),
+  ]);
+
+  // ─── Table instance ─────────────────────────────────────────────────────
+
+  const table = useDataTable({ columns, data: services, getRowId: (s) => s.id });
+
+  // ─── Derived state ──────────────────────────────────────────────────────
+
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const statusFilterValue = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "";
+
+  // ─── Render ────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -402,35 +476,9 @@ export function ServicesManager() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            placeholder="Search services..."
-            className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-9 pr-3 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as "all" | "ACTIVE" | "INACTIVE");
-            reload();
-          }}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
-        >
-          <option value="all">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-      </div>
-
       {/* Table */}
       <div className="mt-4 animate-fade-in overflow-hidden rounded-xl border border-border bg-surface shadow">
-        {loading ? (
+        {loading && services.length === 0 ? (
           <div className="space-y-4 p-6">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse flex gap-4">
@@ -448,82 +496,40 @@ export function ServicesManager() {
             </div>
             <h3 className="mt-4 text-base font-semibold text-text">No services found</h3>
             <p className="mt-1 max-w-sm text-sm text-text-muted">
-              {searchInput || statusFilter !== "all"
-                ? "No services match your filters. Try adjusting your search or filter."
-                : "Get started by adding your first service to the clinic catalog."}
+              Get started by adding your first service to the clinic catalog.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Service</th>
-                  <th className="hidden px-4 py-3 font-semibold md:table-cell">Description</th>
-                  <th className="px-4 py-3 font-semibold">Duration</th>
-                  <th className="px-4 py-3 font-semibold">Price</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {services.map((service) => (
-                  <tr key={service.id} className="hover:bg-accent-soft transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-text">{service.name}</span>
-                    </td>
-                    <td className="hidden max-w-[200px] truncate px-4 py-3 text-text-secondary md:table-cell">
-                      {service.description || <span className="text-text-muted italic">No description</span>}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{formatDuration(service.durationMin)}</td>
-                    <td className="px-4 py-3 font-medium text-text">{formatPrice(service.price)}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          service.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
-                        }`}
-                      >
-                        {service.status === "ACTIVE" ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => {
-                            setEditingService(service);
-                            setModalOpen(true);
-                          }}
-                          title="Edit service"
-                          className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleStatus(service)}
-                          title={service.status === "ACTIVE" ? "Deactivate service" : "Activate service"}
-                          className={`rounded-lg p-2 transition ${
-                            service.status === "ACTIVE"
-                              ? "text-text-muted hover:bg-error-bg hover:text-error"
-                              : "text-text-muted hover:bg-success-bg hover:text-success"
-                          }`}
-                        >
-                          {service.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className={`p-4 ${loading ? "opacity-60 transition-opacity" : ""}`} aria-busy={loading}>
+              <DataTableToolbar
+                table={table}
+                searchPlaceholder="Search services..."
+                filters={[
+                  {
+                    columnId: "status",
+                    label: "statuses",
+                    options: [
+                      { value: "ACTIVE", label: "Active" },
+                      { value: "INACTIVE", label: "Inactive" },
+                    ],
+                  },
+                ]}
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <DataTable table={table} />
+            </div>
+            <DataTablePagination table={table} />
+          </>
         )}
       </div>
 
       {/* Summary */}
       {!loading && services.length > 0 && (
         <div className="mt-3 text-right text-xs text-text-muted">
-          {services.length} service{services.length !== 1 ? "s" : ""}
-          {statusFilter !== "all" && ` (${statusFilter.toLowerCase()})`}
+          {filteredCount} service{filteredCount !== 1 ? "s" : ""}
+          {statusFilterValue && ` (${statusFilterValue.toLowerCase()})`}
         </div>
       )}
 

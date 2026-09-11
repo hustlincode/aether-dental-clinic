@@ -157,6 +157,9 @@ export default function HomePage() {
             <span className="text-accent">Dental</span>
           </div>
           <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
+          <Link href="/privacy-policy" className="text-sm text-text-muted transition-colors duration-200 hover:text-accent">
+            Privacy Policy
+          </Link>
         </div>
       </footer>
     </div>

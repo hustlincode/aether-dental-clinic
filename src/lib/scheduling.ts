@@ -23,6 +23,10 @@ function toHHMM(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function toMinutesOrNull(v: string | null): number | null {
+  return v != null ? toMinutes(v) : null;
+}
+
 function isDateTodayUtc(date: Date): boolean {
   const today = new Date();
   return (
@@ -35,12 +39,13 @@ function isDateTodayUtc(date: Date): boolean {
 /**
  * Returns the appointments for a dentist on a given date keyed by their occupied interval (in minutes).
  */
-async function getOccupiedSlots(dentistId: string, date: Date) {
+async function getOccupiedSlots(dentistId: string, date: Date, excludeId?: string) {
   const appointments = await prisma.appointment.findMany({
     where: {
       dentistId,
       appointmentDate: date,
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
     },
     select: { startTime: true, endTime: true },
   });
@@ -97,45 +102,41 @@ async function getContext(dentistId: string, date: Date): Promise<AvailabilityCo
 }
 
 /**
- * Generates all available appointment slots for a dentist + service on a given date.
- * Accounts for: working schedule, clinic hours, lunch break, blocked dates, existing appointments, service duration.
+ * Formats a Date as a local-timezone "YYYY-MM-DD" key. Used for date keys in
+ * availability results so they match the calendar dates a user in any timezone
+ * actually sees (toISOString() would shift the day in UTC+ timezones).
  */
-export async function getAvailableSlots(
-  dentistId: string,
-  service: Pick<Service, "id" | "durationMin">,
-  date: Date
-): Promise<Slot[] | null> {
-  const ctx = await getContext(dentistId, date);
-  if (!ctx) return null;
+function fmtDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
-  const dayKey = DAY_KEYS[date.getDay()];
-  const dayOfWeek = FULL_DAY[dayKey];
-  const dayAvail = ctx.dentistAvailability.find((a) => a.dayOfWeek === dayOfWeek);
-  if (!dayAvail || !dayAvail.isWorking) return null;
+interface SlotWindow {
+  clinicOpen: number;
+  clinicClose: number;
+  dayOpen: number;
+  dayClose: number;
+  breakStart: number | null;
+  breakEnd: number | null;
+  occupied: { start: number; end: number }[];
+  duration: number;
+  date: Date;
+}
 
-  // Blocked dates check
-  const blocked = await prisma.blockedDate.findFirst({
-    where: { date, OR: [{ dentistId }, { dentistId: null }] },
-  });
-  if (blocked) return null;
-
-  // Determine working window = intersection of clinic hours and dentist hours
-  const open = Math.max(toMinutes(ctx.clinic.openingTime), toMinutes(dayAvail.startTime));
-  const close = Math.min(toMinutes(ctx.clinic.closingTime), toMinutes(dayAvail.endTime));
-
-  // Break window = dentist break or clinic lunch (whichever applies)
-  const breakStart = dayAvail.breakStart ?? ctx.clinic.lunchBreakStart;
-  const breakEnd = dayAvail.breakEnd ?? ctx.clinic.lunchBreakEnd;
-
-  const duration = service.durationMin;
-  const occupied = await getOccupiedSlots(dentistId, date);
+/**
+ * Pure slot generator shared by the single-day and multi-day lookups.
+ * Windows are already minute-values; occupied is minute intervals.
+ */
+function generateSlots(opts: SlotWindow): Slot[] {
+  const { clinicOpen, clinicClose, dayOpen, dayClose, breakStart, breakEnd, occupied, duration, date } = opts;
+  const open = Math.max(clinicOpen, dayOpen);
+  const close = Math.min(clinicClose, dayClose);
 
   const slots: Slot[] = [];
   let t = open;
   while (t + duration <= close) {
     // Skip break window
-    if (breakStart && breakEnd && t < toMinutes(breakEnd) && t + duration > toMinutes(breakStart)) {
-      t = Math.max(t + 1, toMinutes(breakEnd));
+    if (breakStart && breakEnd && t < breakEnd && t + duration > breakStart) {
+      t = Math.max(t + 1, breakEnd);
       continue;
     }
     // Skip if overlaps any occupied appointment
@@ -151,10 +152,48 @@ export async function getAvailableSlots(
   for (const s of slots) {
     if (!unique.has(s.start)) unique.set(s.start, s);
   }
-  const result = Array.from(unique.values()).sort((a, b) => a.start.localeCompare(b.start));
+  return Array.from(unique.values())
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .filter((s) => s.start.endsWith(":00") || s.start.endsWith(":30"));
+}
 
-  // Enforce 30-minute slot increments for a clean UI (start on :00 or :30)
-  return result.filter((s) => s.start.endsWith(":00") || s.start.endsWith(":30"));
+/**
+ * Generates all available appointment slots for a dentist + service on a given date.
+ * Accounts for: working schedule, clinic hours, lunch break, blocked dates, existing appointments, service duration.
+ */
+export async function getAvailableSlots(
+  dentistId: string,
+  service: Pick<Service, "id" | "durationMin">,
+  date: Date,
+  excludeId?: string
+): Promise<Slot[] | null> {
+  const ctx = await getContext(dentistId, date);
+  if (!ctx) return null;
+
+  const dayKey = DAY_KEYS[date.getDay()];
+  const dayOfWeek = FULL_DAY[dayKey];
+  const dayAvail = ctx.dentistAvailability.find((a) => a.dayOfWeek === dayOfWeek);
+  if (!dayAvail || !dayAvail.isWorking) return null;
+
+  // Blocked dates check
+  const blocked = await prisma.blockedDate.findFirst({
+    where: { date, OR: [{ dentistId }, { dentistId: null }] },
+  });
+  if (blocked) return null;
+
+  const occupied = await getOccupiedSlots(dentistId, date, excludeId);
+
+  return generateSlots({
+    clinicOpen: toMinutes(ctx.clinic.openingTime),
+    clinicClose: toMinutes(ctx.clinic.closingTime),
+    dayOpen: toMinutes(dayAvail.startTime),
+    dayClose: toMinutes(dayAvail.endTime),
+    breakStart: dayAvail.breakStart != null ? toMinutes(dayAvail.breakStart) : toMinutesOrNull(ctx.clinic.lunchBreakStart),
+    breakEnd: dayAvail.breakEnd != null ? toMinutes(dayAvail.breakEnd) : toMinutesOrNull(ctx.clinic.lunchBreakEnd),
+    occupied,
+    duration: service.durationMin,
+    date,
+  });
 }
 
 function isInPastToday(date: Date, startMin: number, duration: number): boolean {
@@ -196,6 +235,10 @@ export async function isSlotAvailable(
 /**
  * Returns a list of dates that have at least one available slot for the given dentist+service.
  * Used to build a "selectable dates" calendar in the public booking flow.
+ *
+ * Batched: loads the dentist + clinic + blocked dates + range appointments once
+ * (O(1) queries total) instead of running a per-day round trip like before,
+ * which made the availability calendar feel slow.
  */
 export async function getAvailableDates(
   dentistId: string,
@@ -204,18 +247,69 @@ export async function getAvailableDates(
   daysAhead: number
 ): Promise<string[]> {
   const available: string[] = [];
-  const seen = new Set<string>();
+
+  const endDate = new Date(startDate);
+  endDate.setHours(23, 59, 59, 999);
+  endDate.setDate(startDate.getDate() + daysAhead - 1);
+
+  const dentist = await prisma.dentist.findUnique({
+    where: { id: dentistId },
+    include: { availability: true },
+  });
+  if (!dentist || dentist.status !== "ACTIVE") return available;
+
+  const clinic = await prisma.clinicSetting.findUnique({ where: { id: "singleton" } });
+  if (!clinic) return available;
+
+  const [blockedRows, apptRows] = await Promise.all([
+    prisma.blockedDate.findMany({
+      where: { date: { gte: startDate, lte: endDate }, OR: [{ dentistId }, { dentistId: null }] },
+      select: { date: true },
+    }),
+    prisma.appointment.findMany({
+      where: {
+        dentistId,
+        appointmentDate: { gte: startDate, lte: endDate },
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      },
+      select: { appointmentDate: true, startTime: true, endTime: true },
+    }),
+  ]);
+
+  const blockedSet = new Set(blockedRows.map((b) => fmtDateKey(b.date)));
+  const byDay = new Map<string, { start: number; end: number }[]>();
+  for (const a of apptRows) {
+    const key = fmtDateKey(a.appointmentDate);
+    const list = byDay.get(key) ?? [];
+    list.push({ start: toMinutes(a.startTime), end: toMinutes(a.endTime) });
+    byDay.set(key, list);
+  }
+
   for (let i = 0; i < daysAhead; i++) {
     const d = new Date(startDate);
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    if (seen.has(iso)) continue;
-    seen.add(iso);
-    const slots = await getAvailableSlots(dentistId, service, d);
-    if (slots && slots.length > 0) {
-      available.push(iso);
+    d.setDate(startDate.getDate() + i);
+    const key = fmtDateKey(d);
+    if (blockedSet.has(key)) continue;
+
+    const dayOfWeek = FULL_DAY[DAY_KEYS[d.getDay()]];
+    const dayAvail = dentist.availability.find((a) => a.dayOfWeek === dayOfWeek);
+    if (!dayAvail || !dayAvail.isWorking) continue;
+
+    const slots = generateSlots({
+      clinicOpen: toMinutes(clinic.openingTime),
+      clinicClose: toMinutes(clinic.closingTime),
+      dayOpen: toMinutes(dayAvail.startTime),
+      dayClose: toMinutes(dayAvail.endTime),
+      breakStart: dayAvail.breakStart != null ? toMinutes(dayAvail.breakStart) : toMinutesOrNull(clinic.lunchBreakStart),
+      breakEnd: dayAvail.breakEnd != null ? toMinutes(dayAvail.breakEnd) : toMinutesOrNull(clinic.lunchBreakEnd),
+      occupied: byDay.get(key) ?? [],
+      duration: service.durationMin,
+      date: d,
+    });
+    if (slots.length > 0) {
+      available.push(key);
     }
   }
+
   return available;
 }

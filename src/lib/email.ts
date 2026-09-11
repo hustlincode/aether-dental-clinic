@@ -9,7 +9,8 @@ export type EmailEvent =
   | "appointment_confirmation"
   | "appointment_cancellation"
   | "appointment_pending"
-  | "appointment_followup";
+  | "appointment_followup"
+  | "appointment_reschedule";
 
 export interface AppointmentEmailData {
   patientName: string;
@@ -18,6 +19,8 @@ export interface AppointmentEmailData {
   dentistName: string;
   date: string; // human readable
   time: string; // human readable
+  previousDate?: string; // human readable (reschedule emails only)
+  previousTime?: string; // human readable (reschedule emails only)
 }
 
 let transporter: nodemailer.Transporter | null = null;
@@ -146,6 +149,28 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
       `),
     text: (d) =>
       `Hello ${d.patientName},\n\nYour dental appointment has been confirmed:\n\n${textDetails(d)}\n\nIf you need to reschedule or cancel, please contact us at your earliest convenience.\n\nWe look forward to seeing you!`,
+  },
+  appointment_reschedule: {
+    subject: "Appointment Rescheduled",
+    html: (d) =>
+      layout(`
+        <p>Hello <strong>${d.patientName}</strong>,</p>
+        <p>Your dental appointment has been <strong>rescheduled</strong>. Here are your updated details:</p>
+        ${
+          d.previousDate && d.previousTime
+            ? `<p style="color:#6b7280;margin:4px 0 0;">Previous schedule: ${d.previousDate} at ${d.previousTime}</p>`
+            : ""
+        }
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          ${detailRows(d)}
+        </table>
+        <p>If this change does not work for you, please contact the clinic so we can find a better time.</p>
+        <p style="margin-top:24px;">We look forward to seeing you!</p>
+      `),
+    text: (d) =>
+      `Hello ${d.patientName},\n\nYour dental appointment has been rescheduled. Here are your updated details:\n\n${
+        d.previousDate && d.previousTime ? `Previous schedule: ${d.previousDate} at ${d.previousTime}\n` : ""
+      }${textDetails(d)}\n\nIf this change does not work for you, please contact the clinic so we can find a better time.\n\nWe look forward to seeing you!`,
   },
   appointment_cancellation: {
     subject: "Appointment Cancelled",

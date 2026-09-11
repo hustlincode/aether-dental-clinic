@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { Inbox } from "lucide-react";
 import {
   Area,
@@ -10,9 +10,11 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Sector,
   Tooltip,
   XAxis,
   YAxis,
+  type PieSectorShapeProps,
   type TooltipContentProps,
 } from "recharts";
 
@@ -135,11 +137,57 @@ function AreaTooltipContent({ active, payload, label }: Partial<TooltipContentPr
   );
 }
 
+function StatusTooltipContent({
+  active,
+  payload,
+  total,
+}: Partial<TooltipContentProps<number, string>> & { total: number }) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0]?.payload as StatusSlice | undefined;
+  if (!entry || entry.value <= 0) return null;
+  const pct = total > 0 ? Math.round((entry.value / total) * 100) : 0;
+  return (
+    <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-lg">
+      <p className="text-xs font-medium text-text-muted">{formatStatusLabel(entry.name)}</p>
+      <p className="mt-0.5 text-sm font-semibold text-text">
+        {entry.value} · {pct}%
+      </p>
+    </div>
+  );
+}
+
 export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status: StatusSlice[] }) {
   const colors = useChartColors();
+  const [activeIndex, setActiveIndex] = useState(-1);
   const totalAppointments = status.reduce((sum, s) => sum + s.value, 0);
   const hasDailyData = daily.some((d) => d.count > 0);
   const hasStatusData = status.some((s) => s.value > 0);
+
+  /* Custom sector shape → per-slice hover: enlarges the hovered slice and
+     dims the others. Driven by our own activeIndex so the legend can sync too
+     (Recharts v3 removed the activeIndex prop and only exposes tooltip internals). */
+  const renderPieShape = (props: PieSectorShapeProps) => {
+    const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill, index } = props;
+    const isActive = index === activeIndex;
+    const dimmed = activeIndex !== -1 && !isActive;
+    const or = typeof outerRadius === "number" ? outerRadius + (isActive ? 6 : 0) : outerRadius;
+    return (
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={or}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        cornerRadius={3}
+        opacity={dimmed ? 0.45 : 1}
+        onMouseEnter={() => setActiveIndex(index)}
+        onMouseLeave={() => setActiveIndex(-1)}
+        style={{ cursor: "pointer", transition: "opacity 200ms ease", outline: "none" }}
+      />
+    );
+  };
 
   return (
     <section className="mt-8" aria-label="Analytics">
@@ -220,7 +268,9 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                       innerRadius="62%"
                       outerRadius="88%"
                       paddingAngle={2}
+                      cornerRadius={3}
                       stroke="none"
+                      shape={renderPieShape}
                     >
                       {status.map((entry) => (
                         <Cell
@@ -229,6 +279,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                         />
                       ))}
                     </Pie>
+                    <Tooltip content={<StatusTooltipContent total={totalAppointments} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -236,15 +287,26 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                   <span className="text-xs text-text-muted">Total</span>
                 </div>
               </div>
-              <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
-                {status.map((entry) => (
-                  <li key={entry.name} className="flex items-center gap-2 text-sm">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: colors[STATUS_COLOR_SLOT[entry.name] ?? "neutral"] }}
-                    />
-                    <span className="flex-1 truncate text-text">{formatStatusLabel(entry.name)}</span>
-                    <span className="text-text-muted">{entry.value}</span>
+              <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1">
+                {status.map((entry, i) => (
+                  <li key={entry.name}>
+                    <button
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(i)}
+                      onMouseLeave={() => setActiveIndex(-1)}
+                      onFocus={() => setActiveIndex(i)}
+                      onBlur={() => setActiveIndex(-1)}
+                      className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors ${
+                        activeIndex === i ? "bg-accent-soft" : "hover:bg-background-alt"
+                      }`}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: colors[STATUS_COLOR_SLOT[entry.name] ?? "neutral"] }}
+                      />
+                      <span className="flex-1 truncate text-text">{formatStatusLabel(entry.name)}</span>
+                      <span className="text-text-muted">{entry.value}</span>
+                    </button>
                   </li>
                 ))}
               </ul>

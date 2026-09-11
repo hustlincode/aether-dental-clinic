@@ -68,12 +68,13 @@ export function AdminSidebar({
           )}
         </Link>
 
-        {/* Desktop collapse button */}
+        {/* Desktop collapse button (hidden on mobile: the off-canvas drawer
+            is closed with the header hamburger instead) */}
         <button
           onClick={onToggleCollapse}
           aria-label="Toggle sidebar"
           title="Toggle sidebar"
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text"
+          className="hidden h-7 w-7 items-center justify-center rounded-lg text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text md:flex"
         >
           <PanelLeftClose className="h-4 w-4" aria-hidden />
         </button>

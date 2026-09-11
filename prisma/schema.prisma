@@ -175,6 +175,10 @@ model Appointment {
   status          AppointmentStatus @default(PENDING)
   notes           String?
   price           Decimal?          @db.Decimal(10, 2)
+  // Data Privacy Act (RA 10173) consent evidence captured at booking time
+  dataPrivacyConsent         Boolean   @default(false) @map("data_privacy_consent")
+  dataPrivacyConsentAt       DateTime? @map("data_privacy_consent_at")
+  dataPrivacyConsentSignature String?  @map("data_privacy_consent_signature")
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
