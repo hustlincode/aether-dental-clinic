@@ -30,6 +30,13 @@ import {
 
 import { cn } from "@/lib/utils";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,6 +44,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 declare module "@tanstack/table-core" {
   // The type parameters must shadow the library's original generic declaration
@@ -345,20 +357,24 @@ export function DataTableToolbar<TData extends RowData>({
         const column = table.getColumn(filter.columnId);
         const current = (column?.getFilterValue() as string) ?? "";
         return (
-          <select
+          <Select
             key={filter.columnId}
-            value={current}
-            onChange={(e) => column?.setFilterValue(e.target.value || undefined)}
-            aria-label={filter.label}
-            className={cn(toolbarInputClass, "px-2.5")}
+            value={current || "__all__"}
+            onValueChange={(v) => column?.setFilterValue(v === "__all__" ? undefined : v)}
           >
-            <option value="">{filter.allLabel ?? `All ${filter.label}`}</option>
-            {filter.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label={filter.label}
+              className="h-9 rounded-lg border-border bg-background-alt px-3 text-sm text-text focus-visible:ring-accent/40"
+            >
+              <SelectValue placeholder={filter.allLabel ?? `All ${filter.label}`} />
+            </SelectTrigger>
+            <SelectContent className="bg-surface">
+              <SelectItem value="__all__">{filter.allLabel ?? `All ${filter.label}`}</SelectItem>
+              {filter.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       })}
     </div>
@@ -390,15 +406,20 @@ export function DataTablePagination<TData extends RowData>({
         <span className="font-medium text-text">{rowCount}</span>
       </p>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-          aria-label="Previous page"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Previous page"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Previous page</TooltipContent>
+        </Tooltip>
         {pageItems(pageIndex + 1, pageCount).map((item, i) =>
           item === "..." ? (
             <span key={`gap-${i}`} className="px-1 text-xs text-text-muted">
@@ -420,15 +441,20 @@ export function DataTablePagination<TData extends RowData>({
             </button>
           )
         )}
-        <button
-          type="button"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-          aria-label="Next page"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Next page"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Next page</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

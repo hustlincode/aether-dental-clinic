@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -868,8 +869,6 @@ function PrivacyConsentModal({
   const [signature, setSignature] = useState("");
   const [attempted, setAttempted] = useState(false);
 
-  if (!open) return null;
-
   const signatureMatches =
     fullName.trim().length > 0 &&
     fullName.replace(/\s+/g, " ").trim().toLowerCase() === signature.replace(/\s+/g, " ").trim().toLowerCase();
@@ -883,18 +882,15 @@ function PrivacyConsentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} aria-hidden />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="privacy-consent-title"
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border-accent bg-surface shadow-2xl"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-2xl border border-border-accent bg-surface p-0 shadow-2xl sm:max-w-lg"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 id="privacy-consent-title" className="text-base font-bold text-text">
+          <DialogTitle className="text-base font-bold text-text">
             Data Privacy Consent
-          </h2>
+          </DialogTitle>
           <button
             onClick={() => onOpenChange(false)}
             className="rounded-lg px-2 py-1 text-text-muted transition-colors duration-200 hover:bg-background-alt hover:text-text"
@@ -1019,8 +1015,8 @@ function PrivacyConsentModal({
             I agree
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

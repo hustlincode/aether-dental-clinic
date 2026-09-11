@@ -10,6 +10,7 @@ import { statusActionLabel } from "@/lib/status-labels";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /* ─── Status → color mapping (matches the ProSmile palette) ─── */
 const STATUS_COLORS: Record<string, string> = {
@@ -249,21 +250,31 @@ export function CalendarView() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center rounded-lg border border-border bg-background-alt">
-            <button
-              onClick={() => shiftMonth(-1)}
-              aria-label="Previous month"
-              className="flex h-8 w-8 items-center justify-center rounded-l-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => shiftMonth(-1)}
+                  aria-label="Previous month"
+                  className="flex h-8 w-8 items-center justify-center rounded-l-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Previous month</TooltipContent>
+            </Tooltip>
             <span className="min-w-36 text-center text-sm font-semibold text-text">{monthLabel}</span>
-            <button
-              onClick={() => shiftMonth(1)}
-              aria-label="Next month"
-              className="flex h-8 w-8 items-center justify-center rounded-r-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => shiftMonth(1)}
+                  aria-label="Next month"
+                  className="flex h-8 w-8 items-center justify-center rounded-r-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Next month</TooltipContent>
+            </Tooltip>
           </div>
           <button
             onClick={goToday}

@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, Pencil, ToggleLeft, ToggleRight, X, Stethoscope } from "lucide-react";
+import { Plus, Pencil, ToggleLeft, ToggleRight, X, Stethoscope, MoreHorizontal } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DataTable,
   DataTablePagination,
@@ -134,17 +142,12 @@ function ServiceModal({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
-      <div
-        className="w-full max-w-md rounded-2xl border border-border-strong bg-surface p-6 shadow-lg animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-2xl border border-border-strong bg-surface p-6 shadow-lg sm:max-w-md">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-text">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text">
+          <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
         </div>
@@ -251,8 +254,8 @@ function ServiceModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -417,28 +420,29 @@ export function ServicesManager() {
       cell: (info) => {
         const service = info.row.original;
         return (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => {
-                setEditingService(service);
-                setModalOpen(true);
-              }}
-              title="Edit service"
-              className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              onClick={() => handleToggleStatus(service)}
-              title={service.status === "ACTIVE" ? "Deactivate service" : "Activate service"}
-              className={`rounded-lg p-2 transition ${
-                service.status === "ACTIVE"
-                  ? "text-text-muted hover:bg-error-bg hover:text-error"
-                  : "text-text-muted hover:bg-success-bg hover:text-success"
-              }`}
-            >
-              {service.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
-            </button>
+          <div className="flex items-center justify-end">
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent" aria-label="More actions">
+                      <MoreHorizontal size={15} />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>More actions</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" className="bg-surface">
+                <DropdownMenuItem onSelect={() => { setEditingService(service); setModalOpen(true); }}>
+                  <Pencil size={15} />
+                  Edit service
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleToggleStatus(service)}>
+                  {service.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                  {service.status === "ACTIVE" ? "Deactivate service" : "Activate service"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },

@@ -6,6 +6,7 @@ import { useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientFormSchema, type PatientFormValues } from "@/lib/validations";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -126,16 +127,6 @@ export function PatientFormModal({
     }
   }, [open]);
 
-  // Close on Escape (same convention as the details drawer).
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
   async function handleSubmit(values: PatientFormValues) {
     try {
       await onSave(values);
@@ -150,23 +141,12 @@ export function PatientFormModal({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl border border-border-strong bg-surface p-6 shadow-lg animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="patient-form-title"
-      >
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-2xl border border-border-strong bg-surface p-6 shadow-lg sm:max-w-md">
         <div className="flex items-center justify-between mb-5">
-          <h2 id="patient-form-title" className="text-lg font-bold text-text">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text" aria-label="Close">
+          <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
         </div>
@@ -390,7 +370,7 @@ export function PatientFormModal({
             </div>
           </form>
         </Form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

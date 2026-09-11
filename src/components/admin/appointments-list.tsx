@@ -16,6 +16,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 interface Appt {
   id: string;
@@ -252,14 +264,19 @@ export function AppointmentsList({ role }: { role: string }) {
         const row = info.row.original;
         return (
           <div className="flex items-center justify-end gap-1.5">
-            <button
-              onClick={() => setEditing(row)}
-              title="Edit appointment"
-              aria-label={`Edit appointment ${row.referenceNumber}`}
-              className="rounded-md border border-border bg-surface p-1.5 text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setEditing(row)}
+                  title="Edit appointment"
+                  aria-label={`Edit appointment ${row.referenceNumber}`}
+                  className="rounded-md border border-border bg-surface p-1.5 text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Edit appointment</TooltipContent>
+            </Tooltip>
             <StatusActions
               status={row.status}
               role={role}
@@ -294,16 +311,15 @@ export function AppointmentsList({ role }: { role: string }) {
           />
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
-          >
-            <option value="">All statuses</option>
-            {ALLOWED.map((s) => (
-              <option key={s} value={s}>{s.replace("_", " ")}</option>
-            ))}
-          </select>
+          <Select value={statusFilter || "__all__"} onValueChange={(v) => handleStatusChange(v === "__all__" ? "" : v)}>
+            <SelectTrigger aria-label="Filter by status" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent className="bg-surface">
+              <SelectItem value="__all__">All statuses</SelectItem>
+              {ALLOWED.map((s) => (<SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>))}
+            </SelectContent>
+          </Select>
           <button
             onClick={refresh}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
@@ -341,14 +357,19 @@ export function AppointmentsList({ role }: { role: string }) {
                   Showing {start}–{end} of {pagination.total}
                 </p>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => goToPage(page - 1)}
-                    disabled={page <= 1}
-                    aria-label="Previous page"
-                    className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => goToPage(page - 1)}
+                        disabled={page <= 1}
+                        aria-label="Previous page"
+                        className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Previous page</TooltipContent>
+                  </Tooltip>
                   {getPageItems(page, pagination.totalPages).map((item, i) =>
                     item === "..." ? (
                       <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-text-muted">…</span>
@@ -367,14 +388,19 @@ export function AppointmentsList({ role }: { role: string }) {
                       </button>
                     )
                   )}
-                  <button
-                    onClick={() => goToPage(page + 1)}
-                    disabled={!pagination || page >= pagination.totalPages}
-                    aria-label="Next page"
-                    className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => goToPage(page + 1)}
+                        disabled={!pagination || page >= pagination.totalPages}
+                        aria-label="Next page"
+                        className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Next page</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             )}
@@ -627,47 +653,47 @@ function EditAppointmentDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-dentist" className="text-sm font-medium text-text">Dentist</label>
-              <select
-                id="edit-dentist"
-                value={dentistId}
-                disabled={!canEditPatient}
-                onChange={(e) => setDentistId(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-60"
-              >
-                {dentists.length === 0 && <option value={dentistId}>{appointment.dentist.name}</option>}
-                {dentists.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}{d.status !== "ACTIVE" ? " (inactive)" : ""}</option>
-                ))}
-              </select>
+              <label className="text-sm font-medium text-text">Dentist</label>
+              <Select value={dentistId || undefined} onValueChange={setDentistId} disabled={!canEditPatient}>
+                <SelectTrigger id="edit-dentist" aria-label="Dentist" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                  <SelectValue placeholder="Select a dentist" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface">
+                  {dentists.length === 0 && (
+                    <SelectItem value={appointment.dentist.id} className="disabled:opacity-50">{appointment.dentist.name}</SelectItem>
+                  )}
+                  {dentists.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}{d.status !== "ACTIVE" ? " (inactive)" : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-service" className="text-sm font-medium text-text">Service</label>
-              <select
-                id="edit-service"
-                value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
-              >
-                {services.length === 0 && <option value={serviceId}>{appointment.service.name}</option>}
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}{s.status !== "ACTIVE" ? " (inactive)" : ""}</option>
-                ))}
-              </select>
+              <label className="text-sm font-medium text-text">Service</label>
+              <Select value={serviceId || undefined} onValueChange={setServiceId}>
+                <SelectTrigger id="edit-service" aria-label="Service" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                  <SelectValue placeholder="Select a service" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface">
+                  {services.length === 0 && (
+                    <SelectItem value={appointment.service.id} className="disabled:opacity-50">{appointment.service.name}</SelectItem>
+                  )}
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}{s.status !== "ACTIVE" ? " (inactive)" : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-time" className="text-sm font-medium text-text">Time</label>
-              <select
-                id="edit-time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
-              >
-                <option value="" disabled>Select a time</option>
-                {slots.map((s) => (
-                  <option key={s} value={s}>{fmtTime(s)}</option>
-                ))}
-              </select>
+              <label className="text-sm font-medium text-text">Time</label>
+              <Select value={time || undefined} onValueChange={setTime}>
+                <SelectTrigger id="edit-time" aria-label="Time" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                  <SelectValue placeholder="Select a time" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface">
+                  {slots.map((s) => (<SelectItem key={s} value={s}>{fmtTime(s)}</SelectItem>))}
+                </SelectContent>
+              </Select>
               {loadingSlots && <span className="text-xs text-text-muted">Checking availability...</span>}
               {!loadingSlots && slots.length === 0 && (
                 <span className="text-xs text-text-muted">No available slots for this selection.</span>

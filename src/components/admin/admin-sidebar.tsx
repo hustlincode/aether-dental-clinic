@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /* ─── Nav icon map ─── */
 const iconMap: Record<string, LucideIcon> = {
@@ -70,14 +71,19 @@ export function AdminSidebar({
 
         {/* Desktop collapse button (hidden on mobile: the off-canvas drawer
             is closed with the header hamburger instead) */}
-        <button
-          onClick={onToggleCollapse}
-          aria-label="Toggle sidebar"
-          title="Toggle sidebar"
-          className="hidden h-7 w-7 items-center justify-center rounded-lg text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text md:flex"
-        >
-          <PanelLeftClose className="h-4 w-4" aria-hidden />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggleCollapse}
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
+              className="hidden h-7 w-7 items-center justify-center rounded-lg text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text md:flex"
+            >
+              <PanelLeftClose className="h-4 w-4" aria-hidden />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Toggle sidebar</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Nav */}
@@ -86,7 +92,7 @@ export function AdminSidebar({
           const Icon = iconMap[item.label] ?? LayoutDashboard;
           const active = pathname === item.href;
 
-          return (
+          const linkEl = (
             <Link
               key={item.href}
               href={item.href}
@@ -104,6 +110,16 @@ export function AdminSidebar({
               {!collapsed && <span className="truncate text-sm">{item.label}</span>}
             </Link>
           );
+
+          if (collapsed) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          }
+          return linkEl;
         })}
       </nav>
 

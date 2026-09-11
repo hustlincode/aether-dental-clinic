@@ -5,6 +5,8 @@ import { AlertCircle, CalendarX, RefreshCw, X } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./data-table";
 import { StatusBadge } from "./status-badge";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -145,16 +147,6 @@ export function PatientDetails({
     };
   }, [open, patientId, refreshKey]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
-
   function retry() {
     if (!patientId) return;
     setLoading(true);
@@ -162,33 +154,29 @@ export function PatientDetails({
     setRefreshKey((k) => k + 1);
   }
 
-  if (!open || !patientId) return null;
+  if (!patientId) return null;
 
   const patient = data?.patient ?? null;
   const stats = data?.stats ?? null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div className="absolute inset-0 animate-fade-in bg-black/50" onClick={onClose} aria-hidden="true" />
-
-      {/* Panel */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="patient-details-title"
-        className="animate-slide-up absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-border-strong bg-surface shadow-lg"
-      >
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" showCloseButton={false} className="w-full max-w-md gap-0 border-l border-border-strong bg-surface p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 id="patient-details-title" className="text-lg font-bold text-text">Patient Details</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text"
-            aria-label="Close patient details"
-          >
-            <X size={18} />
-          </button>
+          <SheetTitle className="text-lg font-bold text-text">Patient Details</SheetTitle>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onClose}
+                className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text"
+                aria-label="Close patient details"
+              >
+                <X size={18} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Body */}
@@ -300,8 +288,8 @@ export function PatientDetails({
             </>
           ) : null}
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

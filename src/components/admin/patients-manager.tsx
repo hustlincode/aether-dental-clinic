@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Pencil, Plus, RefreshCw, ToggleLeft, ToggleRight, UserX, Users } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Plus, RefreshCw, ToggleLeft, ToggleRight, UserX, Users } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { StatusBadge } from "./status-badge";
 import { PatientFormModal, type PatientFormValues, type PatientFormInitialData } from "./patient-form-modal";
 import { PatientDetails } from "./patient-details";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DataTable,
   DataTableToolbar,
@@ -296,39 +303,45 @@ export function PatientsManager({ role }: { role: string }) {
       cell: (info) => {
         const patient = info.row.original;
         return (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => setDetailsId(patient.id)}
-              title="View patient"
-              className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
-            >
-              <Eye size={15} />
-            </button>
-            {canManage && (
-              <>
-                <button
-                  onClick={() => {
-                    setEditingPatient(patient);
-                    setModalOpen(true);
-                  }}
-                  title="Edit patient"
-                  className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  onClick={() => handleToggleStatus(patient)}
-                  title={patient.status === "ACTIVE" ? "Deactivate patient" : "Activate patient"}
-                  className={`rounded-lg p-2 transition ${
-                    patient.status === "ACTIVE"
-                      ? "text-text-muted hover:bg-error-bg hover:text-error"
-                      : "text-text-muted hover:bg-success-bg hover:text-success"
-                  }`}
-                >
-                  {patient.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
-                </button>
-              </>
-            )}
+          <div className="flex items-center justify-end">
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
+                      aria-label="More actions"
+                    >
+                      <MoreHorizontal size={15} />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>More actions</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" className="bg-surface">
+                <DropdownMenuItem onSelect={() => setDetailsId(patient.id)}>
+                  <Eye size={15} />
+                  View patient
+                </DropdownMenuItem>
+                {canManage && (
+                  <>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setEditingPatient(patient);
+                        setModalOpen(true);
+                      }}
+                    >
+                      <Pencil size={15} />
+                      Edit patient
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleToggleStatus(patient)}>
+                      {patient.status === "ACTIVE" ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                      {patient.status === "ACTIVE" ? "Deactivate patient" : "Activate patient"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },
