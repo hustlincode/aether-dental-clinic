@@ -5,7 +5,7 @@
     "architect": {
       "description": "Lead architect and orchestrator for autonomous web application development.",
       "mode": "primary",
-      "model": "opencode/deepseek",
+      "model": "opencode/big-pickle",
       "permission": {
         "read": "allow",
         "edit": "allow",
