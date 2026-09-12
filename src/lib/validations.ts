@@ -21,8 +21,6 @@ export const patientFormSchema = z.object({
   phone: z.string().trim().min(7, "Phone number must be at least 7 characters."),
   notes: z.string().trim().max(500, "Notes must be 500 characters or fewer.").optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
-  followUpEnabled: z.boolean(),
-  followUpDays: z.number().int().min(0).max(60),
 });
 
 export type PatientFormValues = z.infer<typeof patientFormSchema>;

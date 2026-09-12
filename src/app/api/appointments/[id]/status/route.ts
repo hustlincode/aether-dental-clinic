@@ -4,7 +4,6 @@ import { AppointmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/api";
 import { sendAppointmentEmail } from "@/lib/email";
-import { scheduleFollowUpForAppointment } from "@/lib/followups";
 import {
   notifyAppointmentCancelled,
   notifyAppointmentCompleted,
@@ -67,16 +66,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         userId: user.id,
       },
     });
-
-    // Schedule a follow-up email when the visit is completed (respects the
-    // patient's follow-up preference). Schedule failures never block the status update.
-    if (status === "COMPLETED") {
-      try {
-        await scheduleFollowUpForAppointment(existing.id);
-      } catch (e) {
-        console.error("Failed to schedule follow-up for appointment:", e);
-      }
-    }
 
     // In-app notifications (role-aware; never allowed to fail the status update).
     try {

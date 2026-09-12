@@ -53,14 +53,6 @@ enum PatientStatus {
   INACTIVE
 }
 
-enum FollowUpStatus {
-  SCHEDULED
-  SENDING
-  SENT
-  FAILED
-  SKIPPED
-}
-
 enum NotificationType {
   APPOINTMENT_CREATED
   APPOINTMENT_CONFIRMED
@@ -90,6 +82,7 @@ model User {
   activities  Activity[]
   createdAppointments Appointment[] @relation("created_appointments")
   notifications Notification[]
+  confirmationEmailsSent ConfirmationEmail[] @relation("confirmation_emails_sent")
 
   @@map("users")
 }
@@ -106,13 +99,11 @@ model Patient {
   phone          String
   notes          String?
   status         PatientStatus @default(ACTIVE)
-  followUpEnabled Boolean  @default(true) @map("follow_up_enabled")
-  followUpDays   Int      @default(1) @map("follow_up_days")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   appointments Appointment[]
-  followUps    FollowUp[]
+  confirmationEmails ConfirmationEmail[]
 
   @@index([lastName, firstName])
   @@index([status])
@@ -191,8 +182,13 @@ model Appointment {
   createdBy  User?   @relation("created_appointments", fields: [createdById], references: [id])
   createdById String? @map("created_by")
 
+  // Latest confirmation-email outcome (denormalized for the Needs Confirmation list)
+  confirmationEmailSentAt   DateTime?                @map("confirmation_email_sent_at")
+  confirmationEmailStatus   ConfirmationEmailStatus? @map("confirmation_email_status")
+  confirmationEmailSentById String?                  @map("confirmation_email_sent_by_id")
+
   activities Activity[] @relation("appointment_activity")
-  followUp   FollowUp?
+  confirmationEmails ConfirmationEmail[]
 
   @@index([appointmentDate])
   @@index([dentistId, appointmentDate])
@@ -203,27 +199,34 @@ model Appointment {
 }
 
 // ---------------------------------------------------------------------------
-// Follow-up emails (automated / manual patient follow-ups after appointments)
+// Confirmation emails (append-only history of "please confirm" reminders)
+// The Appointment columns above hold the latest outcome for fast reads.
 // ---------------------------------------------------------------------------
 
-model FollowUp {
-  id            String         @id @default(cuid())
-  patientId     String         @map("patient_id")
-  appointmentId String         @map("appointment_id")
-  scheduledFor  DateTime       @map("scheduled_for") // when the email should be sent
-  status        FollowUpStatus @default(SCHEDULED)
-  sentAt        DateTime?      @map("sent_at")
+enum ConfirmationEmailStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model ConfirmationEmail {
+  id            String                  @id @default(cuid())
+  appointmentId String                  @map("appointment_id")
+  patientId     String                  @map("patient_id")
+  to            String
+  template      String                  @default("appointment_confirmation_request")
+  status        ConfirmationEmailStatus
   error         String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  sentById      String?                 @map("sent_by_id")
+  createdAt     DateTime                @default(now()) @map("created_at")
 
-  patient     Patient     @relation(fields: [patientId], references: [id])
   appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  sentBy      User?       @relation("confirmation_emails_sent", fields: [sentById], references: [id])
 
-  @@unique([appointmentId])
-  @@index([status, scheduledFor])
+  @@index([appointmentId, createdAt])
   @@index([patientId])
-  @@map("follow_ups")
+  @@map("confirmation_emails")
 }
 
 // ---------------------------------------------------------------------------

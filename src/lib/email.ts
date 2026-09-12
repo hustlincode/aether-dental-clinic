@@ -9,8 +9,8 @@ export type EmailEvent =
   | "appointment_confirmation"
   | "appointment_cancellation"
   | "appointment_pending"
-  | "appointment_followup"
-  | "appointment_reschedule";
+  | "appointment_reschedule"
+  | "appointment_confirmation_request";
 
 export interface AppointmentEmailData {
   patientName: string;
@@ -186,20 +186,20 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
     text: (d) =>
       `Hello ${d.patientName},\n\nYour dental appointment has been cancelled. Appointment Reference: ${d.referenceNumber}.\n\nIf this was unexpected, please contact the clinic to reschedule.`,
   },
-  appointment_followup: {
-    subject: "How was your visit?",
+  appointment_confirmation_request: {
+    subject: "Please confirm your appointment",
     html: (d) =>
       layout(`
         <p>Hello <strong>${d.patientName}</strong>,</p>
-        <p>We hope your recent appointment on <strong>${d.date}</strong> went well. Your health and comfort are important to us, so if you have any concerns about your treatment, please do not hesitate to reach out.</p>
+        <p>This is a friendly reminder that your appointment is still <strong>pending confirmation</strong>. Please confirm it with the clinic so we can hold your slot:</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">
           ${detailRows(d)}
         </table>
-        <p>If you would like to book your next visit, contact the clinic or book online at your convenience.</p>
-        <p style="margin-top:24px;">We look forward to seeing you again!</p>
+        <p>If you can no longer make this time, please let us know and we will help you find another.</p>
+        <p style="margin-top:24px;">Thank you for choosing ${clinicName()}!</p>
       `),
     text: (d) =>
-      `Hello ${d.patientName},\n\nWe hope your recent appointment on ${d.date} went well. Your health and comfort are important to us, so if you have any concerns about your treatment, please do not hesitate to reach out.\n\n${textDetails(d)}\n\nIf you would like to book your next visit, contact the clinic or book online at your convenience.\n\nWe look forward to seeing you again!`,
+      `Hello ${d.patientName},\n\nThis is a friendly reminder that your appointment is still pending confirmation. Please confirm it with the clinic so we can hold your slot:\n\n${textDetails(d)}\n\nIf you can no longer make this time, please let us know and we will help you find another.\n\nThank you for choosing ${clinicName()}!`,
   },
 };
 

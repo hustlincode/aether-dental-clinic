@@ -22,8 +22,6 @@ export interface PatientFormInitialData {
   phone: string;
   notes: string | null;
   status: "ACTIVE" | "INACTIVE";
-  followUpEnabled: boolean;
-  followUpDays: number;
 }
 
 const EMPTY_FORM: PatientFormValues = {
@@ -33,8 +31,6 @@ const EMPTY_FORM: PatientFormValues = {
   phone: "",
   notes: "",
   status: "ACTIVE",
-  followUpEnabled: true,
-  followUpDays: 1,
 };
 
 function toFormValues(data: PatientFormInitialData): PatientFormValues {
@@ -45,8 +41,6 @@ function toFormValues(data: PatientFormInitialData): PatientFormValues {
     phone: data.phone,
     notes: data.notes || "",
     status: data.status,
-    followUpEnabled: data.followUpEnabled,
-    followUpDays: data.followUpDays,
   };
 }
 
@@ -59,8 +53,6 @@ const FIELD_NAMES: ReadonlyArray<keyof PatientFormValues> = [
   "phone",
   "notes",
   "status",
-  "followUpEnabled",
-  "followUpDays",
 ];
 
 function applyServerErrors(form: UseFormReturn<PatientFormValues>, details: unknown) {
@@ -286,70 +278,6 @@ export function PatientFormModal({
                 )}
               />
             )}
-
-            {/* Follow-up emails */}
-            <FormField
-              control={form.control}
-              name="followUpEnabled"
-              render={({ field }) => (
-                <div className="rounded-lg border border-border bg-surface-alt p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text">Follow-up emails</p>
-                      <p className="mt-0.5 text-xs text-text-muted">
-                        Send an automated follow-up after each completed appointment.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => field.onChange(!field.value)}
-                      aria-pressed={field.value}
-                      className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-                        field.value
-                          ? "border-border-accent bg-accent-soft text-accent"
-                          : "border-border text-text-muted"
-                      }`}
-                    >
-                      {field.value ? (
-                        <ToggleRight size={18} className="text-accent" />
-                      ) : (
-                        <ToggleLeft size={18} />
-                      )}
-                      {field.value ? "Enabled" : "Disabled"}
-                    </button>
-                  </div>
-
-                  {field.value && (
-                    <FormField
-                      control={form.control}
-                      name="followUpDays"
-                      render={({ field: daysField }) => (
-                        <div className="mt-3 flex items-center gap-3">
-                          <label htmlFor="patient-follow-up-days" className="text-sm text-text-secondary">
-                            Send after
-                          </label>
-                          <Input
-                            id="patient-follow-up-days"
-                            type="number"
-                            min={0}
-                            max={60}
-                            {...daysField}
-                            onChange={(e) => {
-                              const v = Number(e.target.value);
-                              daysField.onChange(Number.isNaN(v) ? 0 : Math.max(0, Math.min(60, v)));
-                            }}
-                            className="h-auto w-20 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text shadow-none focus:border-accent focus:outline-none focus-visible:border-accent focus-visible:ring-0"
-                          />
-                          <span className="text-sm text-text-muted">
-                            {daysField.value === 1 ? "day" : "days"} after the visit
-                          </span>
-                        </div>
-                      )}
-                    />
-                  )}
-                </div>
-              )}
-            />
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-2">

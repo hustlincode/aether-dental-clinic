@@ -21,22 +21,6 @@ export const metadata: Metadata = {
   description: "Book dental appointments and manage your clinic with Aether Dental.",
 };
 
-// Inline script to prevent flash of wrong theme on load.
-// Reads the user's stored preference (aether-theme: light | dark | system)
-// and resolves "system" against the OS preference before first paint.
-const themeScript = `
-(function() {
-  try {
-    var mode = localStorage.getItem('aether-theme');
-    if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system';
-    var resolved = mode === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : mode;
-    document.documentElement.setAttribute('data-theme', resolved);
-  } catch (e) {}
-})()
-`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -45,9 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body className="h-full">
-        {/* Runs before first paint via the pre-interactive strategy, avoiding
-            the "script tag while rendering React component" warning. */}
-        <Script id="theme-script" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* External (not inline) so React never renders a script element.
+            beforeInteractive injects it before hydration to avoid a theme flash. */}
+        <Script id="theme-script" src="/theme-init.js" strategy="beforeInteractive" />
         <ThemeProvider>
           <TooltipProvider delayDuration={0}>
             {children}

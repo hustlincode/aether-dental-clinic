@@ -54,7 +54,6 @@ async function main() {
 
   // --- Clean existing data (idempotent re-run) ---
   await prisma.emailLog.deleteMany();
-  await prisma.followUp.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.activity.deleteMany();
   await prisma.blockedDate.deleteMany();
@@ -182,9 +181,6 @@ async function main() {
         email: null,
         phone: `${phones[i % phones.length]}${String(1000000 + i * 137).padStart(7, "0")}`,
         status: INACTIVE_INDICES.has(i) ? PatientStatus.INACTIVE : PatientStatus.ACTIVE,
-        // A mix of follow-up preferences for demo purposes
-        followUpEnabled: i % 9 !== 5,
-        followUpDays: 1 + (i % 3),
       },
     });
     patientIds.push(patient.id);
@@ -286,52 +282,6 @@ async function main() {
     }
   }
   console.log(`Created ${aptCount} appointments`);
-
-  // --- Follow-ups (demo data for the dashboard panel) ---
-  // Schedule follow-ups for the most recent completed appointments using each
-  // patient's follow-up preference. Some are SENT / FAILED to show statuses.
-  const completedAppts = await prisma.appointment.findMany({
-    where: { status: "COMPLETED" },
-    include: { patient: true },
-    orderBy: { appointmentDate: "desc" },
-    take: 12,
-  });
-
-  let followUpCount = 0;
-  for (let i = 0; i < completedAppts.length; i++) {
-    const a = completedAppts[i];
-    if (!a.patient.email || !a.patient.followUpEnabled) continue;
-
-    const scheduledFor = new Date(a.appointmentDate);
-    scheduledFor.setUTCDate(scheduledFor.getUTCDate() + a.patient.followUpDays);
-    scheduledFor.setUTCHours(9, 0, 0, 0);
-
-    const data: {
-      patientId: string;
-      appointmentId: string;
-      scheduledFor: Date;
-      status: "SCHEDULED" | "SENT" | "FAILED";
-      sentAt?: Date;
-      error?: string;
-    } = {
-      patientId: a.patientId,
-      appointmentId: a.id,
-      scheduledFor,
-      status: "SCHEDULED",
-    };
-
-    if (i % 4 === 2) {
-      data.status = "SENT";
-      data.sentAt = new Date(scheduledFor.getTime() - 60 * 60 * 1000);
-    } else if (i % 7 === 3) {
-      data.status = "FAILED";
-      data.error = "Connection reset by remote server (demo).";
-    }
-
-    await prisma.followUp.create({ data });
-    followUpCount++;
-  }
-  console.log(`Created ${followUpCount} follow-ups`);
 
   // --- Notifications (demo data for the bell + notification history) ---
   // Staff-facing only (Admin + Receptionist); created_at is spread over recent

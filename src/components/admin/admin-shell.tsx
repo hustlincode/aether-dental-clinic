@@ -22,14 +22,10 @@ export interface AdminShellProps {
 
 export function AdminShell({ navItems, user, children }: AdminShellProps) {
   /* ─── Sidebar collapse state (desktop) ─── */
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return localStorage.getItem(STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  // Start expanded so the server and first client render agree, then adopt the
+  // persisted value after mount. Reading localStorage during render would cause
+  // a hydration mismatch on the sidebar classes.
+  const [collapsed, setCollapsed] = useState(false);
 
   /* ─── Mobile off-canvas sidebar ─── */
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,8 +35,26 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
     mobileOpenRef.current = mobileOpen;
   }, [mobileOpen]);
 
-  /* Persist collapse state */
+  /* Adopt the persisted collapse state after mount */
   useEffect(() => {
+    const id = window.setTimeout(() => {
+      try {
+        if (localStorage.getItem(STORAGE_KEY) === "true") setCollapsed(true);
+      } catch {
+        // localStorage may be unavailable
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  /* Persist collapse state. Skip the first run so we never overwrite the stored
+     value with the default before it has been adopted. */
+  const didMountPersist = useRef(false);
+  useEffect(() => {
+    if (!didMountPersist.current) {
+      didMountPersist.current = true;
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, String(collapsed));
     } catch {

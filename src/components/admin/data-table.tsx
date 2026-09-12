@@ -77,8 +77,8 @@ export const dataTableFeatures = tableFeatures({
 
 /**
  * Full client-side feature set: sorting + global search + column filters +
- * pagination. Used by tables that own their whole dataset (services, patients,
- * follow-ups) so search/filter/sort/page all happen locally in the browser.
+ * pagination. Used by tables that own their whole dataset (services, patients)
+ * so search/filter/sort/page all happen locally in the browser.
  * Individual built-ins only (no stockFeatures) to keep tree-shaking.
  */
 export const filterableDataTableFeatures = tableFeatures({

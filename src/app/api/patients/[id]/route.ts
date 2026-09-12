@@ -12,8 +12,6 @@ const updatePatientSchema = z
     phone: z.string().trim().min(7, "Please provide a valid phone number.").optional(),
     notes: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
-    followUpEnabled: z.boolean().optional(),
-    followUpDays: z.number().int().min(0).max(60).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided.",
@@ -45,8 +43,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         phone: true,
         notes: true,
         status: true,
-        followUpEnabled: true,
-        followUpDays: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -152,8 +148,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.phone !== undefined) data.phone = body.phone.trim();
     if (body.notes !== undefined) data.notes = body.notes.trim() || null;
     if (body.status !== undefined) data.status = body.status;
-    if (body.followUpEnabled !== undefined) data.followUpEnabled = body.followUpEnabled;
-    if (body.followUpDays !== undefined) data.followUpDays = body.followUpDays;
 
     const updated = await prisma.patient.update({
       where: { id },
