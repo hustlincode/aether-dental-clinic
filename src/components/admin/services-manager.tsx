@@ -19,6 +19,12 @@ import {
   type FilterableDataTableFeatures,
   useDataTable,
 } from "./data-table";
+import { PageHeader } from "./page-header";
+import { PageContainer } from "./page-container";
+import { SectionCard } from "./section-card";
+import { EmptyState } from "./empty-state";
+import { ErrorState } from "./error-state";
+import { TableSkeleton } from "./table-skeleton";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -248,7 +254,7 @@ function ServiceModal({
             <button
               type="submit"
               disabled={saving}
-              className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-[#0E0F10] transition hover:opacity-90 disabled:opacity-50"
+              className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
             >
               {saving ? "Saving..." : initialData ? "Update Service" : "Create Service"}
             </button>
@@ -264,6 +270,7 @@ function ServiceModal({
 export function ServicesManager() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -276,6 +283,7 @@ export function ServicesManager() {
   /* Trigger a reload from an event handler. Loading is never toggled
      synchronously inside an effect body. */
   function reload() {
+    setError("");
     setLoading(true);
     setReloadKey((k) => k + 1);
   }
@@ -290,7 +298,10 @@ export function ServicesManager() {
         if (!cancelled) setServices(body.data || []);
       })
       .catch((err) => {
-        if (!cancelled) toast.error(err instanceof Error ? err.message : "Unable to load services.");
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "Unable to load services.";
+        setError(message);
+        toast.error(message);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -461,48 +472,37 @@ export function ServicesManager() {
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Services</h1>
-          <p className="mt-1 text-sm text-text-muted">Manage your clinic&apos;s services, pricing, and durations.</p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingService(null);
-            setModalOpen(true);
-          }}
-          className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-[#0E0F10] transition hover:opacity-90"
-        >
-          <Plus size={18} />
-          Add Service
-        </button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Clinic"
+        title="Services"
+        description="Manage your clinic's services, pricing, and durations."
+        actions={
+          <button
+            onClick={() => {
+              setEditingService(null);
+              setModalOpen(true);
+            }}
+            className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+          >
+            <Plus size={18} />
+            Add Service
+          </button>
+        }
+      />
 
       {/* Table */}
-      <div className="mt-4 animate-fade-in overflow-hidden rounded-xl border border-border bg-surface shadow">
-        {loading && services.length === 0 ? (
-          <div className="space-y-4 p-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse flex gap-4">
-                <div className="h-4 w-1/4 rounded bg-surface-alt" />
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-              </div>
-            ))}
-          </div>
+      <SectionCard padded={false} className="animate-fade-in">
+        {error ? (
+          <ErrorState message={error} onRetry={reload} />
+        ) : loading && services.length === 0 ? (
+          <TableSkeleton />
         ) : services.length === 0 ? (
-          <div className="flex flex-col items-center px-6 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
-              <Stethoscope size={24} className="text-accent" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-text">No services found</h3>
-            <p className="mt-1 max-w-sm text-sm text-text-muted">
-              Get started by adding your first service to the clinic catalog.
-            </p>
-          </div>
+          <EmptyState
+            icon={Stethoscope}
+            title="No services found"
+            description="Get started by adding your first service to the clinic catalog."
+          />
         ) : (
           <>
             <div className={`p-4 ${loading ? "opacity-60 transition-opacity" : ""}`} aria-busy={loading}>
@@ -527,11 +527,11 @@ export function ServicesManager() {
             <DataTablePagination table={table} />
           </>
         )}
-      </div>
+      </SectionCard>
 
       {/* Summary */}
-      {!loading && services.length > 0 && (
-        <div className="mt-3 text-right text-xs text-text-muted">
+      {!error && !loading && services.length > 0 && (
+        <div className="text-right text-xs text-text-muted">
           {filteredCount} service{filteredCount !== 1 ? "s" : ""}
           {statusFilterValue && ` (${statusFilterValue.toLowerCase()})`}
         </div>
@@ -549,6 +549,6 @@ export function ServicesManager() {
         initialData={editingService}
         title={editingService ? "Edit Service" : "Add New Service"}
       />
-    </div>
+    </PageContainer>
   );
 }

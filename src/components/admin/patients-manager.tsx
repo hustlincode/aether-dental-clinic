@@ -21,6 +21,11 @@ import {
   useDataTable,
   type FilterableDataTableFeatures,
 } from "./data-table";
+import { EmptyState } from "@/components/admin/empty-state";
+import { ErrorState } from "@/components/admin/error-state";
+import { PageContainer } from "@/components/admin/page-container";
+import { PageHeader } from "@/components/admin/page-header";
+import { TableSkeleton } from "@/components/admin/table-skeleton";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -207,7 +212,7 @@ export function PatientsManager({ role }: { role: string }) {
             className="flex items-center gap-3 text-left"
             title="View patient details"
           >
-            <span className="gradient-gold flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-[#0E0F10]">
+            <span className="gradient-gold flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary-foreground">
               {initials(patient.firstName, patient.lastName)}
             </span>
             <span className="min-w-0">
@@ -355,115 +360,92 @@ export function PatientsManager({ role }: { role: string }) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Patients</h1>
-          <p className="mt-1 text-sm text-text-muted">Search, filter, and manage your patient records.</p>
-        </div>
-        {canManage && (
-          <button
-            onClick={() => {
-              setEditingPatient(null);
-              setModalOpen(true);
-            }}
-            className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-[#0E0F10] transition hover:opacity-90"
-          >
-            <Plus size={18} />
-            Add Patient
-          </button>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <DataTableToolbar
-          table={table}
-          searchPlaceholder="Search patients..."
-          filters={[
-            {
-              columnId: "status",
-              label: "statuses",
-              options: [
-                { value: "ACTIVE", label: "Active" },
-                { value: "INACTIVE", label: "Inactive" },
-              ],
-            },
-            {
-              columnId: "appointments",
-              label: "appointments",
-              options: [
-                { value: "has", label: "Has appointments" },
-                { value: "none", label: "No appointments" },
-              ],
-            },
-          ]}
-          className="flex-1"
-        />
-        <button
-          onClick={reload}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="mt-4 animate-fade-in overflow-hidden rounded-xl border border-border bg-surface shadow">
-        {error ? (
-          <div className="flex flex-col items-center px-6 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-error-bg">
-              <UserX size={24} className="text-error" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-text">Unable to load patients</h3>
-            <p className="mt-1 max-w-sm text-sm text-text-muted">{error}</p>
-            <button
-              onClick={reload}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Try Again
-            </button>
-          </div>
-        ) : loading && patients.length === 0 ? (
-          <div className="space-y-4 p-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse flex gap-4">
-                <div className="h-10 w-10 rounded-full bg-surface-alt" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-1/3 rounded bg-surface-alt" />
-                  <div className="h-3 w-1/2 rounded bg-surface-alt" />
-                </div>
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-                <div className="h-4 w-1/6 rounded bg-surface-alt" />
-              </div>
-            ))}
-          </div>
-        ) : patients.length === 0 ? (
-          <div className="flex flex-col items-center px-6 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
-              <Users size={24} className="text-accent" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-text">No patients found</h3>
-            <p className="mt-1 max-w-sm text-sm text-text-muted">
-              Get started by adding your first patient to the clinic records.
-            </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Clinic"
+        title="Patients"
+        description="Search, filter, and manage your patient records."
+        actions={
+          <>
             {canManage && (
               <button
                 onClick={() => {
                   setEditingPatient(null);
                   setModalOpen(true);
                 }}
-                className="gradient-gold mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-[#0E0F10] transition hover:opacity-90"
+                className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
               >
                 <Plus size={18} />
                 Add Patient
               </button>
             )}
-          </div>
+            <button
+              onClick={reload}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </>
+        }
+      />
+
+      {/* Toolbar */}
+      <DataTableToolbar
+        table={table}
+        searchPlaceholder="Search patients..."
+        filters={[
+          {
+            columnId: "status",
+            label: "statuses",
+            options: [
+              { value: "ACTIVE", label: "Active" },
+              { value: "INACTIVE", label: "Inactive" },
+            ],
+          },
+          {
+            columnId: "appointments",
+            label: "appointments",
+            options: [
+              { value: "has", label: "Has appointments" },
+              { value: "none", label: "No appointments" },
+            ],
+          },
+        ]}
+        className="w-full"
+      />
+
+      {/* Table */}
+      <div className="card-surface animate-fade-in overflow-hidden">
+        {error ? (
+          <ErrorState
+            title="Unable to load patients"
+            message={error}
+            onRetry={reload}
+            icon={UserX}
+          />
+        ) : loading && patients.length === 0 ? (
+          <TableSkeleton rows={6} columns={5} />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No patients found"
+            description="Get started by adding your first patient to the clinic records."
+            action={
+              canManage ? (
+                <button
+                  onClick={() => {
+                    setEditingPatient(null);
+                    setModalOpen(true);
+                  }}
+                  className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+                >
+                  <Plus size={18} />
+                  Add Patient
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <div className={`overflow-x-auto ${loading ? "opacity-60 transition-opacity" : ""}`} aria-busy={loading}>
@@ -489,6 +471,6 @@ export function PatientsManager({ role }: { role: string }) {
 
       {/* Details drawer */}
       <PatientDetails key={detailsId || "closed"} open={!!detailsId} patientId={detailsId} onClose={() => setDetailsId(null)} />
-    </div>
+    </PageContainer>
   );
 }

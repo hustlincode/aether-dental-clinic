@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { CalendarView } from "@/components/admin/calendar-view";
+import { PageContainer } from "@/components/admin/page-container";
+import { PageHeader } from "@/components/admin/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -9,15 +11,16 @@ export default async function AdminCalendarPage() {
   if (!session?.user) redirect("/login");
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-text">Calendar</h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        View and manage appointments on the calendar.
-      </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Clinic"
+        title="Calendar"
+        description="View and manage appointments on the calendar."
+      />
 
-      <div className="mt-6 animate-fade-in">
+      <div className="animate-fade-in">
         <CalendarView />
       </div>
-    </div>
+    </PageContainer>
   );
 }

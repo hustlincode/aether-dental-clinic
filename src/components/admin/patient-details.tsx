@@ -7,6 +7,7 @@ import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./dat
 import { StatusBadge } from "./status-badge";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { StatTone } from "@/components/admin/stat-card";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -216,7 +217,7 @@ export function PatientDetails({
             <>
               {/* Patient header */}
               <div className="flex items-center gap-3">
-                <div className="gradient-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-[#0E0F10]">
+                <div className="gradient-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary-foreground">
                   {initials(patient.firstName, patient.lastName)}
                 </div>
                 <div className="min-w-0">
@@ -243,18 +244,20 @@ export function PatientDetails({
 
               {/* Stats grid */}
               <div className="mt-5 grid grid-cols-2 gap-3">
-                <StatCard label="Total" value={String(stats.total)} />
-                <StatCard label="Completed" value={String(stats.completed)} />
-                <StatCard label="Cancelled" value={String(stats.cancelled)} />
+                <StatCard label="Total" value={String(stats.total)} tone="neutral" />
+                <StatCard label="Completed" value={String(stats.completed)} tone="success" />
+                <StatCard label="Cancelled" value={String(stats.cancelled)} tone="error" />
                 <StatCard
                   label="Next Appointment"
                   value={stats.nextAppointment ? fmtDate(stats.nextAppointment.appointmentDate) : "—"}
                   sub={stats.nextAppointment ? `${fmtTime(stats.nextAppointment.startTime)} · ${stats.nextAppointment.service.name}` : "No upcoming visits"}
+                  tone="accent"
                 />
                 <StatCard
                   label="Last Appointment"
                   value={stats.lastAppointment ? fmtDate(stats.lastAppointment.appointmentDate) : "—"}
                   sub={stats.lastAppointment ? `${fmtTime(stats.lastAppointment.startTime)} · ${stats.lastAppointment.service.name}` : "No past visits"}
+                  tone="neutral"
                 />
                 <StatCard
                   label="Follow-up Email"
@@ -264,6 +267,7 @@ export function PatientDetails({
                       ? "Will not be contacted"
                       : `${patient.followUpDays ?? 1} day${(patient.followUpDays ?? 1) === 1 ? "" : "s"} after each visit`
                   }
+                  tone={patient.followUpEnabled === false ? "neutral" : "success"}
                 />
               </div>
 
@@ -277,7 +281,7 @@ export function PatientDetails({
                     <p className="mt-1 text-xs text-text-muted">This patient has no appointment history.</p>
                   </div>
                 ) : (
-                  <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                  <div className="card-surface mt-3 overflow-hidden">
                     <DataTable table={table} />
                   </div>
                 )}
@@ -293,11 +297,20 @@ export function PatientDetails({
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+const STAT_TONE_STYLES: Record<StatTone, string> = {
+  accent: "text-accent",
+  success: "text-success",
+  warning: "text-warning",
+  error: "text-error",
+  info: "text-info",
+  neutral: "text-text",
+};
+
+function StatCard({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: StatTone }) {
   return (
     <div className="rounded-lg border border-border bg-surface-alt px-3 py-2.5">
       <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
-      <p className="mt-1 truncate text-base font-semibold text-text">{value}</p>
+      <p className={`mt-1 truncate text-base font-semibold ${STAT_TONE_STYLES[tone]}`}>{value}</p>
       {sub && <p className="mt-0.5 truncate text-xs text-text-muted">{sub}</p>}
     </div>
   );

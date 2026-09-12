@@ -22,13 +22,17 @@ export const metadata: Metadata = {
 };
 
 // Inline script to prevent flash of wrong theme on load.
-// Reads the user's stored theme (aether-theme) or falls back to OS preference.
+// Reads the user's stored preference (aether-theme: light | dark | system)
+// and resolves "system" against the OS preference before first paint.
 const themeScript = `
 (function() {
   try {
-    var theme = localStorage.getItem('aether-theme') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
+    var mode = localStorage.getItem('aether-theme');
+    if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system';
+    var resolved = mode === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : mode;
+    document.documentElement.setAttribute('data-theme', resolved);
   } catch (e) {}
 })()
 `;
@@ -40,14 +44,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body className="h-full">
-        {/* The theme script is injected by Next.js at the HTML level
-            (strategy="beforeInteractive"), so it runs before first paint
-            without being handed to React's client renderer — avoiding the
-            "Encountered a script tag while rendering React component" warning. */}
+        {/* Runs before first paint via the pre-interactive strategy, avoiding
+            the "script tag while rendering React component" warning. */}
         <Script id="theme-script" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
           <TooltipProvider delayDuration={0}>

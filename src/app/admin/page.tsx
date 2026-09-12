@@ -2,8 +2,12 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
+import { CalendarCheck, CalendarClock, CheckCircle2, MailWarning, Users } from "lucide-react";
 import { FollowUpsPanel } from "@/components/admin/follow-ups-panel";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
+import { PageContainer } from "@/components/admin/page-container";
+import { PageHeader } from "@/components/admin/page-header";
+import { StatCard } from "@/components/admin/stat-card";
 import { processDueFollowUps, getPendingFollowUpCount } from "@/lib/followups";
 import { processUpcomingAppointmentReminders } from "@/lib/notifications";
 
@@ -105,19 +109,50 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        Welcome back, {user.name}. Here&apos;s what&apos;s happening today at the clinic.
-      </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Overview"
+        title="Dashboard"
+        description={`Welcome back, ${user.name}. Here's what's happening today at the clinic.`}
+      />
 
       {/* Stat cards */}
-      <div className="mt-6 grid gap-4 animate-fade-in sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard label="Today's Appointments" value={todayCount} />
-        <StatCard label="Upcoming" value={upcomingCount} />
-        <StatCard label="Total Patients" value={totalPatients} />
-        <StatCard label="Completed This Month" value={completedThisMonth} />
-        <StatCard label="Follow-ups Pending" value={pendingFollowUps} />
+      <div className="grid gap-4 animate-fade-in sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <StatCard
+          label="Today's Appointments"
+          value={todayCount}
+          icon={CalendarCheck}
+          tone="accent"
+          hint="Scheduled for today"
+        />
+        <StatCard
+          label="Upcoming"
+          value={upcomingCount}
+          icon={CalendarClock}
+          tone="info"
+          hint="Not cancelled or no-show"
+        />
+        <StatCard
+          label="Total Patients"
+          value={totalPatients}
+          icon={Users}
+          tone="neutral"
+          hint="All time"
+        />
+        <StatCard
+          label="Completed This Month"
+          value={completedThisMonth}
+          icon={CheckCircle2}
+          tone="success"
+          hint="Month to date"
+        />
+        <StatCard
+          label="Follow-ups Pending"
+          value={pendingFollowUps}
+          icon={MailWarning}
+          tone="warning"
+          hint="Awaiting send"
+        />
       </div>
 
       {/* Analytics charts */}
@@ -125,15 +160,6 @@ export default async function AdminDashboard() {
 
       {/* Follow-ups */}
       <FollowUpsPanel role={user.role} />
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-xl border border-l-4 border-l-accent border-border bg-surface p-5 shadow">
-      <div className="text-3xl font-bold text-accent">{value}</div>
-      <div className="mt-1 text-sm text-text-muted">{label}</div>
-    </div>
+    </PageContainer>
   );
 }

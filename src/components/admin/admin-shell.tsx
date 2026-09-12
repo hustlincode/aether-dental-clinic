@@ -6,9 +6,16 @@ import { AdminHeader } from "@/components/admin/admin-header";
 
 const STORAGE_KEY = "aether-sidebar-collapsed";
 
+export interface AdminNavItem {
+  href: string;
+  label: string;
+  roles: string[];
+  group?: string;
+}
+
 /* ─── Props ─── */
 export interface AdminShellProps {
-  navItems: { href: string; label: string; roles: string[] }[];
+  navItems: AdminNavItem[];
   user: { name: string; role: string };
   children: ReactNode;
 }
@@ -75,7 +82,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
           collapsed={collapsed}
           mobileOpen={mobileOpen}
         />
-        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">{children}</main>
+        <main className="admin-canvas flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

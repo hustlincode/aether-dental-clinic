@@ -8,6 +8,12 @@ import { CancelAppointmentDialog } from "./cancel-appointment-dialog";
 import { statusActionLabel } from "@/lib/status-labels";
 import { toast } from "sonner";
 import { DataTable, type DataTableFeatures } from "./data-table";
+import { PageContainer } from "@/components/admin/page-container";
+import { PageHeader } from "@/components/admin/page-header";
+import { SectionCard } from "@/components/admin/section-card";
+import { EmptyState } from "@/components/admin/empty-state";
+import { ErrorState } from "@/components/admin/error-state";
+import { TableSkeleton } from "@/components/admin/table-skeleton";
 import {
   Dialog,
   DialogContent,
@@ -296,10 +302,23 @@ export function AppointmentsList({ role }: { role: string }) {
 
   return (
     <>
-    <div>
-      <h1 className="text-2xl font-bold text-text">Appointments</h1>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Clinic"
+        title="Appointments"
+        description="Search, filter, and manage patient appointments."
+        actions={
+          <button
+            onClick={refresh}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        }
+      />
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
@@ -307,7 +326,7 @@ export function AppointmentsList({ role }: { role: string }) {
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search patient name, email, or phone..."
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+            className="h-9 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -320,28 +339,20 @@ export function AppointmentsList({ role }: { role: string }) {
               {ALLOWED.map((s) => (<SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>))}
             </SelectContent>
           </Select>
-          <button
-            onClick={refresh}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
         </div>
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-lg border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>
-      )}
-
-      <div className="mt-4 flex flex-col animate-fade-in overflow-hidden rounded-xl border border-border bg-surface shadow">
-        {error ? null : loading && appts.length === 0 ? (
-          <div className="px-6 py-16 text-center text-sm text-text-muted">Loading appointments...</div>
+      <SectionCard padded={false} bodyClassName="flex flex-col" className="animate-fade-in">
+        {error ? (
+          <ErrorState message={error} onRetry={refresh} />
+        ) : loading && appts.length === 0 ? (
+          <TableSkeleton />
         ) : appts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-text-muted">
-            <CalendarX className="h-10 w-10 opacity-60" />
-            <span>No appointments found.</span>
-          </div>
+          <EmptyState
+            icon={CalendarX}
+            title="No appointments found."
+            description="Try adjusting your search or status filter."
+          />
         ) : (
           <>
             <div
@@ -380,7 +391,7 @@ export function AppointmentsList({ role }: { role: string }) {
                         aria-current={item === page ? "page" : undefined}
                         className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
                           item === page
-                            ? "bg-accent text-[#0E0F10]"
+                            ? "bg-accent text-primary-foreground"
                             : "text-text-secondary hover:bg-accent-soft hover:text-accent"
                         }`}
                       >
@@ -406,8 +417,8 @@ export function AppointmentsList({ role }: { role: string }) {
             )}
           </>
         )}
-      </div>
-    </div>
+      </SectionCard>
+    </PageContainer>
     {editing && (
       <EditAppointmentDialog
         key={editing.id}
@@ -466,8 +477,8 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
               isCancel
                 ? "border-destructive/30 bg-destructive text-white hover:bg-destructive/90"
                 : isPrimary
-                  ? "border-accent bg-accent text-[#0E0F10] hover:bg-accent-hover"
-                  : "border-border bg-accent-soft text-accent hover:bg-accent hover:text-[#0E0F10]"
+                  ? "border-accent bg-accent text-primary-foreground hover:bg-accent-hover"
+                  : "border-border bg-accent-soft text-accent hover:bg-accent hover:text-primary-foreground"
             }`}
           >
             {statusActionLabel(a)}
@@ -767,7 +778,7 @@ function EditAppointmentDialog({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-[#0E0F10] transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

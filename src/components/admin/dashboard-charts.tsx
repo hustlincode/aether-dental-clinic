@@ -190,11 +190,11 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
   };
 
   return (
-    <section className="mt-8" aria-label="Analytics">
+    <section aria-label="Analytics">
       <h2 className="text-lg font-semibold text-text">Analytics</h2>
       <div className="mt-3 grid items-stretch gap-6 lg:grid-cols-2">
         {/* Weekly appointments trend */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <div className="card-surface p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-secondary">Weekly Appointments</h3>
             <span className="text-xs text-text-muted">Last 7 days</span>
@@ -249,7 +249,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
         </div>
 
         {/* Appointment status breakdown */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <div className="card-surface p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-secondary">Status Breakdown</h3>
             <span className="text-xs text-text-muted">{totalAppointments} total</span>

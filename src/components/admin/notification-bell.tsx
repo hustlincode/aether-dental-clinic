@@ -83,12 +83,18 @@ export function NotificationBell() {
 
   /* ─── Actions ─── */
   async function markAllRead() {
+    // Optimistic update with rollback so the UI can't desync from the server.
+    const prevItems = items;
+    const prevCount = count;
     setItems((prev) => prev?.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })) ?? prev);
     setCount(0);
     try {
-      await fetch("/api/notifications/read-all", { method: "PATCH" });
-    } catch {
-      // non-fatal
+      const res = await fetch("/api/notifications/read-all", { method: "PATCH" });
+      if (!res.ok) throw new Error("Unable to mark all notifications as read.");
+    } catch (err) {
+      setItems(prevItems);
+      setCount(prevCount);
+      setError(err instanceof Error ? err.message : "Unable to mark all notifications as read.");
     }
   }
 

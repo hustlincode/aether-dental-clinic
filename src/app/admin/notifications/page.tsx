@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { NotificationsHistory } from "@/components/admin/notifications-history";
+import { PageContainer } from "@/components/admin/page-container";
+import { PageHeader } from "@/components/admin/page-header";
 
 export const metadata = { title: "Aether Dental — Notifications" };
 
@@ -9,12 +11,13 @@ export default async function NotificationsPage() {
   if (!session?.user) redirect("/login");
 
   return (
-    <div>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-text">Notifications</h1>
-        <p className="text-sm text-text-muted">Important events that need your attention.</p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Insights"
+        title="Notifications"
+        description="Important events that need your attention."
+      />
       <NotificationsHistory />
-    </div>
+    </PageContainer>
   );
 }

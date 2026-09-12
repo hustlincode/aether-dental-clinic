@@ -6,6 +6,9 @@ import { BellDot, CheckCheck, ChevronLeft, ChevronRight, Inbox, RefreshCw } from
 import { notificationColor, notificationIcon, typeLabel } from "./notification-meta";
 import { formatDateTime, timeAgo } from "@/lib/time";
 import type { NotificationItem } from "./notification-bell";
+import { SectionCard } from "./section-card";
+import { EmptyState } from "./empty-state";
+import { ErrorState } from "./error-state";
 
 const PAGE_SIZE = 20;
 
@@ -170,43 +173,34 @@ export function NotificationsHistory() {
         </div>
       </div>
 
-      {error && (
-        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-error/20 bg-error-bg px-4 py-6 text-center">
-          <p className="text-sm text-error">{error}</p>
-          <button
-            onClick={refresh}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition hover:border-accent hover:bg-accent-soft hover:text-accent"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </button>
-        </div>
-      )}
-
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface shadow">
-        {error ? null : loading && !items ? (
-          <div className="space-y-2 px-4 py-4" aria-busy="true">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex animate-pulse gap-3">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-background-alt" />
-                <div className="flex-1 space-y-1.5 py-1">
-                  <div className="h-3.5 w-2/3 rounded bg-background-alt" />
-                  <div className="h-3 w-1/2 rounded bg-background-alt" />
+      {error ? (
+        <ErrorState className="mt-4" message={error} onRetry={refresh} />
+      ) : (
+        <SectionCard padded={false} className="mt-4">
+          {loading && !items ? (
+            <div className="space-y-2 px-4 py-4" aria-busy="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex animate-pulse gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-background-alt" />
+                  <div className="flex-1 space-y-1.5 py-1">
+                    <div className="h-3.5 w-2/3 rounded bg-background-alt" />
+                    <div className="h-3 w-1/2 rounded bg-background-alt" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : !items || items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
-            <Inbox className="h-10 w-10 text-text-muted" aria-hidden />
-            <p className="text-sm font-medium text-text">You&apos;re all caught up.</p>
-            <p className="text-xs text-text-muted">
-              {filter === "unread" ? "No unread notifications." : "Notifications will appear here when something needs your attention."}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-border overflow-hidden">
+              ))}
+            </div>
+          ) : !items || items.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title="You're all caught up."
+              description={filter === "unread" ? "No unread notifications." : "Notifications will appear here when something needs your attention."}
+            />
+          ) : (
+            <>
+              <div
+                className={`divide-y divide-border overflow-hidden ${loading ? "opacity-60 transition-opacity" : ""}`}
+                aria-busy={loading}
+              >
               {items.map((n) => {
                 const Icon = notificationIcon(n.type);
                 return (
@@ -265,7 +259,7 @@ export function NotificationsHistory() {
                         onClick={() => goToPage(item)}
                         aria-current={item === page ? "page" : undefined}
                         className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
-                          item === page ? "bg-accent text-[#0E0F10]" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                          item === page ? "bg-accent text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
                         }`}
                       >
                         {item}
@@ -283,9 +277,10 @@ export function NotificationsHistory() {
                 </div>
               </div>
             )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </SectionCard>
+      )}
     </div>
   );
 }

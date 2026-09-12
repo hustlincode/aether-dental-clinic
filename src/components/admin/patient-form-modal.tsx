@@ -363,7 +363,7 @@ export function PatientFormModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-[#0E0F10] transition hover:opacity-90 disabled:opacity-50"
+                className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
               >
                 {isSubmitting ? "Saving..." : initialData ? "Update Patient" : "Add Patient"}
               </button>

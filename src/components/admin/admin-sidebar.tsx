@@ -17,6 +17,7 @@ import {
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import type { AdminNavItem } from "@/components/admin/admin-shell";
 
 /* ─── Nav icon map ─── */
 const iconMap: Record<string, LucideIcon> = {
@@ -32,7 +33,7 @@ const iconMap: Record<string, LucideIcon> = {
 
 /* ─── Props ─── */
 export interface AdminSidebarProps {
-  navItems: { href: string; label: string; roles: string[] }[];
+  navItems: AdminNavItem[];
   user: { name: string; role: string };
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -52,6 +53,18 @@ export function AdminSidebar({
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
   const roleLabel = user.role?.toLowerCase() ?? "staff";
 
+  /* ─── Group nav items by their optional `group` label ─── */
+  const navGroups = navItems.reduce<{ group: string; items: AdminNavItem[] }[]>(
+    (acc, item) => {
+      const group = item.group ?? "Overview";
+      const bucket = acc.find((g) => g.group === group);
+      if (bucket) bucket.items.push(item);
+      else acc.push({ group, items: [item] });
+      return acc;
+    },
+    [],
+  );
+
   /* ─── Shared sidebar content ─── */
   const sidebarContent = (
     <div className="flex h-full flex-col bg-sidebar-bg text-sidebar-text">
@@ -59,7 +72,7 @@ export function AdminSidebar({
       <div className={`flex items-center justify-between px-3 py-4 ${collapsed ? "flex-col gap-3" : ""}`}>
         <Link href="/admin" className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-gold">
-            <Stethoscope className="h-5 w-5 text-[#0E0F10]" strokeWidth={2} aria-hidden />
+            <Stethoscope className="h-5 w-5 text-primary-foreground" strokeWidth={2} aria-hidden />
           </span>
           {!collapsed && (
             <span className="flex flex-col leading-tight">
@@ -87,40 +100,55 @@ export function AdminSidebar({
       </div>
 
       {/* Nav */}
-      <nav className={`flex-1 space-y-1 overflow-y-auto px-2 py-2 ${collapsed ? "px-2" : ""}`}>
-        {navItems.map((item) => {
-          const Icon = iconMap[item.label] ?? LayoutDashboard;
-          const active = pathname === item.href;
+      <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
+        {navGroups.map(({ group, items }) => (
+          <div key={group} className="space-y-1">
+            {!collapsed && (
+              <p className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text-muted/70">
+                {group}
+              </p>
+            )}
+            {items.map((item) => {
+              const Icon = iconMap[item.label] ?? LayoutDashboard;
+              const active = pathname === item.href;
 
-          const linkEl = (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onCloseMobile}
-              title={collapsed ? item.label : undefined}
-              className={`group relative flex items-center gap-3 rounded-lg transition-colors ${
-                collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
-              } ${
-                active
-                  ? "bg-accent-soft font-semibold text-accent"
-                  : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-              {!collapsed && <span className="truncate text-sm">{item.label}</span>}
-            </Link>
-          );
+              const linkEl = (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onCloseMobile}
+                  title={collapsed ? item.label : undefined}
+                  className={`group relative flex items-center gap-3 rounded-lg transition-colors ${
+                    collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
+                  } ${
+                    active
+                      ? "bg-accent-soft font-semibold text-accent"
+                      : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text"
+                  }`}
+                >
+                  {active && !collapsed && (
+                    <span
+                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent"
+                      aria-hidden
+                    />
+                  )}
+                  <Icon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                  {!collapsed && <span className="truncate text-sm">{item.label}</span>}
+                </Link>
+              );
 
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
-              </Tooltip>
-            );
-          }
-          return linkEl;
-        })}
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+              return linkEl;
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* User + theme + sign out */}
@@ -129,7 +157,7 @@ export function AdminSidebar({
           <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : "min-w-0 flex-1"}`}>
             <div
               title={collapsed ? `${user.name} — ${roleLabel}` : undefined}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-[#0E0F10]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary-foreground"
             >
               {initial}
             </div>
@@ -162,7 +190,7 @@ export function AdminSidebar({
       {/* Mobile overlay backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden animate-fade-in"
+          className="fixed inset-0 z-40 bg-overlay md:hidden animate-fade-in"
           onClick={onCloseMobile}
           aria-hidden="true"
         />

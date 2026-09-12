@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MailCheck, MailX, Play, RefreshCw, Send } from "lucide-react";
+import { MailCheck, Play, RefreshCw, Send } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,9 @@ import {
   useDataTable,
   type FilterableDataTableFeatures,
 } from "./data-table";
+import { EmptyState } from "./empty-state";
+import { ErrorState } from "./error-state";
+import { TableSkeleton } from "./table-skeleton";
 
 interface FollowUpItem {
   id: string;
@@ -270,7 +273,7 @@ export function FollowUpsPanel({ role }: { role: string }) {
   });
 
   return (
-    <div className="mt-8">
+    <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-text">
@@ -286,7 +289,7 @@ export function FollowUpsPanel({ role }: { role: string }) {
             <button
               onClick={processDue}
               disabled={processing}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-[#0E0F10] transition hover:opacity-90 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
             >
               <Play size={14} />
               {processing ? "Processing..." : "Process due now"}
@@ -295,31 +298,17 @@ export function FollowUpsPanel({ role }: { role: string }) {
         </div>
       </div>
 
-      <div className="mt-3 animate-fade-in overflow-hidden rounded-xl border border-border bg-surface shadow">
+      <div className="card-surface mt-3 animate-fade-in overflow-hidden">
         {error ? (
-          <div className="flex flex-col items-center px-6 py-12 text-center">
-            <MailX size={28} className="text-error" />
-            <p className="mt-3 text-sm text-text-secondary">{error}</p>
-            <button
-              onClick={load}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-            >
-              <RefreshCw size={14} />
-              Try Again
-            </button>
-          </div>
+          <ErrorState message={error} onRetry={load} />
         ) : loading && items.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-text-muted">
-            Loading follow-ups...
-          </div>
+          <TableSkeleton rows={5} columns={4} />
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center px-6 py-12 text-center text-sm text-text-muted">
-            <MailCheck size={32} className="opacity-60" />
-            <span className="mt-3">No follow-ups yet.</span>
-            <span className="mt-1 text-xs">
-              Follow-ups appear after appointments are marked completed.
-            </span>
-          </div>
+          <EmptyState
+            icon={MailCheck}
+            title="No follow-ups yet"
+            description="Follow-ups appear after appointments are marked completed."
+          />
         ) : (
           <>
             <div className="px-4 pt-3">

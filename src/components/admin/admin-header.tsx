@@ -73,7 +73,7 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-background-alt"
               aria-label="Open user menu"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-[#0E0F10]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-primary-foreground">
                 {initial}
               </div>
               <div className="hidden flex-col items-start text-left md:flex">

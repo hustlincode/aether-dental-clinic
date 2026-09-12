@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -10,16 +10,17 @@ import { statusActionLabel } from "@/lib/status-labels";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-/* ─── Status → color mapping (matches the ProSmile palette) ─── */
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: "#d97706",
-  CONFIRMED: "#2563eb",
-  CHECKED_IN: "#D4AF37",
-  COMPLETED: "#16a34a",
-  CANCELLED: "#dc2626",
-  NO_SHOW: "#6b7280",
+/* ─── Status → theme-token styling (no hardcoded palette) ─── */
+const STATUS_META: Record<string, { chip: string; border: string }> = {
+  PENDING: { chip: "bg-warning-bg text-warning", border: "var(--warning)" },
+  CONFIRMED: { chip: "bg-info-bg text-info", border: "var(--info)" },
+  CHECKED_IN: { chip: "bg-accent-soft text-text", border: "var(--accent)" },
+  COMPLETED: { chip: "bg-success-bg text-success", border: "var(--success)" },
+  CANCELLED: { chip: "bg-error-bg text-error", border: "var(--error)" },
+  NO_SHOW: { chip: "bg-neutral-bg text-neutral-c", border: "var(--neutral)" },
 };
 
 /* ─── Allowed next-status transitions per current status ─── */
@@ -42,8 +43,8 @@ function statusLabel(s: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function statusColor(s: string) {
-  return STATUS_COLORS[s] ?? STATUS_COLORS.PENDING;
+function statusMeta(s: string) {
+  return STATUS_META[s] ?? STATUS_META.PENDING;
 }
 
 /* ─── Shape stored in the fetched appointment list ─── */
@@ -220,19 +221,35 @@ export function CalendarView() {
 
   const selectedItems = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
 
+  /* ─── Arrow-key navigation across the month grid ─── */
+  const handleGridKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const deltas: Record<string, number> = {
+      ArrowLeft: -1,
+      ArrowRight: 1,
+      ArrowUp: -7,
+      ArrowDown: 7,
+    };
+    const delta = deltas[e.key];
+    if (!delta) return;
+
+    const target = (e.target as HTMLElement).closest("button[data-daycell]");
+    if (!target) return;
+
+    const cells = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-daycell]"),
+    );
+    const index = cells.indexOf(target as HTMLButtonElement);
+    if (index === -1) return;
+
+    e.preventDefault();
+    const next = cells[Math.min(Math.max(index + delta, 0), cells.length - 1)];
+    next?.focus();
+  };
+
   return (
     <>
       {/* ─── Calendar ─── */}
-      <div className="relative rounded-xl border border-border bg-surface p-4 shadow">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-surface/60 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-              <span className="text-sm text-text-muted">Loading calendar...</span>
-            </div>
-          </div>
-        )}
-
+      <div className="card-surface relative p-4">
         {error && (
           <div className="mb-4 rounded-lg border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">
             <div className="flex items-center justify-between">
@@ -294,94 +311,98 @@ export function CalendarView() {
         </div>
 
         {/* Day grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: grid.total }).map((_, i) => {
-            const day = i - grid.offset + 1;
-            if (day < 1 || day > grid.daysInMonth) {
-              return <div key={i} className="min-h-14 rounded-lg bg-background-alt/40 sm:min-h-24" />;
-            }
-            const key = dayKey(day);
-            const items = byDate.get(key) ?? [];
-            const isToday = key === todayKey;
-            const isSelected = key === selectedDate;
+        <div
+          className={cn(
+            "grid grid-cols-7 gap-1",
+            loading && events.length > 0 && "opacity-60 transition-opacity",
+          )}
+          onKeyDown={handleGridKeyDown}
+          aria-busy={loading}
+        >
+          {loading && events.length === 0
+            ? Array.from({ length: 35 }).map((_, i) => (
+                <Skeleton key={i} className="min-h-14 rounded-lg sm:min-h-24" />
+              ))
+            : Array.from({ length: grid.total }).map((_, i) => {
+                const day = i - grid.offset + 1;
+                if (day < 1 || day > grid.daysInMonth) {
+                  return <div key={i} className="min-h-14 rounded-lg bg-background-alt/40 sm:min-h-24" />;
+                }
+                const key = dayKey(day);
+                const items = byDate.get(key) ?? [];
+                const isToday = key === todayKey;
+                const isSelected = key === selectedDate;
 
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => items.length > 0 && setSelectedDate(isSelected ? "" : key)}
-                aria-label={`${fmtLongDate(key)}${items.length > 0 ? `, ${items.length} appointments` : ""}`}
-                className={cn(
-                  "flex min-h-14 flex-col items-stretch gap-1 rounded-lg border p-1 text-left transition-colors sm:min-h-24 sm:p-1.5",
-                  isSelected
-                    ? "border-border-accent bg-accent-soft/70"
-                    : "border-border bg-background-alt/40 hover:border-border-accent hover:bg-accent-soft/30",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold sm:h-7 sm:w-7",
-                    isToday ? "bg-accent text-[#0E0F10]" : "text-text-secondary",
-                  )}
-                >
-                  {day}
-                </span>
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    data-daycell
+                    onClick={() => items.length > 0 && setSelectedDate(isSelected ? "" : key)}
+                    aria-label={`${fmtLongDate(key)}${items.length > 0 ? `, ${items.length} appointments` : ""}`}
+                    className={cn(
+                      "flex min-h-14 flex-col items-stretch gap-1 rounded-lg border p-1 text-left transition-colors sm:min-h-24 sm:p-1.5",
+                      isSelected
+                        ? "border-border-accent bg-accent-soft/70"
+                        : "border-border bg-background-alt/40 hover:border-border-accent hover:bg-accent-soft/30",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold sm:h-7 sm:w-7",
+                        isToday ? "bg-accent text-primary-foreground" : "text-text-secondary",
+                      )}
+                    >
+                      {day}
+                    </span>
 
-                {/* Chips (sm+) */}
-                {items.length > 0 && (
-                  <div className="hidden flex-col gap-1 sm:flex">
-                    {items.slice(0, MAX_CHIPS).map((a) => {
-                      const color = statusColor(a.status);
-                      return (
-                        <span
-                          key={a.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSheet(a);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.stopPropagation();
-                              openSheet(a);
-                            }
-                          }}
-                          className="flex cursor-pointer items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-text-secondary transition-colors hover:text-accent"
-                          style={{
-                            backgroundColor: `${color}1A`,
-                            borderLeft: `3px solid ${color}`,
-                          }}
-                        >
-                          <span className="truncate">
-                            {a.patient.firstName} {a.patient.lastName}
+                    {/* Chips (sm+) */}
+                    {items.length > 0 && (
+                      <div className="hidden flex-col gap-1 sm:flex">
+                        {items.slice(0, MAX_CHIPS).map((a) => {
+                          const meta = statusMeta(a.status);
+                          return (
+                            <span
+                              key={a.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openSheet(a);
+                              }}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-1 truncate rounded border-l-[3px] px-1.5 py-0.5 text-[11px] font-medium transition-colors hover:brightness-105",
+                                meta.chip,
+                              )}
+                              style={{ borderLeftColor: meta.border }}
+                            >
+                              <span className="truncate">
+                                {a.patient.firstName} {a.patient.lastName}
+                              </span>
+                            </span>
+                          );
+                        })}
+                        {items.length > MAX_CHIPS && (
+                          <span className="px-1.5 text-[11px] font-medium text-text-muted">
+                            +{items.length - MAX_CHIPS} more
                           </span>
-                        </span>
-                      );
-                    })}
-                    {items.length > MAX_CHIPS && (
-                      <span className="px-1.5 text-[11px] font-medium text-text-muted">
-                        +{items.length - MAX_CHIPS} more
+                        )}
+                      </div>
+                    )}
+
+                    {/* Dot indicator (mobile) */}
+                    {items.length > 0 && (
+                      <span className="mt-auto flex justify-center pb-0.5 sm:hidden" aria-hidden>
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                       </span>
                     )}
-                  </div>
-                )}
-
-                {/* Dot indicator (mobile) */}
-                {items.length > 0 && (
-                  <span className="mt-auto flex justify-center pb-0.5 sm:hidden" aria-hidden>
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  </button>
+                );
+              })}
         </div>
       </div>
 
       {/* ─── Day agenda ─── */}
       {selectedItems.length > 0 && (
-        <div className="mt-4 animate-fade-in rounded-xl border border-border bg-surface p-4 shadow">
+        <div className="card-surface mt-4 animate-fade-in p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text">{fmtLongDate(selectedDate)}</h3>
             <span className="text-xs text-text-muted">
@@ -465,7 +486,7 @@ export function CalendarView() {
                     variant={ns === "CANCELLED" ? "destructive" : "default"}
                     className={cn(
                       "flex-1",
-                      ns !== "CANCELLED" && "bg-accent text-[#0E0F10] hover:bg-accent-hover",
+                      ns !== "CANCELLED" && "bg-accent text-primary-foreground hover:bg-accent-hover",
                     )}
                   >
                     {actionLoading ? "Updating..." : statusActionLabel(ns)}

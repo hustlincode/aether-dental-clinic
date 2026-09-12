@@ -433,7 +433,7 @@ export function DataTablePagination<TData extends RowData>({
               aria-current={item === pageIndex + 1 ? "page" : undefined}
               className={
                 item === pageIndex + 1
-                  ? "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-semibold text-[#0E0F10]"
+                  ? "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-semibold text-primary-foreground"
                   : "inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs text-text-secondary hover:bg-accent-soft hover:text-accent"
               }
             >
