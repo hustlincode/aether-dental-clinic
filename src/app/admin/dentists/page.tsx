@@ -1,10 +1,13 @@
-import { UpcomingModule } from "@/components/admin/upcoming-module";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { DentistsManager } from "@/components/admin/dentists-manager";
 
-export default function AdminDentistsPage() {
-  return (
-    <UpcomingModule
-      title="Dentists"
-      description="Manage your dental team, specializations, and schedules. This module is planned for the next development cycle."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function AdminDentistsPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (session.user.role !== "ADMIN") redirect("/admin");
+
+  return <DentistsManager role={session.user.role} />;
 }

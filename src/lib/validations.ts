@@ -24,3 +24,32 @@ export const patientFormSchema = z.object({
 });
 
 export type PatientFormValues = z.infer<typeof patientFormSchema>;
+
+// ─── Dentist form schema ─────────────────────────────────────────────────────
+// Mirrors the fields the dentist create/edit modal submits, aligned with what
+// POST/PATCH /api/dentists accept:
+//   - email is required; the API lowercases + trims it on save.
+//   - phone is optional and may be "" (the API maps "" -> null).
+//   - profileImage is optional and may be "" (the API maps "" -> null).
+//   - status only appears in the edit modal, but is kept optional so the create
+//     flow can omit it and let the API default to "ACTIVE".
+export const dentistFormSchema = z.object({
+  name: z.string().trim().min(2, "Dentist name must be at least 2 characters."),
+  email: z.string().trim().email("Please provide a valid email address."),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Please provide a valid phone number.")
+    .optional()
+    .or(z.literal("")),
+  specialization: z.string().trim().min(1, "Specialization is required."),
+  profileImage: z
+    .string()
+    .trim()
+    .url("Please provide a valid image URL.")
+    .optional()
+    .or(z.literal("")),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+});
+
+export type DentistFormValues = z.infer<typeof dentistFormSchema>;
