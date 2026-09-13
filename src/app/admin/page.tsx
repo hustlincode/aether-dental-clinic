@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { CalendarCheck, CalendarClock, CheckCircle2, Users } from "lucide-react";
+import { addDaysToKey, clinicDateKey, dateKeyToUtc } from "@/lib/clinic-time";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import { NeedsConfirmationPanel } from "@/components/admin/needs-confirmation-panel";
 import { PageContainer } from "@/components/admin/page-container";
@@ -17,13 +18,16 @@ export default async function AdminDashboard() {
   if (!session?.user) redirect("/login");
   const user = session.user;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const upcoming = new Date(today);
-  upcoming.setHours(23, 59, 59, 999);
-
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  // Clinic-local calendar boundaries. Appointment.appointmentDate is stored as
+  // a UTC-midnight @db.Date key, so "today" must come from the Asia/Manila
+  // calendar date and be mapped back to the stored UTC-midnight value. Using
+  // the server's local midnight instead is off by one on a UTC+8 machine
+  // (00:00 local maps to the previous UTC date), which is why clinic-time
+  // exists. See src/lib/clinic-time.ts.
+  const todayKey = clinicDateKey();
+  const today = dateKeyToUtc(todayKey);
+  const tomorrow = dateKeyToUtc(addDaysToKey(todayKey, 1));
+  const monthStart = dateKeyToUtc(`${todayKey.slice(0, 7)}-01`);
 
   // Role scoping for dentists
   let dentistId: string | undefined;
@@ -79,15 +83,14 @@ export default async function AdminDashboard() {
     value: statusGroups.find((g) => g.status === name)?._count._all ?? 0,
   }));
 
-  // Appointments per calendar day for the last 7 days (including today).
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - 6);
+  // Appointments per clinic-local calendar day for the last 7 days (including today).
+  const weekStart = dateKeyToUtc(addDaysToKey(todayKey, -6));
 
   const dailyGroups = await prisma.appointment.groupBy({
     by: ["appointmentDate"],
     _count: { _all: true },
     where: {
-      appointmentDate: { gte: weekStart, lte: upcoming },
+      appointmentDate: { gte: weekStart, lt: tomorrow },
       ...dentistFilter,
     },
   });
@@ -95,11 +98,9 @@ export default async function AdminDashboard() {
     dailyGroups.map((g) => [g.appointmentDate.toISOString().slice(0, 10), g._count._all]),
   );
   const dailyCounts: { label: string; count: number }[] = [];
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(weekStart);
-    day.setDate(weekStart.getDate() + i);
-    const key = day.toISOString().slice(0, 10);
-    dailyCounts.push({ label: format(day, "EEE M/d"), count: countsByDate.get(key) ?? 0 });
+  for (let i = 6; i >= 0; i--) {
+    const key = addDaysToKey(todayKey, -i);
+    dailyCounts.push({ label: format(dateKeyToUtc(key), "EEE M/d"), count: countsByDate.get(key) ?? 0 });
   }
 
   return (

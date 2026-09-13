@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Aether Dental</title>
+  <desc id="desc">Book your dental appointment online — Aether Dental, Taguig, Metro Manila</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#E6C76B"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0" cy="0" r="1">
+      <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0" cy="0" r="1">
+      <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0E0F10"/>
+
+  <circle cx="140" cy="60" r="360" fill="url(#glow1)"/>
+  <circle cx="1120" cy="620" r="420" fill="url(#glow2)"/>
+
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.045" stroke-width="1">
+    <circle cx="600" cy="300" r="180"/>
+    <circle cx="600" cy="300" r="260"/>
+    <circle cx="600" cy="300" r="340"/>
+  </g>
+
+  <text x="600" y="300" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="104" font-weight="bold" fill="url(#gold)">Aether Dental</text>
+
+  <rect x="520" y="336" width="160" height="5" rx="2.5" fill="url(#gold)"/>
+
+  <text x="600" y="405" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="#D1D5DB">Book your dental appointment online</text>
+
+  <text x="600" y="470" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#9CA3AF">Taguig, Metro Manila · Instant confirmation</text>
+</svg>

@@ -17,8 +17,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aether Dental — Dental Clinic Booking & Management",
-  description: "Book dental appointments and manage your clinic with Aether Dental.",
+  metadataBase: new URL("https://aetherdental.ph"),
+  title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
+  description:
+    "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. See clear service prices, choose a dentist, and get an instant email confirmation — no phone calls needed.",
+  openGraph: {
+    type: "website",
+    locale: "en_PH",
+    siteName: "Aether Dental",
+    title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
+    description:
+      "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, instant confirmation.",
+    url: "/",
+    images: [
+      {
+        url: "/og.svg",
+        width: 1200,
+        height: 630,
+        alt: "Aether Dental — Book your dental appointment online",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
+    description:
+      "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, instant confirmation.",
+    images: ["/og.svg"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="h-full">
+      <body className="h-full" suppressHydrationWarning>
         {/* External (not inline) so React never renders a script element.
             beforeInteractive injects it before hydration to avoid a theme flash. */}
         <Script id="theme-script" src="/theme-init.js" strategy="beforeInteractive" />
