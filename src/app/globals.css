@@ -382,3 +382,282 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Homepage — Phase 2: typography & card interactions (public homepage only)
+   Additive + namespaced (.home-* / --home-*). Nothing here changes existing
+   tokens, .card-surface*, .gradient-gold*, or any admin-visible rule.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Derived, palette-preserving homepage tokens */
+  --home-glow: rgba(212, 175, 55, 0.10);
+  --home-spot: rgba(212, 175, 55, 0.12);
+  --home-accent-ink: #7a5c12; /* darkened same-hue gold: readable on light surfaces */
+  --home-focus: #7a5c12;
+
+  /* Motion language */
+  --home-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --home-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --home-dur-micro: 140ms;
+  --home-dur-card: 220ms;
+  --home-dur-reveal: 420ms;
+  --home-stagger: 55ms;
+  --home-reveal-shift: 8px;
+
+  /* Per-card hover lift (overridden per section) */
+  --home-card-lift: -3px;
+}
+
+[data-theme="dark"] {
+  --home-glow: rgba(212, 175, 55, 0.16);
+  --home-spot: rgba(212, 175, 55, 0.18);
+  --home-accent-ink: #e6c76b;
+  --home-focus: #e6c76b;
+}
+
+/* Homepage canvas — homepage-tuned variant; does not replace .admin-canvas */
+.home-canvas {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(60rem 30rem at 50% -20%, var(--home-glow), transparent 60%),
+    radial-gradient(var(--canvas-dot) 1px, transparent 0);
+  background-size: auto, 22px 22px;
+}
+
+/* ─── Typography ─── */
+.home-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+}
+
+.home-display-xl { font-size: clamp(2.5rem, 1.25rem + 4.8vw, 4.5rem); line-height: 1.04; letter-spacing: -0.025em; font-weight: 560; }
+.home-display-lg { font-size: clamp(1.875rem, 1.4rem + 2vw, 2.75rem); line-height: 1.1; letter-spacing: -0.02em; font-weight: 540; }
+.home-display-md { font-size: clamp(1.375rem, 1.2rem + 0.7vw, 1.75rem); line-height: 1.15; letter-spacing: -0.015em; font-weight: 560; }
+.home-display-sm { font-size: 1.125rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 560; }
+.home-stat { font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
+
+.home-stat-value { color: var(--home-accent-ink); }
+[data-theme="dark"] .home-stat-value {
+  background-image: linear-gradient(135deg, #d4af37 0%, #e6c76b 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Testimonial quotes: a smaller, quieter serif step than display-md so the
+   quote reads as supporting evidence, not a headline. */
+.home-quote-text {
+  font-size: clamp(1rem, 0.94rem + 0.35vw, 1.125rem); /* 16-18px */
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+  text-wrap: pretty;
+}
+
+.home-eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--home-accent-ink);
+}
+
+/* Gold that stays readable as text in both themes */
+.home-accent-ink { color: var(--home-accent-ink); }
+
+/* ─── Cards ─── */
+.home-card {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(180deg, var(--surface) 0%, var(--surface-alt) 100%);
+  transition:
+    transform var(--home-dur-card) var(--home-ease-out),
+    border-color var(--home-dur-card) var(--home-ease-out),
+    box-shadow var(--home-dur-card) var(--home-ease-out);
+}
+
+.home-card__rail {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms var(--home-ease-out);
+  pointer-events: none;
+}
+
+.home-card--left .home-card__rail {
+  inset: 0 auto 0 0;
+  width: 2px;
+  height: auto;
+  background: linear-gradient(180deg, transparent, var(--accent), transparent);
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+.home-card__icon { transition: transform var(--home-dur-micro) var(--home-ease-out); }
+.home-card__arrow { transition: transform var(--home-dur-micro) var(--home-ease-out); }
+.home-card__book { transition: color var(--home-dur-card) var(--home-ease-out); }
+.home-card__avatar { transition: box-shadow var(--home-dur-card) var(--home-ease-out); }
+.home-quote { transition: transform var(--home-dur-card) var(--home-ease-out), color var(--home-dur-card) var(--home-ease-out); }
+
+.home-card--lift-2 { --home-card-lift: -2px; }
+.home-card--lift-3 { --home-card-lift: -3px; }
+.home-card--lift-4 { --home-card-lift: -4px; }
+
+/* Colour/border/shadow feedback works on every device (state is perceivable). */
+.home-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 18px 44px -24px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.home-card:hover .home-card__book { color: var(--home-accent-ink); }
+.home-card:hover .home-quote { color: var(--home-accent-ink); }
+
+/* Motion (transforms) is gated to fine pointers. */
+@media (hover: hover) and (pointer: fine) {
+  .home-card:hover { transform: translateY(var(--home-card-lift)); }
+  .home-card:hover .home-card__rail { transform: scaleX(1); }
+  .home-card--left:hover .home-card__rail { transform: scaleY(1); }
+  .home-card:hover .home-card__icon { transform: translateY(-1px) scale(1.05); }
+  .home-card:hover .home-card__arrow { transform: translateX(3px); }
+  .home-card:hover .home-card__avatar { box-shadow: 0 0 0 3px var(--home-glow); }
+  .home-card:hover .home-quote { transform: scale(1.08) rotate(-4deg); }
+}
+
+.home-card:active {
+  transform: translateY(-1px) scale(0.995);
+  box-shadow: var(--shadow);
+  transition-duration: var(--home-dur-micro);
+}
+
+/* ─── Spotlight ─── */
+.home-spotlight { position: relative; }
+.home-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--home-dur-card) var(--home-ease-out);
+  background: radial-gradient(220px circle at var(--spot-x, 50%) var(--spot-y, 50%), var(--home-spot), transparent 70%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .home-spotlight:hover::after { opacity: 1; }
+}
+
+/* ─── How-booking-works steps ─── */
+.home-step { position: relative; z-index: 1; }
+.home-step__num { transition: box-shadow var(--home-dur-card) var(--home-ease-out); }
+.home-steps { position: relative; }
+.home-steps::before {
+  content: "";
+  position: absolute;
+  top: 2.25rem;
+  left: 10%;
+  right: 10%;
+  display: none; /* hidden unless the steps sit in a single row */
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 600ms var(--home-ease-out);
+}
+@media (min-width: 1024px) {
+  .home-steps::before { display: block; }
+}
+.home-steps.is-in::before { transform: scaleX(1); }
+@media (hover: hover) and (pointer: fine) {
+  .home-step:hover { border-color: var(--border-accent); }
+  .home-step:hover .home-step__num { box-shadow: 0 0 0 4px var(--home-glow); }
+}
+
+/* ─── FAQ (Radix owns behaviour) ─── */
+.home-faq [data-slot="accordion-trigger"]:hover { text-decoration: none; }
+.home-faq [data-slot="accordion-item"] {
+  transition: background-color var(--home-dur-card) var(--home-ease-out), box-shadow var(--home-dur-card) var(--home-ease-out);
+}
+.home-faq [data-slot="accordion-item"][data-state="open"] {
+  border-radius: var(--radius-md);
+  background-color: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ─── Header / footer nav underline ─── */
+.home-nav-link { position: relative; }
+.home-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: var(--home-accent-ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--home-dur-card) var(--home-ease-out);
+}
+.home-nav-link:hover::after,
+.home-nav-link:focus-visible::after { transform: scaleX(1); }
+
+/* ─── Reveal ─── */
+.home-reveal { opacity: 1; }
+.home-reveal.is-in { animation: home-reveal var(--home-dur-reveal) var(--home-ease-out) both; }
+.home-reveal-group > * { opacity: 1; }
+.home-reveal-group:not(.is-in) > * { opacity: 0; transform: translateY(var(--home-reveal-shift)); }
+.home-reveal-group.is-in > * { animation: home-reveal var(--home-dur-reveal) var(--home-ease-out) both; }
+.home-reveal-group.is-in > :nth-child(1) { animation-delay: 0ms; }
+.home-reveal-group.is-in > :nth-child(2) { animation-delay: calc(var(--home-stagger) * 1); }
+.home-reveal-group.is-in > :nth-child(3) { animation-delay: calc(var(--home-stagger) * 2); }
+.home-reveal-group.is-in > :nth-child(4) { animation-delay: calc(var(--home-stagger) * 3); }
+.home-reveal-group.is-in > :nth-child(5) { animation-delay: calc(var(--home-stagger) * 4); }
+.home-reveal-group.is-in > :nth-child(6) { animation-delay: calc(var(--home-stagger) * 5); }
+.home-reveal-group.is-in > :nth-child(7) { animation-delay: calc(var(--home-stagger) * 6); }
+.home-reveal-group.is-in > :nth-child(8) { animation-delay: calc(var(--home-stagger) * 7); }
+
+/* ─── Glow drift (CTA band) ─── */
+.home-drift {
+  position: absolute;
+  inset: -20% -10%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(40rem 22rem at 50% 45%, var(--home-glow), transparent 70%);
+  animation: home-drift 12s var(--home-ease-std) infinite;
+}
+
+@keyframes home-reveal {
+  from { opacity: 0; transform: translateY(var(--home-reveal-shift)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes home-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.5; }
+  50% { transform: translate3d(0, -2%, 0); opacity: 0.75; }
+}
+
+/* Homepage focus colour (≥3:1 against adjacent surfaces) */
+.home-root :focus-visible { outline-color: var(--home-focus); }
+
+/* Reduced motion: keep colour/border/shadow state, drop motion + spotlight */
+@media (prefers-reduced-motion: reduce) {
+  .home-card,
+  .home-card:hover,
+  .home-card:active,
+  .home-quote,
+  .home-card:hover .home-quote,
+  .home-card:hover .home-card__icon,
+  .home-card:hover .home-card__arrow { transform: none !important; }
+  .home-card:hover .home-card__rail { transform: scaleX(1); }
+  .home-card--left:hover .home-card__rail { transform: scaleY(1); }
+  .home-spotlight::after { display: none; }
+  .home-drift { animation: none; opacity: 0.5; }
+  .home-steps::before { transform: scaleX(1); transition: none; }
+  .home-reveal,
+  .home-reveal-group,
+  .home-reveal-group > *,
+  .home-reveal-group.is-in > * { opacity: 1 !important; transform: none !important; animation: none !important; }
+}

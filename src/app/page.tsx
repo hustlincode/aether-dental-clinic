@@ -34,6 +34,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MobileNav } from "@/components/home/mobile-nav";
 import { MobileBookBar } from "@/components/home/mobile-book-bar";
+import { frauncesDisplay } from "@/components/home/home-fonts";
+import { Reveal } from "@/components/home/reveal";
+import { SpotlightArea } from "@/components/home/spotlight-card";
 
 export const dynamic = "force-dynamic";
 
@@ -272,22 +275,22 @@ export default async function HomePage() {
   const previewDate = format(nextWeekday(), "EEE, MMM d");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn(frauncesDisplay.variable, "home-root min-h-screen bg-background")}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(dentistJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(faqJsonLd) }} />
 
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b border-border bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link href="/" aria-label="Aether Dental home" className="text-xl font-bold">
+          <Link href="/" aria-label="Aether Dental home" className="home-display text-xl font-semibold">
             <span className="text-text">Aether </span>
             <span className="text-accent">Dental</span>
           </Link>
           <nav aria-label="Primary" className="hidden items-center gap-6 text-sm font-medium text-text-secondary lg:flex">
-            <Link href="/#services" className="transition-colors duration-200 hover:text-accent">Services</Link>
-            <Link href="/#dentists" className="transition-colors duration-200 hover:text-accent">Dentists</Link>
-            <Link href="/#faq" className="transition-colors duration-200 hover:text-accent">FAQ</Link>
-            <Link href="/#contact" className="transition-colors duration-200 hover:text-accent">Contact</Link>
+            <Link href="/#services" className="home-nav-link transition-colors duration-200 hover:text-accent">Services</Link>
+            <Link href="/#dentists" className="home-nav-link transition-colors duration-200 hover:text-accent">Dentists</Link>
+            <Link href="/#faq" className="home-nav-link transition-colors duration-200 hover:text-accent">FAQ</Link>
+            <Link href="/#contact" className="home-nav-link transition-colors duration-200 hover:text-accent">Contact</Link>
           </nav>
           <div className="flex items-center gap-2.5">
             <Link
@@ -310,16 +313,16 @@ export default async function HomePage() {
 
       <main>
         {/* ── Hero (fills the viewport below the sticky header) ── */}
-        <section className="admin-canvas flex min-h-[calc(100dvh-4rem)] items-center">
+        <section className="home-canvas flex min-h-[calc(100dvh-4rem)] items-center">
           <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
             <div>
-              <div className="inline-flex items-center rounded-full border border-border-accent bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+              <div className="home-eyebrow inline-flex items-center rounded-full border border-border-accent bg-accent-soft px-3 py-1.5">
                 Trusted dental care · Online booking
               </div>
-              <h1 className="mt-4 text-4xl font-bold tracking-tight text-text sm:text-5xl">
+              <h1 className="home-display home-display-xl mt-4 text-text">
                 Your best smile starts with one easy booking.
               </h1>
-              <p className="mt-4 max-w-xl text-lg text-text-secondary">
+              <p className="mt-4 max-w-xl text-lg leading-[1.65] text-text-secondary">
                 Choose your service, pick a dentist and a time that works, and get an instant confirmation. No phone
                 calls. No waiting.
               </p>
@@ -343,7 +346,9 @@ export default async function HomePage() {
                 ))}
               </div>
             </div>
-            <BookingPreview service={featuredService} dentist={heroDentist} previewDate={previewDate} />
+            <SpotlightArea>
+              <BookingPreview service={featuredService} dentist={heroDentist} previewDate={previewDate} />
+            </SpotlightArea>
           </div>
         </section>
 
@@ -368,144 +373,149 @@ export default async function HomePage() {
 
         {/* ── Services (bento, DB-driven) ── */}
         <section id="services" className="scroll-mt-24 bg-background">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Services</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">Our services</h2>
+              <p className="home-eyebrow">Services</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">Our services</h2>
               <p className="mt-3 text-text-muted">Transparent pricing. Professional care.</p>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredService && (
-                <ServiceCard service={featuredService} featured icon={Sparkles} />
-              )}
-              {otherServices.map((s, i) => (
-                <ServiceCard key={s.id} service={s} icon={SERVICE_ICONS[i % SERVICE_ICONS.length]} />
-              ))}
-            </div>
+            <SpotlightArea className="mt-12 grid gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
+              <Reveal stagger className="contents">
+                {featuredService && (
+                  <ServiceCard service={featuredService} featured icon={Sparkles} />
+                )}
+                {otherServices.map((s, i) => (
+                  <ServiceCard key={s.id} service={s} icon={SERVICE_ICONS[i % SERVICE_ICONS.length]} />
+                ))}
+              </Reveal>
+            </SpotlightArea>
           </div>
         </section>
 
         {/* ── How booking works ── */}
         <section id="how-it-works" className="scroll-mt-24 bg-background-alt">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">How it works</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">How booking works</h2>
+              <p className="home-eyebrow">How it works</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">How booking works</h2>
             </div>
-            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Reveal stagger as="ol" className="home-steps mt-12 grid gap-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
               {BOOKING_STEPS.map((step, i) => (
-                <div key={step.title} className="card-surface p-5">
-                  <span className="gradient-gold flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-[#0E0F10]">
+                <li key={step.title} className="card-surface home-step p-5">
+                  <span className="home-step__num gradient-gold flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-[#0E0F10]">
                     {i + 1}
                   </span>
                   <h3 className="mt-3 font-semibold text-text">{step.title}</h3>
-                  <p className="mt-1 text-sm text-text-muted">{step.copy}</p>
-                </div>
+                  <p className="mt-1 text-[0.9375rem] leading-[1.55] text-text-muted">{step.copy}</p>
+                </li>
               ))}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ── Why Aether ── */}
         <section id="why-aether" className="scroll-mt-24 bg-background">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Why Aether</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">Dental care built around your day</h2>
+              <p className="home-eyebrow">Why Aether</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">Dental care built around your day</h2>
               <p className="mt-3 text-text-muted">The things that make booking (and visiting) easier.</p>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Reveal stagger className="mt-12 grid gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
               {BENEFITS.map((benefit) => {
                 const Icon = benefit.icon;
                 return (
                   <div
                     key={benefit.title}
-                    className="card-surface card-surface-hover p-5"
+                    className="card-surface card-surface-hover home-card home-card--left home-card--lift-2 p-5"
                   >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                    <span className="home-card__rail" aria-hidden />
+                    <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
                       <Icon className="size-5" aria-hidden />
                     </span>
                     <h3 className="mt-4 font-semibold text-text">{benefit.title}</h3>
-                    <p className="mt-1 text-sm text-text-muted">{benefit.copy}</p>
+                    <p className="mt-1 text-[0.9375rem] leading-[1.55] text-text-muted">{benefit.copy}</p>
                   </div>
                 );
               })}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ── Meet the dentists (DB-driven) ── */}
         <section id="dentists" className="scroll-mt-24 bg-background-alt">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Our team</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">Meet the dentists</h2>
+              <p className="home-eyebrow">Our team</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">Meet the dentists</h2>
               <p className="mt-3 text-text-muted">Experienced specialists who put your comfort first.</p>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Reveal stagger className="mt-12 grid gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
               {dentists.length === 0 ? (
                 <p className="text-text-muted">Our dentist directory is being updated.</p>
               ) : (
                 dentists.map((d, i) => (
-                  <div key={d.id} className="card-surface p-5">
-                    <Avatar className="size-14">
+                  <div key={d.id} className="card-surface home-card home-card--lift-2 p-5">
+                    <span className="home-card__rail" aria-hidden />
+                    <Avatar className="home-card__avatar size-14">
                       <AvatarFallback className="bg-accent-soft text-base font-bold text-accent">
                         {initials(d.name)}
                       </AvatarFallback>
                     </Avatar>
                     <h3 className="mt-4 font-semibold text-text">{d.name}</h3>
-                    <p className="text-sm font-medium text-accent">{d.specialization}</p>
-                    <p className="mt-2 text-sm text-text-muted">
+                    <p className="home-accent-ink text-sm font-medium">{d.specialization}</p>
+                    <p className="mt-2 text-[0.9375rem] leading-[1.55] text-text-muted">
                       {CARE_PHILOSOPHIES[i % CARE_PHILOSOPHIES.length]}
                     </p>
                   </div>
                 ))
               )}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ── Testimonials ── */}
         <section id="testimonials" className="scroll-mt-24 bg-background">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Testimonials</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">What patients say</h2>
+              <p className="home-eyebrow">Testimonials</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">What patients say</h2>
               <p className="mt-3 text-text-muted">Real experiences from the chair.</p>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <Reveal stagger className="mt-12 grid gap-4 sm:mt-16 sm:grid-cols-2">
               {TESTIMONIALS.map((t) => (
-                <figure key={t.name} className="card-surface p-6">
+                <figure key={t.name} className="card-surface card-surface-hover home-card home-card--lift-3 p-6">
+                  <span className="home-card__rail" aria-hidden />
                   <Stars />
                   <blockquote className="mt-3 text-text-secondary">
-                    <Quote className="mb-2 size-4 text-accent" aria-hidden />
-                    <p>{t.quote}</p>
+                    <Quote className="home-quote mb-2 size-4 text-accent" aria-hidden />
+                    <p className="home-display home-quote-text">{t.quote}</p>
                   </blockquote>
                   <figcaption className="mt-4 flex items-center justify-between gap-3">
                     <span className="text-sm font-semibold text-text">{t.name}</span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border-accent bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">
+                    <span className="home-accent-ink inline-flex items-center gap-1 rounded-full border border-border-accent bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-medium">
                       <BadgeCheck className="size-3.5" aria-hidden />
                       {t.service}
                     </span>
                   </figcaption>
                 </figure>
               ))}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ── FAQ ── */}
         <section id="faq" className="scroll-mt-24 bg-background-alt">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">FAQ</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">Frequently asked questions</h2>
+              <p className="home-eyebrow">FAQ</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">Frequently asked questions</h2>
             </div>
-            <Accordion type="single" collapsible className="mt-8">
+            <Accordion type="single" collapsible className="home-faq mt-10">
               {FAQ_ITEMS.map((item) => (
-                <AccordionItem key={item.q} value={item.q} className="border-border">
+                <AccordionItem key={item.q} value={item.q} className="border-border px-3">
                   <AccordionTrigger className="text-base font-semibold text-text">{item.q}</AccordionTrigger>
-                  <AccordionContent className="text-text-secondary">{item.a}</AccordionContent>
+                  <AccordionContent className="text-[0.9375rem] leading-[1.6] text-text-secondary">{item.a}</AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
@@ -513,9 +523,10 @@ export default async function HomePage() {
         </section>
 
         {/* ── CTA band ── */}
-        <section aria-labelledby="cta-heading" className="border-y border-border-accent bg-accent-soft">
-          <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:py-20">
-            <h2 id="cta-heading" className="text-3xl font-bold text-text sm:text-4xl">
+        <section aria-labelledby="cta-heading" className="home-canvas relative overflow-hidden border-y border-border-accent">
+          <div className="home-drift" aria-hidden />
+          <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
+            <h2 id="cta-heading" className="home-display home-display-lg text-text">
               Book your visit in under 2 minutes
             </h2>
             <p className="mt-3 text-text-secondary">Confirmation sent instantly · No phone required</p>
@@ -530,13 +541,14 @@ export default async function HomePage() {
 
         {/* ── Contact & hours (DB-driven) ── */}
         <section id="contact" className="scroll-mt-24 bg-background">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Contact</p>
-              <h2 className="mt-2 text-3xl font-bold text-text">Visit us</h2>
+              <p className="home-eyebrow">Contact</p>
+              <h2 className="home-display home-display-lg mt-3 text-text">Visit us</h2>
             </div>
-            <div className="mt-10 grid gap-8 md:grid-cols-2">
-              <div className="card-surface p-6">
+            <Reveal stagger className="mt-12 grid gap-8 sm:mt-16 md:grid-cols-2">
+              <div className="card-surface home-card home-card--lift-2 p-6">
+                <span className="home-card__rail" aria-hidden />
                 {clinic?.name && <p className="font-semibold text-text">{clinic.name}</p>}
                 <div className="mt-4 space-y-4 text-text-secondary">
                   <p className="flex items-start gap-2.5">
@@ -548,7 +560,7 @@ export default async function HomePage() {
                       <Phone className="size-4 shrink-0 text-accent" aria-hidden />
                       <a
                         href={`tel:${clinic.phone.replace(/[\s()-]/g, "")}`}
-                        className="transition-colors hover:text-accent"
+                        className="underline-offset-2 transition-colors hover:text-[color:var(--home-accent-ink)] hover:underline"
                       >
                         {clinic.phone}
                       </a>
@@ -562,7 +574,7 @@ export default async function HomePage() {
                   {clinic?.email ? (
                     <p className="flex items-center gap-2.5">
                       <Mail className="size-4 shrink-0 text-accent" aria-hidden />
-                      <a href={`mailto:${clinic.email}`} className="transition-colors hover:text-accent">
+                      <a href={`mailto:${clinic.email}`} className="underline-offset-2 transition-colors hover:text-[color:var(--home-accent-ink)] hover:underline">
                         {clinic.email}
                       </a>
                     </p>
@@ -574,7 +586,8 @@ export default async function HomePage() {
                   )}
                 </div>
               </div>
-              <div className="card-surface p-6">
+              <div className="card-surface home-card home-card--lift-2 p-6">
+                <span className="home-card__rail" aria-hidden />
                 <h3 className="text-lg font-semibold text-text">Clinic hours</h3>
                 <div className="mt-4 space-y-3 text-text-secondary">
                   {clinic ? (
@@ -597,7 +610,7 @@ export default async function HomePage() {
                   )}
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </section>
       </main>
@@ -607,7 +620,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-start">
             <div className="text-center sm:text-left">
-              <div className="text-lg font-bold">
+              <div className="home-display text-lg font-semibold">
                 <span className="text-text">Aether </span>
                 <span className="text-accent">Dental</span>
               </div>
@@ -616,15 +629,15 @@ export default async function HomePage() {
               </p>
             </div>
             <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-text-secondary">
-              <Link href="/#services" className="transition-colors duration-200 hover:text-accent">Services</Link>
-              <Link href="/#dentists" className="transition-colors duration-200 hover:text-accent">Dentists</Link>
-              <Link href="/#faq" className="transition-colors duration-200 hover:text-accent">FAQ</Link>
-              <Link href="/#contact" className="transition-colors duration-200 hover:text-accent">Contact</Link>
+              <Link href="/#services" className="home-nav-link transition-colors duration-200 hover:text-accent">Services</Link>
+              <Link href="/#dentists" className="home-nav-link transition-colors duration-200 hover:text-accent">Dentists</Link>
+              <Link href="/#faq" className="home-nav-link transition-colors duration-200 hover:text-accent">FAQ</Link>
+              <Link href="/#contact" className="home-nav-link transition-colors duration-200 hover:text-accent">Contact</Link>
             </nav>
           </div>
           <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-border pt-4 text-xs text-text-muted sm:flex-row">
             <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
-            <Link href="/privacy-policy" className="transition-colors duration-200 hover:text-accent">
+            <Link href="/privacy-policy" className="home-nav-link transition-colors duration-200 hover:text-accent">
               Privacy Policy
             </Link>
           </div>
@@ -656,7 +669,7 @@ const SERVICE_ICONS: LucideIcon[] = [
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="gradient-gold-text text-2xl font-bold sm:text-3xl">{value}</div>
+      <div className="home-display home-stat home-stat-value">{value}</div>
       <div className="mt-1 text-xs text-text-muted sm:text-sm">{label}</div>
     </div>
   );
@@ -683,28 +696,34 @@ function ServiceCard({
   return (
     <Link
       href="/book"
+      data-spotlight={featured ? "" : undefined}
       className={cn(
-        "card-surface card-surface-hover group flex flex-col p-6",
-        featured && "sm:col-span-2 lg:col-span-2"
+        "card-surface card-surface-hover home-card home-card--lift-3 group flex flex-col p-6",
+        featured && "home-spotlight sm:col-span-2 lg:col-span-2"
       )}
     >
+      <span className="home-card__rail" aria-hidden />
       <div className="flex items-start justify-between">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
+        <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
           <Icon className="size-5" aria-hidden />
         </span>
         <span
-          className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-text-muted transition-colors group-hover:text-accent"
+          className="home-card__book mt-1 inline-flex items-center gap-1 text-xs font-medium text-text-muted"
           aria-hidden
         >
           Book<span className="sr-only"> {service.name}</span>
-          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="home-card__arrow size-3.5" />
         </span>
       </div>
-      <h3 className={cn("mt-4 font-semibold text-text", featured ? "text-2xl" : "text-lg")}>{service.name}</h3>
-      {service.description && <p className="mt-1.5 text-sm text-text-muted">{service.description}</p>}
+      <h3 className={cn("mt-4 font-semibold text-text", featured ? "home-display home-display-md" : "text-lg")}>
+        {service.name}
+      </h3>
+      {service.description && (
+        <p className="mt-1.5 text-[0.9375rem] leading-[1.55] text-text-muted">{service.description}</p>
+      )}
       <div className="mt-auto flex items-center justify-between pt-5">
-        <span className="text-xl font-bold text-accent">{formatPeso(service.price)}</span>
-        <span className="inline-flex items-center gap-1.5 text-sm text-text-muted">
+        <span className="home-accent-ink text-xl font-bold">{formatPeso(service.price)}</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-xs text-text-muted">
           <Clock className="size-3.5" aria-hidden />
           {formatDuration(service.durationMin)}
         </span>
@@ -723,7 +742,11 @@ function BookingPreview({
   previewDate: string;
 }) {
   return (
-    <div className="card-surface animate-slide-up p-6">
+    <div
+      data-spotlight=""
+      className="card-surface home-card home-card--lift-4 home-spotlight animate-slide-up p-6"
+    >
+      <span className="home-card__rail" aria-hidden />
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-semibold text-text">
           <CalendarDays className="size-4 text-accent" aria-hidden />
