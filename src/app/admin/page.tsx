@@ -119,6 +119,7 @@ export default async function AdminDashboard() {
           icon={CalendarCheck}
           tone="accent"
           hint="Scheduled for today"
+          href={`/admin/appointments?date=${todayKey}`}
         />
         <StatCard
           label="Upcoming"

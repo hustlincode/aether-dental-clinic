@@ -82,9 +82,12 @@ function getPageItems(current: number, totalPages: number): (number | "...")[] {
 
 const columnHelper = createColumnHelper<DataTableFeatures, Appt>();
 
-export function AppointmentsList({ role }: { role: string }) {
+export function AppointmentsList({ role, initialDateKey }: { role: string; initialDateKey?: string }) {
   const [query, setQuery] = useState("");
   const [params, setParams] = useState({ page: 1, status: "", search: "" });
+  const [datePreset, setDatePreset] = useState<"all" | "today">(
+    initialDateKey && initialDateKey === getClinicDateKey() ? "today" : "all",
+  );
   const [appts, setAppts] = useState<Appt[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +111,7 @@ export function AppointmentsList({ role }: { role: string }) {
     const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (statusFilter) qs.set("status", statusFilter);
     if (searchFilter) qs.set("search", searchFilter);
+    if (datePreset === "today") qs.set("date", getClinicDateKey());
 
     fetch(`/api/appointments?${qs.toString()}`)
       .then(async (res) => {
@@ -128,7 +132,7 @@ export function AppointmentsList({ role }: { role: string }) {
     return () => {
       cancelled = true;
     };
-  }, [page, statusFilter, searchFilter, refreshKey]);
+  }, [page, statusFilter, searchFilter, datePreset, refreshKey]);
 
   /* Loading is toggled by user actions (never synchronously inside the effect),
      so the initial state starts as true and every interaction re-shows it. */
@@ -148,6 +152,12 @@ export function AppointmentsList({ role }: { role: string }) {
 
   function handleStatusChange(value: string) {
     setParams((p) => ({ ...p, status: value, page: 1 }));
+    beginLoad();
+  }
+
+  function handleDatePresetChange(value: "all" | "today") {
+    setDatePreset(value);
+    setParams((p) => ({ ...p, page: 1 }));
     beginLoad();
   }
 
@@ -330,6 +340,15 @@ export function AppointmentsList({ role }: { role: string }) {
           />
         </div>
         <div className="flex items-center gap-2">
+          <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as "all" | "today")}>
+            <SelectTrigger aria-label="Filter by date" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+              <SelectValue placeholder="All dates" />
+            </SelectTrigger>
+            <SelectContent className="bg-surface">
+              <SelectItem value="all">All dates</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={statusFilter || "__all__"} onValueChange={(v) => handleStatusChange(v === "__all__" ? "" : v)}>
             <SelectTrigger aria-label="Filter by status" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
               <SelectValue placeholder="All statuses" />
@@ -351,7 +370,7 @@ export function AppointmentsList({ role }: { role: string }) {
           <EmptyState
             icon={CalendarX}
             title="No appointments found."
-            description="Try adjusting your search or status filter."
+            description="Try adjusting your search, date, or status filter."
           />
         ) : (
           <>
@@ -497,6 +516,23 @@ interface SelectOption {
 
 function localDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Clinic-local "today" in Asia/Manila as a YYYY-MM-DD key, matching the
+// @db.Date keys served by /api/appointments. Client mirror of
+// src/lib/clinic-time.ts clinicDateKey; kept here so the server env-dependent
+// module stays out of the client bundle.
+const CLINIC_TZ = "Asia/Manila";
+
+function getClinicDateKey(instant: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CLINIC_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function EditAppointmentDialog({
