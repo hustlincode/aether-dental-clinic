@@ -408,7 +408,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
                         key={item}
                         onClick={() => goToPage(item)}
                         aria-current={item === page ? "page" : undefined}
-                        className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+                        className={`min-w-8 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
                           item === page
                             ? "bg-accent text-primary-foreground"
                             : "text-text-secondary hover:bg-accent-soft hover:text-accent"

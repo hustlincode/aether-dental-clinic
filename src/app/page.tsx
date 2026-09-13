@@ -560,7 +560,7 @@ export default async function HomePage() {
                       <Phone className="size-4 shrink-0 text-accent" aria-hidden />
                       <a
                         href={`tel:${clinic.phone.replace(/[\s()-]/g, "")}`}
-                        className="underline-offset-2 transition-colors hover:text-[color:var(--home-accent-ink)] hover:underline"
+                        className="underline-offset-2 transition-colors hover:text-(--home-accent-ink) hover:underline"
                       >
                         {clinic.phone}
                       </a>
@@ -574,7 +574,7 @@ export default async function HomePage() {
                   {clinic?.email ? (
                     <p className="flex items-center gap-2.5">
                       <Mail className="size-4 shrink-0 text-accent" aria-hidden />
-                      <a href={`mailto:${clinic.email}`} className="underline-offset-2 transition-colors hover:text-[color:var(--home-accent-ink)] hover:underline">
+                      <a href={`mailto:${clinic.email}`} className="underline-offset-2 transition-colors hover:text-(--home-accent-ink) hover:underline">
                         {clinic.email}
                       </a>
                     </p>
