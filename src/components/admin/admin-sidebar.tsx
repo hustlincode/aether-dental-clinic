@@ -10,11 +10,10 @@ import {
   Stethoscope,
   BriefcaseMedical,
   FileBarChart2,
-  PanelLeftClose,
   Bell,
+  PanelLeftClose,
   type LucideIcon,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { AdminNavItem } from "@/components/admin/admin-shell";
@@ -68,7 +67,9 @@ export function AdminSidebar({
   /* ─── Shared sidebar content ─── */
   const sidebarContent = (
     <div className="flex h-full flex-col bg-sidebar-bg text-sidebar-text">
-      {/* Brand + collapse */}
+      {/* Brand + collapse toggle.
+          Desktop-only button (hidden on mobile: the off-canvas drawer is closed
+          with the header hamburger). The header has no burger in web view. */}
       <div className={`flex items-center justify-between px-3 py-4 ${collapsed ? "flex-col gap-3" : ""}`}>
         <Link href="/admin" className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-gold">
@@ -82,8 +83,6 @@ export function AdminSidebar({
           )}
         </Link>
 
-        {/* Desktop collapse button (hidden on mobile: the off-canvas drawer
-            is closed with the header hamburger instead) */}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -151,36 +150,27 @@ export function AdminSidebar({
         ))}
       </nav>
 
-      {/* User + theme + sign out */}
+      {/* Footer — identity is desktop-only and hidden while collapsed (on mobile
+          the header owns the user info). Sign-out stays icon-only so it remains
+          reachable in both desktop and the mobile drawer. The theme toggle lives
+          in the header. */}
       <div className={`border-t border-sidebar-border p-3 ${collapsed ? "px-2" : ""}`}>
-        <div className={`flex ${collapsed ? "flex-col items-center gap-2" : "items-center justify-between gap-2"}`}>
-          <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : "min-w-0 flex-1"}`}>
-            <div
-              title={collapsed ? `${user.name} — ${roleLabel}` : undefined}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary-foreground"
-            >
-              {initial}
-            </div>
-            {!collapsed && (
+        <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : ""}`}>
+          {!collapsed && (
+            <div className="flex min-w-0 items-center gap-2 max-md:hidden">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary-foreground">
+                {initial}
+              </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-sidebar-text">{user.name}</div>
                 <div className="text-xs text-sidebar-text-muted">{roleLabel}</div>
               </div>
-            )}
-          </div>
-          {!collapsed && (
-            <div className="flex items-center gap-1.5">
-              <ThemeToggle />
-              <SignOutButton iconOnly />
             </div>
           )}
-        </div>
-        {collapsed && (
-          <div className="mt-2 flex justify-center gap-1.5 border-t border-sidebar-border pt-2">
-            <ThemeToggle />
+          <div className={`flex items-center gap-1.5 ${collapsed ? "" : "ml-auto"}`}>
             <SignOutButton iconOnly />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -196,7 +186,8 @@ export function AdminSidebar({
         />
       )}
 
-      {/* Sidebar — mobile: fixed off-canvas; desktop: relative flex child */}
+      {/* Sidebar — mobile: fixed off-canvas drawer; desktop: relative flex child
+          that collapses via the in-sidebar toggle (md:w-16 / md:w-64) */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-sidebar-border transition-all duration-300 md:relative md:inset-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"

@@ -27,13 +27,11 @@ const pageTitleMap: Record<string, string> = {
 /* ─── Props ─── */
 export interface AdminHeaderProps {
   onToggleSidebar: () => void;
-  onToggleCollapse: () => void;
   user: { name: string; role: string };
-  collapsed: boolean;
   mobileOpen: boolean;
 }
 
-export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed, mobileOpen }: AdminHeaderProps) {
+export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderProps) {
   const pathname = usePathname();
   const title = pageTitleMap[pathname] ?? "Admin";
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
@@ -41,21 +39,14 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface/85 px-4 backdrop-blur">
-      {/* Left: animated hamburger + title */}
+      {/* Left: mobile drawer toggle + title */}
       <div className="flex items-center gap-3">
-        {/* Mobile: off-canvas sidebar toggle */}
+        {/* Mobile only — the desktop sidebar is always expanded and has no toggle */}
         <HamburgerButton
           open={mobileOpen}
           onClick={onToggleSidebar}
           label="Toggle navigation menu"
           className="md:hidden"
-        />
-        {/* Desktop: collapse/expand sidebar toggle */}
-        <HamburgerButton
-          open={!collapsed}
-          onClick={onToggleCollapse}
-          label="Collapse sidebar"
-          className="max-md:hidden"
         />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-text">{title}</span>
@@ -63,33 +54,31 @@ export function AdminHeader({ onToggleSidebar, onToggleCollapse, user, collapsed
         </div>
       </div>
 
-      {/* Right: notifications + theme toggle + user menu */}
+      {/* Right: theme + notifications + user menu.
+          The theme toggle lives here in every viewport (global control).
+          The user menu is mobile-only — on desktop the sidebar footer owns the
+          user identity, so showing it here too would duplicate it. */}
       <div className="flex items-center gap-2">
-        <NotificationBell />
         <ThemeToggle />
+        <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-background-alt"
+              className="flex items-center rounded-lg p-1 transition hover:bg-background-alt md:hidden"
               aria-label="Open user menu"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-primary-foreground">
                 {initial}
               </div>
-              <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-sm font-medium leading-tight text-text">{user.name}</span>
-                <span className="text-xs leading-tight text-text-muted">{roleLabel}</span>
-              </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60 bg-surface">
-            {/* User info on mobile only */}
-            <div className="px-4 py-3 md:hidden">
+            <div className="px-4 py-3">
               <div className="truncate text-sm font-semibold text-text">{user.name}</div>
               <div className="text-xs text-text-muted">{roleLabel}</div>
             </div>
-            <DropdownMenuSeparator className="md:hidden" />
-            <div className="px-2 py-2 md:pt-1">
+            <DropdownMenuSeparator />
+            <div className="px-2 py-2">
               <SignOutButton variant="header" className="w-full justify-start" />
             </div>
           </DropdownMenuContent>
