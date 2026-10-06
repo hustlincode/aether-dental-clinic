@@ -33,7 +33,7 @@ export function MobileNav() {
           className="lg:hidden"
         />
       </SheetTrigger>
-      <SheetContent side="right" className="w-[17rem] sm:max-w-sm">
+      <SheetContent side="right" className="w-68 sm:max-w-sm">
         <SheetHeader className="border-b border-border">
           <SheetTitle>
             <span className="text-text">Aether </span>
