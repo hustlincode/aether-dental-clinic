@@ -19,10 +19,15 @@ interface Pagination {
   totalPages: number;
 }
 
-function getPageItems(current: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+/**
+ * Page numbers for the current window. `siblings` = how many pages to show either
+ * side of the current one; `siblings: 0` yields the compact `1 … c … n` bar used
+ * on narrow viewports, where a 40px target per button cannot fit seven of them.
+ */
+function getPageItems(current: number, totalPages: number, siblings = 2): (number | "...")[] {
+  if (totalPages <= siblings * 2 + 3) return Array.from({ length: totalPages }, (_, i) => i + 1);
   const pages = new Set<number>([1, totalPages]);
-  for (let p = current - 2; p <= current + 2; p++) {
+  for (let p = current - siblings; p <= current + siblings; p++) {
     if (p >= 1 && p <= totalPages) pages.add(p);
   }
   const sorted = [...pages].sort((a, b) => a - b);
@@ -132,22 +137,22 @@ export function NotificationsHistory() {
     <div>
       {/* Toolbar */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-1">
+        <div className="flex items-center gap-1 rounded-control border border-border bg-surface p-1">
           <button
             onClick={() => changeFilter("all")}
             aria-pressed={filter === "all"}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "all" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
+            className={`inline-flex h-10 items-center rounded-chip px-3 text-sm font-medium transition-colors ${filter === "all" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
           >
             All
           </button>
           <button
             onClick={() => changeFilter("unread")}
             aria-pressed={filter === "unread"}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "unread" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-chip px-3 text-sm font-medium transition-colors ${filter === "unread" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
           >
             Unread
             {unreadCount > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold text-white">
                 {unreadCount}
               </span>
             )}
@@ -157,7 +162,7 @@ export function NotificationsHistory() {
         <div className="flex items-center gap-2">
           <button
             onClick={refresh}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+            className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -165,7 +170,7 @@ export function NotificationsHistory() {
           <button
             onClick={markAllRead}
             disabled={unreadCount === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCheck className="h-4 w-4" />
             Mark all as read
@@ -181,7 +186,7 @@ export function NotificationsHistory() {
             <div className="space-y-2 px-4 py-4" aria-busy="true">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="flex animate-pulse gap-3">
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-background-alt" />
+                  <div className="h-10 w-10 shrink-0 rounded-pill bg-background-alt" />
                   <div className="flex-1 space-y-1.5 py-1">
                     <div className="h-3.5 w-2/3 rounded bg-background-alt" />
                     <div className="h-3 w-1/2 rounded bg-background-alt" />
@@ -211,7 +216,7 @@ export function NotificationsHistory() {
                       !n.isRead ? "bg-accent-soft/50" : ""
                     }`}
                   >
-                    <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${notificationColor(n.type)}`}>
+                    <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-pill ${notificationColor(n.type)}`}>
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -219,13 +224,13 @@ export function NotificationsHistory() {
                         <span className={`text-sm font-medium ${n.isRead ? "text-text-secondary" : "text-text"}`}>
                           {typeLabel(n.type)}
                         </span>
-                        <span className="text-[11px] text-text-muted" title={formatDateTime(n.createdAt)}>
+                        <span className="text-eyebrow text-text-muted" title={formatDateTime(n.createdAt)}>
                           {timeAgo(n.createdAt)}
                         </span>
                       </span>
                       <span className="mt-0.5 block text-sm leading-snug text-text-secondary">{n.message}</span>
                       {!n.isRead && (
-                        <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                        <span className="mt-1.5 inline-flex items-center gap-1 rounded-pill bg-accent-soft px-2 py-0.5 text-eyebrow font-semibold uppercase tracking-wide text-accent">
                           <BellDot className="h-3 w-3" aria-hidden />
                           New
                         </span>
@@ -246,31 +251,55 @@ export function NotificationsHistory() {
                     onClick={() => goToPage(page - 1)}
                     disabled={page <= 1}
                     aria-label="Previous page"
-                    className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  {getPageItems(page, pagination.totalPages).map((item, i) =>
-                    item === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-text-muted">…</span>
-                    ) : (
-                      <button
-                        key={item}
-                        onClick={() => goToPage(item)}
-                        aria-current={item === page ? "page" : undefined}
-                        className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
-                          item === page ? "bg-accent text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    )
-                  )}
+                  {/* P0.3: the wide 7-item window needs ~392px at 40px targets and
+                      overflows a 360px viewport, so narrow screens get a compact
+                      1 … c … n bar instead. `display:none` keeps the hidden copy
+                      out of the tab order and the accessibility tree. */}
+                  <div className="hidden items-center gap-1 sm:flex">
+                    {getPageItems(page, pagination.totalPages, 2).map((item, i) =>
+                      item === "..." ? (
+                        <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-text-muted">…</span>
+                      ) : (
+                        <button
+                          key={item}
+                          onClick={() => goToPage(item)}
+                          aria-current={item === page ? "page" : undefined}
+                          className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
+                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 sm:hidden">
+                    {getPageItems(page, pagination.totalPages, 0).map((item, i) =>
+                      item === "..." ? (
+                        <span key={`ellipsis-compact-${i}`} className="px-1.5 text-sm text-text-muted">…</span>
+                      ) : (
+                        <button
+                          key={item}
+                          onClick={() => goToPage(item)}
+                          aria-current={item === page ? "page" : undefined}
+                          className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
+                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+                  </div>
                   <button
                     onClick={() => goToPage(page + 1)}
                     disabled={!pagination || page >= pagination.totalPages}
                     aria-label="Next page"
-                    className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

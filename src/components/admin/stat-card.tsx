@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 export type StatTone = "accent" | "success" | "warning" | "error" | "info" | "neutral";
 
@@ -42,13 +42,13 @@ export function StatCard({
   const inner = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
-        <p className={cn("mt-2 text-3xl font-bold tabular-nums", styles.value)}>{value}</p>
+        <p className="font-mono text-eyebrow uppercase text-text-muted">{label}</p>
+        <p className={cn("mt-2 text-stat tabular-nums", styles.value)}>{value}</p>
         {hint && <p className="mt-1 text-xs text-text-muted">{hint}</p>}
       </div>
       {Icon && (
         <span
-          className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", styles.icon)}
+          className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-control", styles.icon)}
           aria-hidden
         >
           <Icon className="h-5 w-5" strokeWidth={2} />

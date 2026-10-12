@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarX, ChevronLeft, ChevronRight, Pencil, RefreshCw, Search } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
+import { cn } from "@/lib/utils";
 import { StatusBadge } from "./status-badge";
 import { CancelAppointmentDialog } from "./cancel-appointment-dialog";
 import { statusActionLabel } from "@/lib/status-labels";
@@ -14,6 +15,7 @@ import { SectionCard } from "@/components/admin/section-card";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { TableSkeleton } from "@/components/admin/table-skeleton";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -61,12 +63,17 @@ const ALLOWED = ["PENDING", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED",
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
 
-function getPageItems(current: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 7) {
+/**
+ * Page numbers for the current window. `siblings` = how many pages to show either
+ * side of the current one; `siblings: 0` yields the compact `1 … c … n` bar used
+ * on narrow viewports, where a 40px target per button cannot fit seven of them.
+ */
+function getPageItems(current: number, totalPages: number, siblings = 2): (number | "...")[] {
+  if (totalPages <= siblings * 2 + 3) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
   const pages = new Set<number>([1, totalPages]);
-  for (let p = current - 2; p <= current + 2; p++) {
+  for (let p = current - siblings; p <= current + siblings; p++) {
     if (p >= 1 && p <= totalPages) pages.add(p);
   }
   const sorted = [...pages].sort((a, b) => a - b);
@@ -282,14 +289,15 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
           <div className="flex items-center justify-end gap-1.5">
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <Button
+                  variant="outline"
+                  size="icon-xs"
                   onClick={() => setEditing(row)}
                   title="Edit appointment"
                   aria-label={`Edit appointment ${row.referenceNumber}`}
-                  className="rounded-md border border-border bg-surface p-1.5 text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
+                  <Pencil aria-hidden />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>Edit appointment</TooltipContent>
             </Tooltip>
@@ -318,13 +326,10 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
         title="Appointments"
         description="Search, filter, and manage patient appointments."
         actions={
-          <button
-            onClick={refresh}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="default" onClick={refresh}>
+            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
             Refresh
-          </button>
+          </Button>
         }
       />
 
@@ -336,12 +341,12 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search patient name, email, or phone..."
-            className="h-9 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+            className="relative h-9 w-full rounded-control border border-border bg-surface pl-9 pr-3 text-sm text-text placeholder:text-text-muted transition-[color,box-shadow] after:absolute after:left-0 after:right-0 after:-inset-y-1 after:content-[''] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
           />
         </div>
         <div className="flex items-center gap-2">
           <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as "all" | "today")}>
-            <SelectTrigger aria-label="Filter by date" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+            <SelectTrigger aria-label="Filter by date" size="sm" className="rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
               <SelectValue placeholder="All dates" />
             </SelectTrigger>
             <SelectContent className="bg-surface">
@@ -350,7 +355,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
             </SelectContent>
           </Select>
           <Select value={statusFilter || "__all__"} onValueChange={(v) => handleStatusChange(v === "__all__" ? "" : v)}>
-            <SelectTrigger aria-label="Filter by status" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+            <SelectTrigger aria-label="Filter by status" size="sm" className="rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent className="bg-surface">
@@ -389,45 +394,91 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
                 <div className="flex items-center gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        type="button"
                         onClick={() => goToPage(page - 1)}
                         disabled={page <= 1}
                         aria-label="Previous page"
-                        className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
+                        <ChevronLeft aria-hidden />
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>Previous page</TooltipContent>
                   </Tooltip>
-                  {getPageItems(page, pagination.totalPages).map((item, i) =>
-                    item === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-text-muted">…</span>
-                    ) : (
-                      <button
-                        key={item}
-                        onClick={() => goToPage(item)}
-                        aria-current={item === page ? "page" : undefined}
-                        className={`min-w-8 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
-                          item === page
-                            ? "bg-accent text-primary-foreground"
-                            : "text-text-secondary hover:bg-accent-soft hover:text-accent"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    )
-                  )}
+                  {/* Both windows stay in the DOM; exactly one is displayed at any
+                      width, and `display:none` keeps the hidden copy out of the tab
+                      order and the accessibility tree. At `icon-sm` (32px) and
+                      `gap-1`, the wide 9-slot window (7 numbers + two "…")
+                      measures ~296px, and with prev/next plus their gaps it is
+                      ~376px — still wider than a 360px viewport, so the
+                      condensed `1 … c … n` copy below is load-bearing and
+                      stays. Mirrors `DataTablePagination`. */}
+                  <div className="hidden items-center gap-1 sm:flex">
+                    {getPageItems(page, pagination.totalPages, 2).map((item, i) =>
+                      item === "..." ? (
+                        <span key={`ellipsis-${i}`} className="px-1 text-xs text-text-muted">
+                          …
+                        </span>
+                      ) : (
+                        <Button
+                          key={item}
+                          type="button"
+                          variant={item === page ? "default" : "ghost"}
+                          size="icon-sm"
+                          onClick={() => goToPage(item)}
+                          aria-current={item === page ? "page" : undefined}
+                          className={cn(
+                            "text-xs font-semibold",
+                            // `ghost` carries no ink of its own; the inactive
+                            // page number keeps the secondary text colour.
+                            item === page && "text-primary-foreground",
+                            item !== page && "text-text-secondary",
+                          )}
+                        >
+                          {item}
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 sm:hidden">
+                    {getPageItems(page, pagination.totalPages, 0).map((item, i) =>
+                      item === "..." ? (
+                        <span key={`ellipsis-compact-${i}`} className="px-1 text-xs text-text-muted">
+                          …
+                        </span>
+                      ) : (
+                        <Button
+                          key={item}
+                          type="button"
+                          variant={item === page ? "default" : "ghost"}
+                          size="icon-sm"
+                          onClick={() => goToPage(item)}
+                          aria-current={item === page ? "page" : undefined}
+                          className={cn(
+                            "text-xs font-semibold",
+                            item === page && "text-primary-foreground",
+                            item !== page && "text-text-secondary",
+                          )}
+                        >
+                          {item}
+                        </Button>
+                      )
+                    )}
+                  </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        type="button"
                         onClick={() => goToPage(page + 1)}
                         disabled={!pagination || page >= pagination.totalPages}
                         aria-label="Next page"
-                        className="rounded-lg border border-border p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
+                        <ChevronRight aria-hidden />
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>Next page</TooltipContent>
                   </Tooltip>
@@ -489,15 +540,22 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
         const isCancel = a === "CANCELLED";
         const isPrimary = i === 0 && !isCancel;
         return (
+          /* Hand-rolled, not <Button size="xs">: these three treatments each carry
+             an explicit ink, and tailwind-merge treats every custom `text-*` token
+             as one group — a size that declares a font-size (`text-caption`)
+             evicts the variant's `text-destructive-foreground` /
+             `text-primary-foreground`, and a `className` colour evicts the size.
+             Either way the chip loses its ink. Height and hit are what changed
+             here, so the `::after` contract is applied directly instead. */
           <button
             key={a}
             onClick={() => onChange(a)}
-            className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+            className={`relative inline-flex h-7 items-center rounded-chip border px-2.5 text-xs font-semibold transition-all after:absolute after:left-0 after:right-0 after:-inset-y-0.5 after:content-[''] ${
               isCancel
                 ? "border-destructive/30 bg-destructive text-white hover:bg-destructive/90"
                 : isPrimary
-                  ? "border-accent bg-accent text-primary-foreground hover:bg-accent-hover"
-                  : "border-border bg-accent-soft text-accent hover:bg-accent hover:text-primary-foreground"
+                  ? "border-accent bg-accent-fill text-primary-foreground hover:bg-accent-fill-hover"
+                  : "border-border bg-accent-soft text-accent hover:bg-accent-fill hover:text-primary-foreground"
             }`}
           >
             {statusActionLabel(a)}
@@ -682,7 +740,7 @@ function EditAppointmentDialog({
         </DialogHeader>
 
         {error && (
-          <div className="rounded-lg border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>
+          <div className="rounded-control border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>
         )}
 
         <div className="grid gap-4">
@@ -696,13 +754,13 @@ function EditAppointmentDialog({
                 min={minDate}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text">Dentist</label>
               <Select value={dentistId || undefined} onValueChange={setDentistId} disabled={!canEditPatient}>
-                <SelectTrigger id="edit-dentist" aria-label="Dentist" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                <SelectTrigger id="edit-dentist" aria-label="Dentist" className="h-11 rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
                   <SelectValue placeholder="Select a dentist" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface">
@@ -718,7 +776,7 @@ function EditAppointmentDialog({
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text">Service</label>
               <Select value={serviceId || undefined} onValueChange={setServiceId}>
-                <SelectTrigger id="edit-service" aria-label="Service" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                <SelectTrigger id="edit-service" aria-label="Service" className="h-11 rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface">
@@ -734,7 +792,7 @@ function EditAppointmentDialog({
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text">Time</label>
               <Select value={time || undefined} onValueChange={setTime}>
-                <SelectTrigger id="edit-time" aria-label="Time" className="h-9 rounded-lg border-border bg-surface px-3 text-sm text-text focus-visible:ring-accent/40">
+                <SelectTrigger id="edit-time" aria-label="Time" className="h-11 rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
                   <SelectValue placeholder="Select a time" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface">
@@ -757,7 +815,7 @@ function EditAppointmentDialog({
                   id="edit-first"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                  className="min-h-11 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -766,7 +824,7 @@ function EditAppointmentDialog({
                   id="edit-last"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                  className="min-h-11 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -776,7 +834,7 @@ function EditAppointmentDialog({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                  className="min-h-11 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -785,7 +843,7 @@ function EditAppointmentDialog({
                   id="edit-phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+                  className="min-h-11 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 />
               </div>
             </fieldset>
@@ -798,7 +856,7 @@ function EditAppointmentDialog({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+              className="min-h-11 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
               placeholder="Optional internal notes about this appointment..."
             />
           </div>
@@ -807,14 +865,14 @@ function EditAppointmentDialog({
         <DialogFooter>
           <button
             onClick={onClose}
-            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+            className="inline-flex h-11 items-center rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-control border border-accent bg-accent-fill px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent-fill-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

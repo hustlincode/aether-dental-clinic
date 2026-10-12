@@ -251,12 +251,12 @@ export function CalendarView() {
       {/* ─── Calendar ─── */}
       <div className="card-surface relative p-4">
         {error && (
-          <div className="mb-4 rounded-lg border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">
+          <div className="mb-4 rounded-control border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">
             <div className="flex items-center justify-between">
               <span>{error}</span>
               <button
                 onClick={() => loadEvents(range.from, range.to)}
-                className="ml-4 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+                className="ml-4 inline-flex h-10 items-center rounded-control border border-border bg-surface px-3 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
               >
                 Retry
               </button>
@@ -266,13 +266,19 @@ export function CalendarView() {
 
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center rounded-lg border border-border bg-background-alt">
+          <div className="flex items-center rounded-control border border-border bg-background-alt">
             <Tooltip>
               <TooltipTrigger asChild>
+                {/* Hand-rolled, not <Button>: the segmented control needs
+                    `rounded-l-control` with square inner corners, and the
+                    primitive's `rounded-control` base is not overridable
+                    through tailwind-merge (`rounded-none` will not evict
+                    `rounded-control`). Shrinking the box by 4px is the point;
+                    the hit contract is applied directly. */}
                 <button
                   onClick={() => shiftMonth(-1)}
                   aria-label="Previous month"
-                  className="flex h-8 w-8 items-center justify-center rounded-l-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+                  className="relative flex size-9 items-center justify-center rounded-l-control text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent after:absolute after:left-0 after:right-0 after:-inset-y-1 after:content-['']"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -285,7 +291,7 @@ export function CalendarView() {
                 <button
                   onClick={() => shiftMonth(1)}
                   aria-label="Next month"
-                  className="flex h-8 w-8 items-center justify-center rounded-r-lg text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+                  className="relative flex size-9 items-center justify-center rounded-r-control text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent after:absolute after:left-0 after:right-0 after:-inset-y-1 after:content-['']"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -293,12 +299,9 @@ export function CalendarView() {
               <TooltipContent>Next month</TooltipContent>
             </Tooltip>
           </div>
-          <button
-            onClick={goToday}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-          >
+          <Button variant="outline" size="default" onClick={goToday}>
             Today
-          </button>
+          </Button>
         </div>
 
         {/* Weekday header */}
@@ -321,12 +324,12 @@ export function CalendarView() {
         >
           {loading && events.length === 0
             ? Array.from({ length: 35 }).map((_, i) => (
-                <Skeleton key={i} className="min-h-14 rounded-lg sm:min-h-24" />
+                <Skeleton key={i} className="min-h-14 rounded-control sm:min-h-24" />
               ))
             : Array.from({ length: grid.total }).map((_, i) => {
                 const day = i - grid.offset + 1;
                 if (day < 1 || day > grid.daysInMonth) {
-                  return <div key={i} className="min-h-14 rounded-lg bg-background-alt/40 sm:min-h-24" />;
+                  return <div key={i} className="min-h-14 rounded-control bg-background-alt/40 sm:min-h-24" />;
                 }
                 const key = dayKey(day);
                 const items = byDate.get(key) ?? [];
@@ -341,7 +344,7 @@ export function CalendarView() {
                     onClick={() => items.length > 0 && setSelectedDate(isSelected ? "" : key)}
                     aria-label={`${fmtLongDate(key)}${items.length > 0 ? `, ${items.length} appointments` : ""}`}
                     className={cn(
-                      "flex min-h-14 flex-col items-stretch gap-1 rounded-lg border p-1 text-left transition-colors sm:min-h-24 sm:p-1.5",
+                      "flex min-h-14 flex-col items-stretch gap-1 rounded-control border p-1 text-left transition-colors sm:min-h-24 sm:p-1.5",
                       isSelected
                         ? "border-border-accent bg-accent-soft/70"
                         : "border-border bg-background-alt/40 hover:border-border-accent hover:bg-accent-soft/30",
@@ -349,8 +352,8 @@ export function CalendarView() {
                   >
                     <span
                       className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold sm:h-7 sm:w-7",
-                        isToday ? "bg-accent text-primary-foreground" : "text-text-secondary",
+                        "flex h-6 w-6 items-center justify-center rounded-pill text-xs font-semibold sm:h-7 sm:w-7",
+                        isToday ? "bg-accent-fill text-primary-foreground" : "text-text-secondary",
                       )}
                     >
                       {day}
@@ -369,7 +372,7 @@ export function CalendarView() {
                                 openSheet(a);
                               }}
                               className={cn(
-                                "flex cursor-pointer items-center gap-1 truncate rounded border-l-[3px] px-1.5 py-0.5 text-[11px] font-medium transition-colors hover:brightness-105",
+                                "flex cursor-pointer items-center gap-1 truncate rounded border-l-[3px] px-1.5 py-0.5 text-micro font-medium transition-colors hover:brightness-105",
                                 meta.chip,
                               )}
                               style={{ borderLeftColor: meta.border }}
@@ -381,7 +384,7 @@ export function CalendarView() {
                           );
                         })}
                         {items.length > MAX_CHIPS && (
-                          <span className="px-1.5 text-[11px] font-medium text-text-muted">
+                          <span className="px-1.5 text-eyebrow font-medium text-text-muted">
                             +{items.length - MAX_CHIPS} more
                           </span>
                         )}
@@ -391,7 +394,7 @@ export function CalendarView() {
                     {/* Dot indicator (mobile) */}
                     {items.length > 0 && (
                       <span className="mt-auto flex justify-center pb-0.5 sm:hidden" aria-hidden>
-                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                        <span className="h-1.5 w-1.5 rounded-pill bg-accent-fill" />
                       </span>
                     )}
                   </button>
@@ -415,7 +418,7 @@ export function CalendarView() {
                 <button
                   type="button"
                   onClick={() => openSheet(a)}
-                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-accent-soft"
+                  className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left transition-colors hover:bg-accent-soft"
                 >
                   <span className="w-16 shrink-0 text-sm font-semibold text-text">{fmtTime(a.startTime)}</span>
                   <span className="min-w-0 flex-1">
@@ -484,10 +487,7 @@ export function CalendarView() {
                     onClick={() => (ns === "CANCELLED" ? setCancelOpen(true) : changeStatus(ns))}
                     disabled={actionLoading}
                     variant={ns === "CANCELLED" ? "destructive" : "default"}
-                    className={cn(
-                      "flex-1",
-                      ns !== "CANCELLED" && "bg-accent text-primary-foreground hover:bg-accent-hover",
-                    )}
+                    className="flex-1"
                   >
                     {actionLoading ? "Updating..." : statusActionLabel(ns)}
                   </Button>

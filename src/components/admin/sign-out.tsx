@@ -24,11 +24,11 @@ export function SignOutButton({
         onClick={() => setOpen(true)}
         aria-label="Sign out"
         title="Sign out"
-        className={`flex items-center gap-2 rounded-lg transition-all ${
+        className={`flex items-center gap-2 rounded-control transition-all ${
           variant === "header"
             ? "text-text-secondary hover:bg-accent-soft hover:text-accent"
             : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text"
-        } ${iconOnly ? "px-2 py-1.5" : "px-2.5 py-1.5 text-sm"} ${className}`}
+        } ${iconOnly ? "min-h-9 px-2 py-1.5" : "min-h-10 px-2.5 py-1.5 text-sm"} ${className}`}
       >
         <LogOut className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
         {!iconOnly && <span className="text-sm font-medium">Log out</span>}

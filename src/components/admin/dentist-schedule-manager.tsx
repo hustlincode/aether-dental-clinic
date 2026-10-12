@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarClock, CalendarRange } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/admin/page-header";
+import { Button } from "@/components/ui/button";
 import { BlockedDatesPanel } from "@/components/admin/blocked-dates-panel";
 import { DentistScheduleEditor } from "@/components/admin/dentist-schedule-editor";
 
@@ -25,13 +26,12 @@ export function DentistScheduleManager({
         title={`Schedule · ${dentistName}`}
         description="Control this dentist's weekly availability and one-off blocked dates. Changes apply to booking immediately."
         actions={
-          <Link
-            href="/admin/dentists"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-          >
-            <ArrowLeft size={16} />
-            Back to Dentists
-          </Link>
+          <Button asChild variant="outline" size="default">
+            <Link href="/admin/dentists">
+              <ArrowLeft aria-hidden />
+              Back to Dentists
+            </Link>
+          </Button>
         }
       />
 

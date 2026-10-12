@@ -196,7 +196,7 @@ export function DentistDetails({
             <TooltipTrigger asChild>
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text"
+                className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text"
                 aria-label="Close dentist details"
               >
                 <X size={18} />
@@ -211,7 +211,7 @@ export function DentistDetails({
           {loading && !data ? (
             <div className="space-y-4" aria-busy="true">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 animate-pulse rounded-full bg-surface-alt" />
+                <div className="h-12 w-12 animate-pulse rounded-pill bg-surface-alt" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 w-1/2 animate-pulse rounded bg-surface-alt" />
                   <div className="h-3 w-2/3 animate-pulse rounded bg-surface-alt" />
@@ -219,21 +219,21 @@ export function DentistDetails({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-lg bg-surface-alt" />
+                  <div key={i} className="h-20 animate-pulse rounded-control bg-surface-alt" />
                 ))}
               </div>
-              <div className="h-40 animate-pulse rounded-lg bg-surface-alt" />
+              <div className="h-40 animate-pulse rounded-control bg-surface-alt" />
             </div>
           ) : error ? (
             <div className="flex flex-col items-center px-6 py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-error-bg">
+              <div className="flex h-14 w-14 items-center justify-center rounded-pill bg-error-bg">
                 <AlertCircle size={24} className="text-error" />
               </div>
               <h3 className="mt-4 text-base font-semibold text-text">Unable to load dentist</h3>
               <p className="mt-1 max-w-sm text-sm text-text-muted">{error}</p>
               <button
                 onClick={retry}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+                className="mt-4 inline-flex h-11 items-center gap-2 rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
               >
                 <RefreshCw className="h-4 w-4" />
                 Try Again
@@ -256,7 +256,7 @@ export function DentistDetails({
                   {dentist.phone && <p className="truncate text-sm text-text-muted">{dentist.phone}</p>}
                 </div>
                 <span
-                  className={`ml-auto shrink-0 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  className={`ml-auto shrink-0 inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
                     dentist.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
                   }`}
                 >
@@ -268,7 +268,7 @@ export function DentistDetails({
               <Link
                 href={`/admin/dentists/${dentist.id}`}
                 onClick={onClose}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt px-4 py-2.5 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-control border border-border bg-surface-alt px-4 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
               >
                 <CalendarClock size={16} />
                 Manage Schedule
@@ -283,7 +283,7 @@ export function DentistDetails({
               {/* Weekly schedule */}
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-text">Weekly Schedule</h3>
-                <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                <div className="mt-3 overflow-hidden rounded-card border border-border">
                   {schedule.map((row, index) => (
                     <div
                       key={DAY_ORDER[index]}
@@ -306,7 +306,7 @@ export function DentistDetails({
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-text">Upcoming Appointments</h3>
                 {data.upcoming.length === 0 ? (
-                  <div className="mt-3 flex flex-col items-center rounded-xl border border-border bg-surface-alt px-6 py-10 text-center">
+                  <div className="mt-3 flex flex-col items-center rounded-card border border-border bg-surface-alt px-6 py-10 text-center">
                     <CalendarX size={28} className="text-text-muted" />
                     <p className="mt-3 text-sm text-text-secondary">No upcoming appointments</p>
                     <p className="mt-1 text-xs text-text-muted">This dentist has no upcoming appointments.</p>
@@ -339,7 +339,7 @@ const STAT_TONE_STYLES: Record<StatTone, string> = {
 
 function StatCard({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: StatTone }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-alt px-3 py-2.5">
+    <div className="rounded-control border border-border bg-surface-alt px-3 py-2.5">
       <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
       <p className={`mt-1 truncate text-base font-semibold ${STAT_TONE_STYLES[tone]}`}>{value}</p>
       {sub && <p className="mt-0.5 truncate text-xs text-text-muted">{sub}</p>}

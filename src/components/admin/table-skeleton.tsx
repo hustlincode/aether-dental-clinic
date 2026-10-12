@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export interface TableSkeletonProps {

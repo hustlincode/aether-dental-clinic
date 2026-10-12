@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CalendarPlus, CalendarX, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 
@@ -25,7 +26,7 @@ function formatDay(value: string): string {
 }
 
 const inputClass =
-  "h-auto w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-auto w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40";
 
 export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
   const [dates, setDates] = useState<BlockedDate[]>([]);
@@ -125,13 +126,9 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
               Days when this dentist is unavailable, regardless of schedule.
             </p>
           </div>
-          <button
-            onClick={reload}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-          >
-            <CalendarX size={16} />
+          <Button variant="outline" size="default" onClick={reload}>
             Refresh
-          </button>
+          </Button>
         </header>
 
         <div className="p-5">
@@ -157,7 +154,7 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
                   </div>
                   <button
                     onClick={() => setPendingRemove(item)}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition hover:border-error/40 hover:bg-error-bg hover:text-error"
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition hover:border-error/40 hover:bg-error-bg hover:text-error"
                     aria-label={`Remove blocked date for ${formatDay(item.date)}`}
                   >
                     <Trash2 size={14} />
@@ -198,14 +195,15 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
               className={inputClass}
             />
           </label>
-          <button
+          <Button
             type="submit"
+            size="default"
+            className="w-full"
             disabled={submitting || loading || !date}
-            className="gradient-gold inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus size={16} />}
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <CalendarPlus className="size-4" aria-hidden />}
             {submitting ? "Blocking..." : "Block Date"}
-          </button>
+          </Button>
         </form>
       </section>
 

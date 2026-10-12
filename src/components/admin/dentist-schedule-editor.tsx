@@ -5,6 +5,7 @@ import { CalendarX, RefreshCw, Save, ToggleLeft, ToggleRight } from "lucide-reac
 import { toast } from "sonner";
 import { ErrorState } from "@/components/admin/error-state";
 import { SectionCard } from "@/components/admin/section-card";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ function toMinutes(hhmm: string): number {
 // ─── Shared input style ──────────────────────────────────────────────────────
 
 const timeInputClass =
-  "h-auto w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text shadow-none transition focus:border-accent focus:outline-none focus-visible:border-accent focus-visible:ring-0 dark:bg-surface-alt aria-invalid:border-error";
+  "h-auto w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 dark:bg-surface-alt aria-invalid:border-error";
 
 // ─── Weekly Schedule Editor ──────────────────────────────────────────────────
 
@@ -222,13 +223,10 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
       title="Weekly Schedule"
       description="Set working hours and breaks. Booking availability is recalculated automatically from this schedule."
       actions={
-        <button
-          onClick={reload}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        <Button variant="outline" size="default" onClick={reload}>
+          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
           Refresh
-        </button>
+        </Button>
       }
       footer={
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
@@ -237,14 +235,14 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
               ? `Last saved just now — ${dirtyCount} working day(s).`
               : `Currently ${dirtyCount} working day(s). Non-working days are excluded from booking.`}
           </p>
-          <button
+          <Button
             onClick={handleSave}
+            size="default"
             disabled={saving || loading}
-            className="gradient-gold inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
           >
-            <Save size={16} />
+            <Save aria-hidden />
             {saving ? "Saving..." : "Save Schedule"}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -258,7 +256,7 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
       ) : loading ? (
         <div className="space-y-2" aria-busy="true">
           {Array.from({ length: 7 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-surface-alt" />
+            <div key={index} className="h-14 animate-pulse rounded-control bg-surface-alt" />
           ))}
         </div>
       ) : (
@@ -273,7 +271,7 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
                     <button
                       type="button"
                       onClick={() => updateRow(index, { isWorking: !row.isWorking })}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-surface-alt px-2.5 py-1.5 text-sm font-medium transition hover:border-border-accent"
+                      className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-2.5 text-sm font-medium transition hover:border-border-accent"
                       aria-pressed={row.isWorking}
                       aria-label={`${DAY_LABELS[row.dayOfWeek]} ${row.isWorking ? "working" : "not working"}`}
                     >
