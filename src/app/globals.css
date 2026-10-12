@@ -322,6 +322,14 @@
    should carry a comment pointing back here. */
 @theme {
   --breakpoint-compact: 430px;
+  /* `tight` (420px) — micro-labels step DOWN here: `--text-eyebrow` is 11px
+     mono at 0.2em tracking, ~290px for a 33-character string, which just
+     clears a 360px screen and overflows a 320px one.
+     `xs` (375px) — narrowest tier still in real use (iPhone SE/8/X). The
+     booking step indicator steps down again there; see `.steps-label` at the
+     end of this file. */
+  --breakpoint-tight: 420px;
+  --breakpoint-xs: 375px;
 }
 
 /* ─── 5. Tailwind v4 theme mappings ─── */
@@ -1018,4 +1026,47 @@ body {
   .home-reveal-group,
   .home-reveal-group > *,
   .home-reveal-group.is-in > * { opacity: 1 !important; transform: none !important; animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Narrow-screen type steps — MUST stay the last rules in this file.
+
+   Position is load-bearing: `.home-eyebrow` and the `text-eyebrow` utility are
+   both unlayered, so source order decides which `font-size` wins. Declared
+   earlier, these are silently overridden by the `.home-*` block above — same
+   specificity, later wins, no error and no effective size change.
+
+   Declared as plain rules rather than by overriding `:root { --text-eyebrow }`
+   because `@theme inline` INLINES token values into the generated utility:
+   `.text-eyebrow` compiles to a literal `font-size:.6875rem`, so a variable
+   override would do nothing at all.
+
+   `var()` is not substituted inside media conditions, so the literals mirror
+   `--breakpoint-tight` / `--breakpoint-xs` from §4b.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ≤420px — micro-labels, 11px → 10px.
+   This is what makes the booking step row fit on a narrow phone. */
+@media (max-width: 420px) {
+  .text-eyebrow,
+  .home-eyebrow {
+    font-size: 0.625rem;
+  }
+}
+
+/* ≤420px — booking step indicator gaps.
+   All four steps stay labelled at every width (losing a step reads as a bug),
+   so the row has to buy its width from the gaps instead of the text: the item
+   gap goes 6px → 4px and the column gap 4px → 2px, which is worth 14px across
+   four items. That is what takes the row from overflowing at 360px to fitting
+   with room to spare. Font size and tracking are untouched — they are already
+   at the legible 10px from the rule above. */
+@media (max-width: 420px) {
+  .steps-label {
+    gap: 0.125rem;           /* gap-1  → 2px */
+  }
+
+  .steps-label > * {
+    gap: 0.25rem;            /* gap-1.5 → 4px */
+  }
 }

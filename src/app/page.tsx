@@ -309,9 +309,20 @@ export default async function HomePage() {
       </header>
 
       <main>
-        {/* ── Hero (fills the viewport below the sticky header) ── */}
+        {/* ── Hero (fills the viewport below the sticky header) ──
+            Vertical padding is py-8 at every width below `sm`, then py-20.
+            py-16 (64px) top and bottom around a display headline ate most of the
+            first screen on a phone, pushing the booking preview card and both
+            CTAs below the fold.
+
+            No `xs` breakpoint here on purpose. Tailwind's `xs:` is a MIN-width
+            variant — it applies at 375px and ABOVE — so `py-16 xs:py-8` would
+            have given the large padding to the narrow screens and the small
+            padding to the wide ones, exactly backwards. Going below a threshold
+            needs `max-xs:`. Since both sides of 375px now want the same value,
+            the step is just noise. Horizontal padding is untouched. */}
         <section className="home-canvas flex min-h-[calc(100dvh-4rem)] items-center">
-          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-8 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
             <div>
               <div className="home-eyebrow inline-flex items-center rounded-pill border border-border-accent bg-accent-soft px-3 py-1.5">
                 Trusted dental care · Online booking
@@ -754,12 +765,27 @@ function BookingPreview({
         </span>
       </div>
 
-      {/* Step progress */}
-      <div className="mt-6 flex items-center justify-between gap-1 text-eyebrow font-medium text-text-muted">
-        {["Service", "Dentist", "Date & time", "Confirm"].map((label, i) => {
+      {/* Step progress.
+          All four steps stay labelled at every width — a stepper that silently
+          loses a step reads as a bug, not as minimalism.
+
+          Each step carries a full and a short form. The short form exists only
+          to make the row fit a narrow phone: at 11px the row needs ~330px
+          against ~295px available at 375px, and the overflow is what squeezes
+          the columns. From `sm` up there is room for the real wording, so it
+          comes back. The whole row is `aria-hidden` (the booking steps are
+          announced by the real flow below), so the doubled text is never read
+          twice. */}
+      <div className="steps-label mt-6 flex items-center justify-between text-eyebrow font-medium text-text-muted">
+        {[
+          { full: "Service", short: "Service" },
+          { full: "Dentist", short: "Dentist" },
+          { full: "Date & time", short: "Dnt" },
+          { full: "Confirm", short: "Done" },
+        ].map((step, i) => {
           const state = i < 2 ? "done" : i === 2 ? "current" : "todo";
           return (
-            <span key={label} className="flex flex-1 items-center gap-1.5" aria-hidden>
+            <span key={step.full} className="flex flex-1 items-center gap-1" aria-hidden>
               <span
                 className={cn(
                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-pill text-micro font-bold",
@@ -770,7 +796,10 @@ function BookingPreview({
               >
                 {state === "done" ? <Check className="size-3" /> : i + 1}
               </span>
-              <span className={cn(state === "todo" && "hidden sm:inline")}>{label}</span>
+              <span>
+                <span className="sm:hidden">{step.short}</span>
+                <span className="hidden sm:inline">{step.full}</span>
+              </span>
             </span>
           );
         })}
