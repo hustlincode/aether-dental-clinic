@@ -1,25 +1,87 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* ─── ProSmile Color Scheme — Light Theme (default fallback) ─── */
+/* Tailwind's automatic source detection scans every un-ignored file in the
+   repo — including .md and .mjs — for class-shaped candidates. eslint-local-rules/
+   is the one directory that MUST contain utility names: it documents the
+   patterns the lint rules ban. Its prose therefore re-creates the dead-CSS bug
+   it exists to prevent. Paths here resolve from this file's directory (src/app).
+
+   scripts/ and cn.config.mjs joined that list when `audit:classes` landed. The
+   guard script must name the real utilities it merges (shadow-red-500,
+   duration-300, rounded-lg, …) or it cannot test anything, and the merge config
+   documents the bug it fixes with the very classes involved. Both are tooling:
+   neither contributes a utility, so both are excluded rather than stripped of
+   their literals — the assertions have to stay honest. */
+@source not "../../eslint-local-rules";
+@source not "../../scripts";
+@source not "../../cn.config.mjs";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Aether Dental — token layer
+
+   File shape (§3.12 of THEME-ENHANCEMENT-PLAN.md):
+     1. @imports
+     2. :root                       — light theme (the default)
+     3. [data-theme="dark"]         — overrides ONLY; never repeats a light value
+     4. :root                       — theme-INDEPENDENT tokens (radius / motion /
+                                      density / z-index / canvas layers)
+     5. @theme inline               — the Tailwind mappings
+     6. @keyframes + --animate-*    — durations tokenised
+     7. @layer base                 — colour-scheme, focus, selection, scrollbars
+     8. canvas / card-surface / gradients
+     9. .home-* block               — DESIGN.md-protected; aliases only
+
+   Invariants:
+     • A colour token has exactly one job (surface / ink / line / accent).
+     • `[data-theme="dark"]` declares only what actually differs from `:root`.
+     • shadcn's alias block is declared exactly once, in `:root`.
+     • Theme-independent tokens are declared exactly once, in `:root`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 2. Light theme (default) ─── */
 :root {
+  color-scheme: light;
+
+  /* surface */
   --background: #f5f5f4;
   --background-alt: #e7e5e4;
   --surface: #ffffff;
   --surface-alt: #fafaf9;
+
+  /* ink */
   --text: #0e0f10;
   --text-secondary: #44403c;
-  --text-muted: #9ca3af;
-  --accent: #D4AF37;
-  --accent-hover: #E6C76B;
-  --accent-soft: rgba(212, 175, 55, 0.10);
-  --cream: #FFF8E7;
+  --text-muted: #5E666E;
+
+  /* The accent has four roles — fill / ink / line / surface. Never mix them. */
+  --accent: #D4AF37;             /* fill — needs dark ink on top */
+  --accent-hover: #E6C76B;       /* fill hover */
+  --accent-ink: #7A5C12;         /* text, borders, icons — readable in light */
+  --accent-ink-hover: #5A430C;
+  --accent-soft: rgba(212, 175, 55, 0.10);   /* chip wash */
+  --accent-surface: var(--accent-soft);      /* shadcn "subtle hover surface" */
+
+  /* lines */
   --border: rgba(14, 15, 16, 0.10);
   --border-strong: rgba(14, 15, 16, 0.18);
-  --border-accent: rgba(212, 175, 55, 0.40);
-  --ring: rgba(212, 175, 55, 0.30);
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --border-accent: rgba(212, 175, 55, 0.40); /* decorative hairline only */
+  --accent-line: rgba(122, 92, 18, 0.75);    /* FUNCTIONAL accent border, >=3:1 */
+  --ring: rgba(122, 92, 18, 0.28);           /* decorative glow only */
+  --focus-ring: #8A6A12;                     /* the one accent allowed as a focus ring */
+
+  /* elevation — the full scale. Dark overrides the five steps in §3. */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
+  --shadow-xl: 0 24px 48px rgba(0,0,0,0.12);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 35%, transparent);
+
+  /* Legacy elevation name. `.card-surface` and `.home-card:active` read
+     `var(--shadow)`; it aliases `--shadow-sm` at an identical value so the
+     dark step is declared once instead of being restated per theme. */
+  --shadow: var(--shadow-sm);
 
   /* Derived canvas tokens (light) — no new palette colors */
   --overlay: rgba(14, 15, 16, 0.45);
@@ -30,27 +92,42 @@
   --hero-start: #f5f5f4;
   --hero-end: #e7e5e4;
 
-  /* Semantic status — light */
-  --success: #16a34a;
+  /* Semantic status — light (darkened so chip ink passes AA on its own chip) */
+  --success: #15803d;
   --success-bg: #dcfce7;
-  --warning: #d97706;
+  --warning: #92400e;
   --warning-bg: #fef3c7;
-  --error: #dc2626;
+  --error: #b91c1c;
   --error-bg: #fee2e2;
-  --info: #2563eb;
+  --info: #1d4ed8;
   --info-bg: #dbeafe;
-  --neutral: #6b7280;
+  --neutral: #4b5563;
   --neutral-bg: #f3f4f6;
+
+  /* Chart palette (P4, §3.4) — data visualisation ONLY.
+     `--chart-1` is the darker gold from the verified "Premium black + gold"
+     profile because a series stroke must clear 3:1 on a white card; brand
+     surfaces stay `#D4AF37`. Never use a `--chart-*` token for UI chrome. */
+  --chart-1: #A16207;            /* 4.92:1 on --surface — brand series */
+  --chart-2: #1d4ed8;           /* 6.70:1 */
+  --chart-3: #15803d;           /* 5.02:1 */
+  --chart-4: #b91c1c;           /* 6.47:1 */
+  --chart-5: #5E666E;           /* 5.83:1 */
+  --chart-grid: #e7e5e4;        /* decorative, exempt from 1.4.11 */
+  --chart-axis: var(--text-muted);   /* axis ticks are text -> 4.5:1 required */
+  --chart-surface: var(--surface);   /* the card the chart is painted on */
 
   /* Sidebar (admin) — light */
   --sidebar-bg: #fafaf9;
   --sidebar-surface: #ffffff;
   --sidebar-text: #0e0f10;
-  --sidebar-text-muted: #6b7280;
-  --sidebar-hover: rgba(212, 175, 55, 0.10);
+  --sidebar-text-muted: var(--text-muted);  /* theme-independent: always tracks --text-muted */
+  --sidebar-hover: rgba(212, 175, 55, 0.10);   /* same gold wash in both themes */
   --sidebar-border: rgba(14, 15, 16, 0.08);
 
-  /* shadcn/ui aliases — mapped to the ProSmile palette */
+  /* shadcn/ui aliases — mapped to the ProSmile palette.
+     Declared ONCE here; every one of these resolves through a token that IS
+     theme-aware, so [data-theme="dark"] needs no copy of this block. */
   --foreground: var(--text);
   --card: var(--surface);
   --card-foreground: var(--text);
@@ -66,43 +143,47 @@
   --destructive: var(--error);
   --destructive-foreground: #ffffff;
   --input: var(--border);
-  --radius: 0.5rem;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ─── Dark Theme (ProSmile default) ─── */
+/* ─── 3. Dark theme (default) ───
+   Only values that differ from :root. `--accent`, `--accent-hover`,
+   `--accent-surface`, every shadcn alias and the whole radius block are
+   identical in both themes and therefore deliberately absent here. */
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --background: #0E0F10;
   --background-alt: #141516;
   --surface: #1F2326;
   --surface-alt: #262a2e;
   --text: #F8F9FA;
   --text-secondary: #D1D5DB;
-  --text-muted: #4B5563;
-  --accent: #D4AF37;
-  --accent-hover: #E6C76B;
+  --text-muted: #9CA3AF;
+
+  --accent-ink: #E6C76B;
+  --accent-ink-hover: #F0DCA0;
   --accent-soft: rgba(212, 175, 55, 0.12);
-  --cream: #FFF8E7;
+
   --border: rgba(248, 249, 250, 0.10);
   --border-strong: rgba(248, 249, 250, 0.18);
   --border-accent: rgba(212, 175, 55, 0.45);
-  --ring: rgba(212, 175, 55, 0.25);
-  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-lg: 0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.2);
+  --accent-line: rgba(212, 175, 55, 0.75);
+  --ring: rgba(230, 199, 107, 0.28);
+  --focus-ring: #E6C76B;
 
-  /* Derived canvas tokens (dark) — no new palette colors */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.28);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.2);
+  --shadow-xl: 0 24px 48px rgba(0,0,0,0.5);
+
   --overlay: rgba(0, 0, 0, 0.6);
   --canvas-dot: rgba(248, 249, 250, 0.045);
   --canvas-glow: rgba(212, 175, 55, 0.09);
 
-  /* Hero gradient — dark */
   --hero-start: #0E0F10;
   --hero-end: #1F2326;
 
-  /* Semantic status — dark */
   --success: #4ade80;
   --success-bg: rgba(74, 222, 128, 0.12);
   --warning: #fbbf24;
@@ -114,39 +195,138 @@
   --neutral: #9ca3af;
   --neutral-bg: rgba(156, 163, 175, 0.12);
 
-  /* Sidebar (admin) */
+  /* Chart palette (P4) — dark. Same slot meanings as light; only the values
+     change. `--chart-1` returns to the brand gold here because the dark card
+     surface gives it 7.53:1. */
+  --chart-1: #D4AF37;            /* 7.53:1 on --surface */
+  --chart-2: #60a5fa;           /* 6.23:1 */
+  --chart-3: #4ade80;           /* 9.08:1 */
+  --chart-4: #f87171;           /* 5.72:1 */
+  --chart-5: #9CA3AF;           /* 6.23:1 */
+  --chart-grid: rgba(248, 249, 250, 0.08);
+  /* --chart-axis / --chart-surface are `var()` aliases of theme-aware tokens
+     and are deliberately NOT repeated here — one declaration, both themes. */
+
   --sidebar-bg: #0E0F10;
   --sidebar-surface: #1F2326;
   --sidebar-text: #F8F9FA;
-  --sidebar-text-muted: #4B5563;
-  --sidebar-hover: rgba(212, 175, 55, 0.10);
   --sidebar-border: rgba(248, 249, 250, 0.08);
+}
 
-  /* shadcn/ui aliases — mapped to the ProSmile palette */
-  --foreground: var(--text);
-  --card: var(--surface);
-  --card-foreground: var(--text);
-  --popover: var(--surface);
-  --popover-foreground: var(--text);
-  --primary: var(--accent);
-  --primary-foreground: #0e0f10;
-  --secondary: var(--background-alt);
-  --secondary-foreground: var(--text-secondary);
-  --muted: var(--surface-alt);
-  --muted-foreground: var(--text-muted);
-  --accent-foreground: var(--text);
-  --destructive: var(--error);
-  --destructive-foreground: #ffffff;
-  --input: var(--border);
+/* ─── 4. Theme-INDEPENDENT tokens ───
+   Declared once, never repeated in [data-theme="dark"]. */
+
+/* Radius — shadcn-compat values, chosen to equal Tailwind's own scale so the
+   shadcn alias block in the light `:root` above and this block can never
+   disagree. Declared here rather than inside the alias block because radius is
+   theme-independent (finding E1: it used to be duplicated verbatim in both). */
+:root {
   --radius: 0.5rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Radius — semantic scale (Q8: semantic, so Tailwind's rounded-sm/md/lg/xl
+     keep their built-in meaning and no one is silently clobbered).
+     Every value equals the utility it replaces: control 0.5rem == rounded-lg,
+     card 0.75rem == rounded-xl, chip 0.375rem == rounded-md. */
+  --radius-control: 0.5rem;   /* buttons, inputs, selects, inline chips */
+  --radius-card: 0.75rem;     /* cards, panels, modals, sheets */
+  --radius-chip: 0.375rem;    /* badges, tags, small status pills */
+  --radius-pill: 9999px;      /* avatars, full-round chips */
+
+  /* Canvas layers — shared by .canvas-base, .admin-canvas and .home-canvas so
+     the dot grid is declared once and every canvas tiles it identically. */
+  --canvas-dot-layer: radial-gradient(var(--canvas-dot) 1px, transparent 0);
+  --canvas-dot-tile: 22px 22px;
+
+  /* Z-index (§3.11) — named so the next component does not invent z-[999].
+     These live in :root, not in `@theme inline`: Tailwind v4 has no `--z-*`
+     theme namespace, so declaring them there makes the compiler drop them
+     entirely (verified against the compiled bundle). Consumed as
+     `z-index: var(--z-modal)` from hand-written CSS. Current usage already
+     conforms: z-10 ×2, z-30 ×1, z-40 ×2, z-50 ×14. */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-drawer: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* Motion — easing */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);   /* decelerating "settle" */
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);     /* standard */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Motion — duration */
+  --dur-micro: 140ms;    /* icon nudge, arrow shift */
+  --dur-fast: 200ms;     /* hover colour, borders, theme cross-fade */
+  --dur-card: 220ms;     /* card lift, rail */
+  --dur-slow: 320ms;     /* panel/modal enter */
+  --dur-reveal: 420ms;   /* scroll reveal */
+  --stagger: 55ms;       /* staggered children */
+  /* Radix overlay timings. P5 lifted the two values that were hard-coded on
+     <SheetContent> as `data-[state=open]:duration-500` /
+     `data-[state=closed]:duration-300` (tw-animate-css' Radix defaults) so the
+     classes read as `duration-(--dur-overlay-in/-out)`. Enter and exit are
+     separate tokens because they are deliberately asymmetric. */
+  --dur-overlay-in: 500ms;
+  --dur-overlay-out: 300ms;
+
+  /* Density — control heights and the touch-target floor (WCAG 2.5.5/2.5.8).
+     Deliberately no `--space-*` scale: Tailwind's spacing scale already is one.
+
+     `--control-height-*` are HIT heights, NOT visual heights. The visual box is
+     set by the Button `size` variant; the target is the `::after` pseudo-element
+     that escapes it vertically at the button's own width. `default` renders 36px
+     tall and hits 44px. Mapping in THEME.md § Density. */
+  --control-height-sm: 2rem;      /* 32px HIT — Button `xs` / `icon-xs` */
+  --control-height-md: 2.75rem;   /* 44px HIT — Button `default` / `icon` (WCAG 2.5.5) */
+  --control-height-lg: 3rem;       /* 48px HIT — Button `lg` / `icon-lg` */
+  /* NO `--control-height-xs`: Button `sm` / `icon-sm` hit 40px, which would
+     need `2.5rem` — larger than `--control-height-sm` (32px) and therefore a
+     scale that counts UP as it goes DOWN. Documented as a known gap in THEME.md
+     § Density instead. `--control-height-*` has no consumer; it is a contract
+     reference, so the gap cannot regress anything. */
+  --control-padding-x-md: 1rem;
+  --touch-target-min: 2.75rem;    /* 44px */
+  --touch-target-aa-min: 1.5rem;  /* 24px — WCAG 2.5.8 absolute floor */
+
+  /* Density — content rhythm. Only gaps that a recurring primitive owns are
+     tokenised; everything else stays on Tailwind's spacing scale.
+     --card-gap equals the `gap-6` (1.5rem) Card shipped before P3, so adopting
+     it is value-identical and cannot move a layout. */
+  --card-gap: 1.5rem;
 }
 
-/* ─── Tailwind v4 Theme Tokens ─── */
+/* Opt-in density for admin table toolbars.
+   GUARDRAIL: compact shrinks the touch target below 44px, so it MUST stay
+   scoped to a fine pointer. Applying it on touch re-introduces finding A13. */
+@media (pointer: fine) {
+  [data-density="compact"] {
+    --control-height-sm: 1.75rem;
+    --control-height-md: 2.25rem;   /* 36px — desktop pointer only */
+  }
+}
+
+/* ─── 4b. Breakpoints ───
+   `compact` is the compact-header threshold: at and below it, header-bar
+   icons step up one size step (size-4 -> size-5) so they stay legible on
+   narrow phones. Declared in a plain `@theme` (not `inline`) because
+   Tailwind needs the literal value to emit the `max-compact:` variant.
+
+   Any `@media` rule in this file that mirrors this threshold MUST use the
+   literal 430px — `var()` is not substituted inside media conditions — and
+   should carry a comment pointing back here. */
+@theme {
+  --breakpoint-compact: 430px;
+}
+
+/* ─── 5. Tailwind v4 theme mappings ─── */
 @theme inline {
+  /* surface & ink */
   --color-background: var(--background);
   --color-background-alt: var(--background-alt);
   --color-surface: var(--surface);
@@ -155,10 +335,19 @@
   --color-text: var(--text);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
+  /* ── The accent split, expressed to Tailwind ────────────────────────────
+     `text-accent` / `border-accent` / `ring-accent` → readable gold INK
+     `bg-accent-fill` / `fill-accent-fill`          → brand gold FILL
+     `bg-accent-surface`                            → shadcn's subtle-hover wash
+     `bg-accent` is therefore NOT gold. Use -fill or -surface. ─────────── */
+  --color-accent: var(--accent-ink);
+  --color-accent-hover: var(--accent-ink-hover);
+  --color-accent-fill: var(--accent);
+  --color-accent-fill-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
-  --color-cream: var(--cream);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-line: var(--accent-line);
+  --color-focus: var(--focus-ring);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-border-accent: var(--border-accent);
@@ -187,6 +376,13 @@
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
   --color-neutral-c: var(--neutral);
+  /* ⚠️ The `-c` suffix is a deliberate naming dodge, NOT a typo.
+     `--color-neutral: var(--neutral)` would clobber Tailwind's built-in
+     `neutral-50 … neutral-950` scale, and every `bg-neutral-500` /
+     `text-neutral-400` in the tree would silently resolve to the clinic grey.
+     `--color-neutral-bg` keeps its plain name because it does not collide.
+     So the neutral chip ink is `text-neutral-c` / `bg-neutral-bg`. Do not
+     "fix" it to `text-neutral`. */
   --color-neutral-bg: var(--neutral-bg);
   --color-sidebar-bg: var(--sidebar-bg);
   --color-sidebar-surface: var(--sidebar-surface);
@@ -195,18 +391,138 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-border: var(--sidebar-border);
 
+  /* ── Chart palette (P4, §3.4) ───────────────────────────────────────────
+     Exposed as Tailwind colours so a tooltip or legend swatch can use a
+     class (`bg-chart-surface`) instead of re-reading the variable in JS.
+     The series colours themselves are read at runtime by dashboard-charts.tsx
+     because SVG geometry cannot take a token through a class. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-surface: var(--chart-surface);
+
+  /* ── Typography (§3.6) ────────────────────────────────────────────────
+     Additive by design: `--text-body-sm` yields `text-body-sm`, NOT `text-sm`,
+     so Tailwind's built-in `text-sm`/`text-xs` keep working untouched. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);   /* undefined outside the homepage — safe */
+  --font-label: var(--font-geist-mono);
 
-  /* Animation tokens */
-  --animate-fade-in: fade-in 0.4s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
-  --animate-slide-down: slide-down 0.3s ease-out;
-  --animate-scale-in: scale-in 0.3s ease-out;
+  /* Display (Fraunces; homepage-scoped via --font-fraunces) */
+  --text-display-xl: clamp(2.5rem, 1.25rem + 4.8vw, 4.5rem);
+  --text-display-xl--line-height: 1.04;
+  --text-display-xl--letter-spacing: -0.025em;
+  --text-display-xl--font-weight: 560;
+
+  --text-display-lg: clamp(1.875rem, 1.4rem + 2vw, 2.75rem);
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 540;
+
+  --text-display-md: clamp(1.375rem, 1.2rem + 0.7vw, 1.75rem);
+  --text-display-md--line-height: 1.15;
+  --text-display-md--letter-spacing: -0.015em;
+  --text-display-md--font-weight: 560;
+
+  --text-display-sm: 1.125rem;
+  --text-display-sm--line-height: 1.35;
+  --text-display-sm--letter-spacing: -0.01em;
+  --text-display-sm--font-weight: 560;
+
+  --text-stat: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem);
+  --text-stat--line-height: 1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 600;
+
+  /* Titles (Geist Sans — admin, booking, forms) */
+  --text-title-lg: 1.5rem;
+  --text-title-lg--line-height: 1.25;
+  --text-title-lg--letter-spacing: -0.015em;
+  --text-title-lg--font-weight: 600;
+
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  --text-title-sm: 1.0625rem;
+  --text-title-sm--line-height: 1.4;
+  --text-title-sm--letter-spacing: -0.005em;
+  --text-title-sm--font-weight: 600;
+
+  /* Body */
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 400;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-body--font-weight: 400;
+
+  --text-body-sm: 0.9375rem;
+  --text-body-sm--line-height: 1.55;
+  --text-body-sm--font-weight: 400;   /* 15px — lifts the text-sm floor */
+
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.45;
+  --text-caption--font-weight: 500;  /* 13px — replaces text-xs (12px) metadata */
+
+  /* Micro-labels (Geist Mono, uppercase, tracked) */
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.2em;
+  --text-eyebrow--font-weight: 500;
+
+  /* Glyphs in fixed-size boxes — step numerals, avatar initials, unread-count
+     badges, calendar chips. Tracking is deliberately 0: the 0.2em above forces a
+     single digit or two letters past a 16-20px container. */
+  --text-micro: 0.625rem;
+  --text-micro--line-height: 1;
+  --text-micro--letter-spacing: 0;
+  --text-micro--font-weight: 600;
+
+  /* Control labels (Geist Sans) */
+  --text-label: 0.875rem;
+  --text-label--line-height: 1;
+  --text-label--letter-spacing: -0.005em;
+  --text-label--font-weight: 600;
+
+  /* ── Radius (§3.7) — semantic utilities ──────────────────────────────── */
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+  --radius-chip: var(--radius-chip);
+  --radius-pill: var(--radius-pill);
+
+  /* ── Elevation (§3.8) — `shadow-sm`/`shadow-lg` now resolve to tokens ── */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-focus: var(--shadow-focus);
+
+  /* ── Motion (§3.10) ─────────────────────────────────────────────────── */
+  --ease-out: var(--ease-out);
+  --ease-std: var(--ease-std);
+  --ease-in-out: var(--ease-in-out);
+
+  /* ── Z-index — see §4 above: declared in :root, Tailwind has no --z-* namespace ── */
+
+  /* Animation tokens — durations now come from the --dur-* scale. */
+  --animate-fade-in: fade-in var(--dur-slow) var(--ease-out);
+  --animate-slide-up: slide-up var(--dur-slow) var(--ease-out);
+  --animate-slide-down: slide-down var(--dur-fast) var(--ease-out);
+  --animate-scale-in: scale-in var(--dur-fast) var(--ease-out);
+  /* Loops keep an absolute duration: --dur-* are one-shot timings. */
   --animate-pulse-gold: pulse-gold 2s ease-in-out infinite;
 }
 
-/* ─── Keyframes ─── */
+/* ─── 6. Keyframes ─── */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -232,12 +548,20 @@
   50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* Enter and exit must be declared together; these are the sanctioned overlay
+   timings. tw-animate-css supplies the data-[state] plumbing. */
+.animate-overlay-in { animation: overlay-in var(--dur-fast) var(--ease-out); }
+.animate-overlay-out { animation: overlay-out var(--dur-fast) var(--ease-std) forwards; }
+
+@keyframes overlay-in {
+  from { opacity: 0; transform: scale(0.98); }
 }
 
-/* ─── Base ─── */
+@keyframes overlay-out {
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+/* ─── 7. Base ─── */
 html, body {
   height: 100%;
 }
@@ -246,15 +570,12 @@ body {
   background: var(--background);
   color: var(--text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ─── Smooth theme transition ─── */
-[data-theme] * {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: 0.2s;
-  transition-timing-function: ease;
-}
+/* Transitions are component-owned. There is deliberately no global
+   `[data-theme] * { transition-* }` rule: it animated properties no component
+   asked to animate and forced a style recalc on every node. The theme swap
+   itself is animated by a View Transition instead (see theme-provider.tsx). */
 
 /* Disable transitions on initial load to prevent flash */
 .no-transition,
@@ -262,9 +583,16 @@ body {
   transition: none !important;
 }
 
-/* ─── Focus ring — gold accent ─── */
+/* Theme swap: cross-fade instead of a hard cut. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-fast);
+  animation-timing-function: var(--ease-std);
+}
+
+/* ─── Focus ring — readable accent, >=3:1 against every surface ─── */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -285,14 +613,33 @@ body {
   background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-end) 100%);
 }
 
-/* ─── Admin canvas — layered background (palette-preserving, understated) ─── */
-.admin-canvas {
+/* ─── 8. Canvas ───
+   `.canvas-base` owns the foundation every canvas shares: the page colour and
+   the dot grid. `.admin-canvas` / `.home-canvas` are thin per-variant
+   overrides that stack their own glow layers on top of the same grid. */
+.canvas-base,
+.admin-canvas,
+.home-canvas {
   background-color: var(--background);
+  background-image: var(--canvas-dot-layer);
+  background-size: var(--canvas-dot-tile);
+}
+
+/* Admin canvas — two glows above the dot grid */
+.admin-canvas {
   background-image:
     radial-gradient(60rem 30rem at 12% -8%, var(--canvas-glow), transparent 60%),
     radial-gradient(45rem 28rem at 100% 0%, var(--canvas-glow), transparent 55%),
-    radial-gradient(var(--canvas-dot) 1px, transparent 0);
-  background-size: auto, auto, 22px 22px;
+    var(--canvas-dot-layer);
+  background-size: auto, auto, var(--canvas-dot-tile);
+}
+
+/* Homepage canvas — one centred glow above the same dot grid */
+.home-canvas {
+  background-image:
+    radial-gradient(60rem 30rem at 50% -20%, var(--home-glow), transparent 60%),
+    var(--canvas-dot-layer);
+  background-size: auto, var(--canvas-dot-tile);
 }
 
 /* ─── Canonical card surface (single source for card chrome) ─── */
@@ -323,6 +670,10 @@ body {
   .card-surface {
     transition: none;
   }
+
+  /* ::view-transition-* pseudo-elements are not matched by `*`. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
 }
 
 /* ─── Scrollbar styling ─── */
@@ -373,10 +724,22 @@ body {
 .burger--open .burger-line--middle { opacity: 0; }
 .burger--open .burger-line--bottom { transform: translateY(0) rotate(-45deg); }
 
+/* Header icons step up below the compact breakpoint, matching the
+   `max-compact:size-5` used by the lucide header icons. Mirrors
+   `--breakpoint-compact` (430px) — see section 4b. `var()` is not
+   substituted inside media conditions, so the literal is required.
+   `scale` keeps every line offset and the open/close transform intact,
+   so only the rendered size changes: 20x16 -> 25x20. */
+@media (max-width: 430px) {
+  .burger { transform: scale(1.25); }
+}
+
 /* ─── shadcn/ui base layer ─── */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    /* No `outline-ring/50` here: it set a 1.24:1 outline colour on every
+       element in the tree. The focus outline is owned by :focus-visible. */
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
@@ -387,6 +750,10 @@ body {
    Homepage — Phase 2: typography & card interactions (public homepage only)
    Additive + namespaced (.home-* / --home-*). Nothing here changes existing
    tokens, .card-surface*, .gradient-gold*, or any admin-visible rule.
+
+   P1/P2 update: the motion tokens and the display/stat/eyebrow sizes are now
+   ALIASES of the global scale. Every resolved value is byte-identical to the
+   literal it replaced — see the DESIGN.md "Promoted to global tokens" note.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -396,13 +763,13 @@ body {
   --home-accent-ink: #7a5c12; /* darkened same-hue gold: readable on light surfaces */
   --home-focus: #7a5c12;
 
-  /* Motion language */
-  --home-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --home-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
-  --home-dur-micro: 140ms;
-  --home-dur-card: 220ms;
-  --home-dur-reveal: 420ms;
-  --home-stagger: 55ms;
+  /* Motion language — aliases of the global --ease-* / --dur-* scale */
+  --home-ease-out: var(--ease-out);
+  --home-ease-std: var(--ease-std);
+  --home-dur-micro: var(--dur-micro);
+  --home-dur-card: var(--dur-card);
+  --home-dur-reveal: var(--dur-reveal);
+  --home-stagger: var(--stagger);
   --home-reveal-shift: 8px;
 
   /* Per-card hover lift (overridden per section) */
@@ -416,25 +783,16 @@ body {
   --home-focus: #e6c76b;
 }
 
-/* Homepage canvas — homepage-tuned variant; does not replace .admin-canvas */
-.home-canvas {
-  background-color: var(--background);
-  background-image:
-    radial-gradient(60rem 30rem at 50% -20%, var(--home-glow), transparent 60%),
-    radial-gradient(var(--canvas-dot) 1px, transparent 0);
-  background-size: auto, 22px 22px;
-}
-
 /* ─── Typography ─── */
 .home-display {
   font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
 }
 
-.home-display-xl { font-size: clamp(2.5rem, 1.25rem + 4.8vw, 4.5rem); line-height: 1.04; letter-spacing: -0.025em; font-weight: 560; }
-.home-display-lg { font-size: clamp(1.875rem, 1.4rem + 2vw, 2.75rem); line-height: 1.1; letter-spacing: -0.02em; font-weight: 540; }
-.home-display-md { font-size: clamp(1.375rem, 1.2rem + 0.7vw, 1.75rem); line-height: 1.15; letter-spacing: -0.015em; font-weight: 560; }
-.home-display-sm { font-size: 1.125rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 560; }
-.home-stat { font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
+.home-display-xl { font-size: var(--text-display-xl); line-height: 1.04; letter-spacing: -0.025em; font-weight: 560; }
+.home-display-lg { font-size: var(--text-display-lg); line-height: 1.1; letter-spacing: -0.02em; font-weight: 540; }
+.home-display-md { font-size: var(--text-display-md); line-height: 1.15; letter-spacing: -0.015em; font-weight: 560; }
+.home-display-sm { font-size: var(--text-display-sm); line-height: 1.35; letter-spacing: -0.01em; font-weight: 560; }
+.home-stat { font-size: var(--text-stat); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
 
 .home-stat-value { color: var(--home-accent-ink); }
 [data-theme="dark"] .home-stat-value {
@@ -457,11 +815,11 @@ body {
 
 .home-eyebrow {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.6875rem;
+  font-size: var(--text-eyebrow);
   line-height: 1;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--text-eyebrow--letter-spacing);
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: var(--text-eyebrow--font-weight);
   color: var(--home-accent-ink);
 }
 
