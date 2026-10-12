@@ -1,7 +1,9 @@
 "use client";
 
 import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "./theme-provider";
+import { Button } from "./button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,18 +29,20 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           type="button"
+          className={cn("group", className)}
           aria-label={`Change theme (current: ${mode})`}
           title={`Theme: ${mode}`}
-          className={`group flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface transition-all hover:border-accent hover:bg-accent-soft ${className}`}
         >
           <ActiveIcon
-            className="h-4 w-4 text-text-secondary transition-colors group-hover:text-accent"
+            className="size-4 text-text-secondary transition-colors group-hover:text-accent max-compact:size-5"
             strokeWidth={2}
             aria-hidden
           />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 bg-surface">
         <DropdownMenuRadioGroup
@@ -52,7 +56,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
               <Icon className="h-4 w-4 text-text-muted" aria-hidden />
               <span className="flex flex-1 flex-col">
                 <span className="text-sm text-text">{label}</span>
-                <span className="text-[11px] leading-tight text-text-muted">{hint}</span>
+                <span className="text-eyebrow leading-tight text-text-muted">{hint}</span>
               </span>
             </DropdownMenuRadioItem>
           ))}

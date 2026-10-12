@@ -1,12 +1,15 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/cn"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+        // `gap-(--card-gap)` is the density token (1.5rem == the `gap-6` this
+        // shipped before P3); `shadow-sm` resolves to the --shadow-sm token and
+        // `rounded-card` to 0.75rem via @theme inline.
+        "flex flex-col gap-(--card-gap) rounded-card border bg-card py-6 text-card-foreground shadow-sm",
         className
       )}
       {...props}
