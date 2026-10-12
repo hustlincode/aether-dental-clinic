@@ -28,68 +28,63 @@ export interface StatusSlice {
   value: number;
 }
 
-interface ChartColors {
-  accent: string;
-  success: string;
-  warning: string;
-  error: string;
-  neutral: string;
-  textMuted: string;
+interface ChartPalette {
+  /** Five series slots, in `--chart-1 … --chart-5` order. */
+  series: string[];
+  /** Axis tick / label ink — a text token, so it owes 4.5:1, not 3:1. */
+  axis: string;
+  /** Gridlines. Decorative, therefore exempt from WCAG 1.4.11. */
   grid: string;
 }
 
+/** Status → series slot. One pair shares a slot by necessity: six statuses,
+ *  five slots. CONFIRMED + CHECKED_IN are the "active" pair and share a slot
+ *  exactly as they shared the gold accent before P4. Every other status maps
+ *  to the hue it already wore, and the hues differ by lightness as well as
+ *  hue in both themes. See `--chart-*` in globals.css. */
+const STATUS_COLOR_SLOT: Record<string, number> = {
+  PENDING: 0, // chart-1 — amber/gold: attention
+  CONFIRMED: 1, // chart-2 — blue
+  CHECKED_IN: 1, // chart-2 — shares with CONFIRMED (semantically adjacent)
+  COMPLETED: 2, // chart-3 — green
+  CANCELLED: 3, // chart-4 — red
+  NO_SHOW: 4, // chart-5 — grey
+};
+const DEFAULT_SLOT = 4;
+
 /**
- * Fallback palette (light theme) used for the server render and the first
- * client paint. Once mounted, colours are read from the live CSS variables so
- * the charts always follow the active theme (light or dark).
+ * Reads the live chart tokens off `:root`. Returns `null` until they resolve.
+ *
+ * There is deliberately NO fallback palette here. A hardcoded fallback is a
+ * second copy of the palette that can never be kept in sync with
+ * `--chart-*` and is exactly what makes the first client paint disagree with
+ * the active theme. Instead the server snapshot is `null` and nothing is
+ * painted until the real values are read — one frame of an empty chart card is
+ * strictly better than one frame of wrong-coloured geometry.
  */
-const FALLBACK_COLORS: ChartColors = {
-  accent: "#D4AF37",
-  success: "#16a34a",
-  warning: "#d97706",
-  error: "#dc2626",
-  neutral: "#6b7280",
-  textMuted: "#9ca3af",
-  grid: "#e7e5e4",
-};
-
-/** Status → theme variable slot. Kept in sync with StatusBadge semantics. */
-const STATUS_COLOR_SLOT: Record<string, keyof ChartColors> = {
-  PENDING: "warning",
-  CONFIRMED: "accent",
-  CHECKED_IN: "accent",
-  COMPLETED: "success",
-  CANCELLED: "error",
-  NO_SHOW: "neutral",
-};
-
-function readChartColors(): ChartColors {
-  if (typeof window === "undefined") return FALLBACK_COLORS;
+function readChartPalette(): ChartPalette | null {
+  if (typeof window === "undefined") return null;
   const styles = getComputedStyle(document.documentElement);
-  const value = (name: string) => styles.getPropertyValue(name).trim() || undefined;
-  return {
-    accent: value("--accent") ?? FALLBACK_COLORS.accent,
-    success: value("--success") ?? FALLBACK_COLORS.success,
-    warning: value("--warning") ?? FALLBACK_COLORS.warning,
-    error: value("--error") ?? FALLBACK_COLORS.error,
-    neutral: value("--neutral") ?? FALLBACK_COLORS.neutral,
-    textMuted: value("--text-muted") ?? FALLBACK_COLORS.textMuted,
-    grid: value("--border") ?? FALLBACK_COLORS.grid,
-  };
+  const read = (name: string) => styles.getPropertyValue(name).trim();
+  const series = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"].map(read);
+  const axis = read("--chart-axis");
+  const grid = read("--chart-grid");
+  if (series.some((color) => color === "") || axis === "" || grid === "") return null;
+  return { series, axis, grid };
 }
 
 // Module-level cache so the snapshot stays referentially stable between renders
 // (useSyncExternalStore needs that) and only recomputes when the theme changes.
 let cachedTheme: string | null = null;
-let cachedColors: ChartColors | null = null;
+let cachedPalette: ChartPalette | null = null;
 
-function getChartColorsSnapshot(): ChartColors {
-  if (typeof window === "undefined") return FALLBACK_COLORS;
+function getChartPaletteSnapshot(): ChartPalette | null {
+  if (typeof window === "undefined") return null;
   const theme = document.documentElement.getAttribute("data-theme");
-  if (cachedColors && cachedTheme === theme) return cachedColors;
-  cachedColors = readChartColors();
+  if (cachedPalette && cachedTheme === theme) return cachedPalette;
+  cachedPalette = readChartPalette();
   cachedTheme = theme;
-  return cachedColors;
+  return cachedPalette;
 }
 
 function subscribeToTheme(onStoreChange: () => void): () => void {
@@ -102,8 +97,8 @@ function subscribeToTheme(onStoreChange: () => void): () => void {
   return () => observer.disconnect();
 }
 
-function useChartColors(): ChartColors {
-  return useSyncExternalStore(subscribeToTheme, getChartColorsSnapshot, () => FALLBACK_COLORS);
+function useChartPalette(): ChartPalette | null {
+  return useSyncExternalStore(subscribeToTheme, getChartPaletteSnapshot, () => null);
 }
 
 function formatStatusLabel(name: string): string {
@@ -128,7 +123,7 @@ function AreaTooltipContent({ active, payload, label }: Partial<TooltipContentPr
   if (!active || !payload?.length) return null;
   const value = Number(payload[0]?.value ?? 0);
   return (
-    <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-lg">
+    <div className="rounded-control border border-border bg-chart-surface px-3 py-2 shadow-xl">
       <p className="text-xs font-medium text-text-muted">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-text">
         {value} appointment{value === 1 ? "" : "s"}
@@ -147,7 +142,7 @@ function StatusTooltipContent({
   if (!entry || entry.value <= 0) return null;
   const pct = total > 0 ? Math.round((entry.value / total) * 100) : 0;
   return (
-    <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-lg">
+    <div className="rounded-control border border-border bg-chart-surface px-3 py-2 shadow-xl">
       <p className="text-xs font-medium text-text-muted">{formatStatusLabel(entry.name)}</p>
       <p className="mt-0.5 text-sm font-semibold text-text">
         {entry.value} · {pct}%
@@ -157,11 +152,13 @@ function StatusTooltipContent({
 }
 
 export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status: StatusSlice[] }) {
-  const colors = useChartColors();
+  const palette = useChartPalette();
   const [activeIndex, setActiveIndex] = useState(-1);
   const totalAppointments = status.reduce((sum, s) => sum + s.value, 0);
   const hasDailyData = daily.some((d) => d.count > 0);
   const hasStatusData = status.some((s) => s.value > 0);
+  const slotColor = (name: string) => palette?.series[STATUS_COLOR_SLOT[name] ?? DEFAULT_SLOT];
+  const chartReady = palette !== null;
 
   /* Custom sector shape → per-slice hover: enlarges the hovered slice and
      dims the others. Driven by our own activeIndex so the legend can sync too
@@ -200,22 +197,24 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
             <span className="text-xs text-text-muted">Last 7 days</span>
           </div>
           <div className="mt-4 h-64">
-            {hasDailyData ? (
+            {/* Nothing renders until the palette resolves. The fixed height is
+                kept so the card does not shift when it arrives. */}
+            {chartReady && hasDailyData && (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={daily} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                   <defs>
                     <linearGradient id="dailyTrendFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={colors.accent} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={colors.accent} stopOpacity={0.02} />
+                      <stop offset="0%" stopColor={palette.series[0]} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={palette.series[0]} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke={colors.grid} strokeDasharray="4 4" vertical={false} />
+                  <CartesianGrid stroke={palette.grid} strokeDasharray="4 4" vertical={false} />
                   <XAxis
                     dataKey="label"
                     interval="preserveStartEnd"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: colors.textMuted, fontSize: 12 }}
+                    tick={{ fill: palette.axis, fontSize: 12 }}
                     dy={6}
                   />
                   <YAxis
@@ -223,26 +222,27 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                     domain={[0, "auto"]}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: colors.textMuted, fontSize: 12 }}
+                    tick={{ fill: palette.axis, fontSize: 12 }}
                     width={36}
                   />
                   <Tooltip
                     content={<AreaTooltipContent />}
-                    cursor={{ stroke: colors.accent, strokeWidth: 1, strokeDasharray: "4 4" }}
+                    cursor={{ stroke: palette.series[0], strokeWidth: 1, strokeDasharray: "4 4" }}
                   />
                   <Area
                     type="monotone"
                     dataKey="count"
                     name="Appointments"
-                    stroke={colors.accent}
+                    stroke={palette.series[0]}
                     strokeWidth={2}
                     fill="url(#dailyTrendFill)"
-                    dot={{ r: 3, fill: colors.accent, strokeWidth: 0 }}
+                    dot={{ r: 3, fill: palette.series[0], strokeWidth: 0 }}
                     activeDot={{ r: 5 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : (
+            )}
+            {chartReady && !hasDailyData && (
               <EmptyState message="No appointments in the last 7 days yet." />
             )}
           </div>
@@ -254,7 +254,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
             <h3 className="text-sm font-semibold text-text-secondary">Status Breakdown</h3>
             <span className="text-xs text-text-muted">{totalAppointments} total</span>
           </div>
-          {hasStatusData ? (
+          {palette && hasStatusData ? (
             <>
               <div className="relative mt-4 h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -273,10 +273,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                       shape={renderPieShape}
                     >
                       {status.map((entry) => (
-                        <Cell
-                          key={entry.name}
-                          fill={colors[STATUS_COLOR_SLOT[entry.name] ?? "neutral"]}
-                        />
+                        <Cell key={entry.name} fill={slotColor(entry.name)} />
                       ))}
                     </Pie>
                     <Tooltip content={<StatusTooltipContent total={totalAppointments} />} />
@@ -296,13 +293,13 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                       onMouseLeave={() => setActiveIndex(-1)}
                       onFocus={() => setActiveIndex(i)}
                       onBlur={() => setActiveIndex(-1)}
-                      className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors ${
+                      className={`flex min-h-8 w-full items-center gap-2 rounded-chip px-1.5 py-1.5 text-left text-sm transition-colors ${
                         activeIndex === i ? "bg-accent-soft" : "hover:bg-background-alt"
                       }`}
                     >
                       <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: colors[STATUS_COLOR_SLOT[entry.name] ?? "neutral"] }}
+                        className="h-2.5 w-2.5 shrink-0 rounded-pill"
+                        style={{ backgroundColor: slotColor(entry.name) }}
                       />
                       <span className="flex-1 truncate text-text">{formatStatusLabel(entry.name)}</span>
                       <span className="text-text-muted">{entry.value}</span>
