@@ -170,7 +170,7 @@ export function NotificationBell() {
         </div>
 
         {/* Body */}
-        <div className="max-h-[28rem] overflow-y-auto">
+        <div className="max-h-112 overflow-y-auto">
           {error ? (
             <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
               <p className="text-sm text-error">{error}</p>
