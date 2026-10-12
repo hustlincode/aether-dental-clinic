@@ -56,12 +56,12 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-text-muted">Clinic Management</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="animate-scale-in rounded-2xl border border-border bg-surface p-6 shadow-lg">
+        <form onSubmit={handleSubmit} className="animate-scale-in rounded-card border border-border bg-surface p-6 shadow-lg">
           <h1 className="text-lg font-bold text-text">Sign in</h1>
           <p className="mt-1 text-sm text-text-muted">Access your clinic dashboard.</p>
 
           {error && (
-            <div className="mt-4 rounded-lg border border-error/20 bg-error-bg px-3 py-2 text-sm text-error">{error}</div>
+            <div className="mt-4 rounded-control border border-error/20 bg-error-bg px-3 py-2 text-sm text-error">{error}</div>
           )}
 
           <div className="mt-5 space-y-4">
@@ -73,7 +73,13 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                // House focus idiom (THEME.md §Focus): no `outline-none` — the
+                // global 2px `var(--focus-ring)` outline is the accessible
+                // indicator; `focus:border-accent` is mouse feedback and the
+                // ring pair is decorative.
+                // `min-h-11` is the 44px default contract (--control-height-md,
+                // WCAG 2.5.5); `px-3 py-2 text-sm` alone renders 38px.
+                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 placeholder="admin@aetherdental.ph"
               />
             </div>
@@ -85,14 +91,14 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 placeholder="••••••••"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full gradient-gold rounded-lg py-2.5 font-semibold text-[#0E0F10] shadow transition-opacity duration-200 hover:opacity-90 disabled:opacity-60"
+              className="w-full gradient-gold rounded-control py-2.5 font-semibold text-[#0E0F10] shadow-sm transition-opacity duration-(--dur-fast) hover:opacity-90 disabled:opacity-60"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -108,7 +114,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="mt-5 rounded-xl border border-border bg-background-alt p-3 text-xs text-text-muted">
+          <div className="mt-5 rounded-card border border-border bg-background-alt p-3 text-xs text-text-muted">
             <p className="font-semibold text-text-secondary">Demo accounts</p>
             <p>admin@aetherdental.ph / admin123</p>
             <p>reception@aetherdental.ph / reception123</p>
@@ -116,7 +122,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-text-muted">
-          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-200">← Back to home</Link>
+          <Link href="/" className="font-medium text-accent hover:text-accent-hover transition-colors duration-(--dur-fast)">← Back to home</Link>
         </p>
       </div>
     </div>

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
@@ -310,10 +312,10 @@ export default function BookPage() {
             Aether Dental
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/privacy-policy" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
+            <Link href="/privacy-policy" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
               Privacy Policy
             </Link>
-            <Link href="/login" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
+            <Link href="/login" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
               Staff login
             </Link>
             <ThemeToggle />
@@ -436,9 +438,9 @@ function StepIndicator({ step }: { step: Step }) {
         return (
           <div key={l.key} className="flex items-center gap-1">
             <div
-              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
+              className={`flex items-center gap-2 rounded-pill px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-(--dur-slow) ${
                 active
-                  ? "bg-accent text-[#0E0F10]"
+                  ? "bg-accent-fill text-[#0E0F10]"
                   : done
                     ? "bg-accent-soft text-accent"
                     : "bg-surface text-text-muted border border-border"
@@ -461,8 +463,8 @@ function StepIndicator({ step }: { step: Step }) {
 
 function LoadingBlock() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+    <div className="flex flex-col items-center justify-center rounded-card border border-border bg-surface py-16">
+      <div className="h-8 w-8 animate-spin rounded-pill border-2 border-accent border-t-transparent" />
       <p className="mt-4 text-sm text-text-muted">Loading booking options...</p>
     </div>
   );
@@ -484,7 +486,7 @@ function SelectService({ services, onSelect }: { services: Service[]; onSelect: 
           key={s.id}
           onClick={() => onSelect(s)}
           style={{ animationDelay: `${i * 60}ms` }}
-          className="animate-slide-up flex w-full items-center justify-between rounded-xl border border-border bg-surface p-4 text-left shadow transition-all duration-200 hover:border-border-accent hover:shadow-lg"
+          className="animate-slide-up flex w-full items-center justify-between rounded-card border border-border bg-surface p-4 text-left shadow-sm transition-all duration-(--dur-fast) hover:border-border-accent hover:shadow-lg"
         >
           <div>
             <div className="font-semibold text-text">{s.name}</div>
@@ -520,9 +522,9 @@ function SelectDentist({ dentists, service, onSelect, onBack }: { dentists: Dent
             <button
               key={d.id}
               onClick={() => onSelect(d)}
-              className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow transition-all duration-200 hover:border-border-accent hover:shadow-lg"
+              className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-sm transition-all duration-(--dur-fast) hover:border-border-accent hover:shadow-lg"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-lg font-bold text-accent">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill bg-accent-soft text-lg font-bold text-accent">
                 {d.name.replace(/^Dr\.?\s*/, "").charAt(0)}
               </div>
               <div>
@@ -556,19 +558,43 @@ function SelectDate({
   return (
     <div className="animate-slide-up">
       <BackLink onClick={onBack} label="Change dentist" />
-      <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow">
+      {/* px-2 / gap-0.5 below `sm` are deliberate (plan §9 Q2, option (a)).
+          A 7-column grid cannot reach the 44px of WCAG 2.5.5 (AAA) at a 360px
+          viewport, so the measured exception is documented instead of being
+          papered over by redesigning the calendar:
+            360px -> (360 - 32 page px-4 - 2 border - 16 card px-2 - 12 gaps) / 7
+                   = 298 / 7 = 42.6px
+            390px -> 328 / 7 = 46.9px
+          That clears WCAG 2.5.8 (AA, 24x24 minimum) everywhere and clears the
+          44px AAA target from ~375px up. The `sm:` step restores the roomier
+          p-4 / gap-1 spacing once there is space for it. */}
+      <div className="mt-4 rounded-card border border-border bg-surface px-2 py-3 shadow-sm sm:p-4">
         <div className="flex items-center justify-between">
-          <button onClick={() => shiftMonth(-1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">←</button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Previous month"
+            onClick={() => shiftMonth(-1)}
+          >
+            <ChevronLeft aria-hidden />
+          </Button>
           <div className="font-semibold text-text">{monthLabel}</div>
-          <button onClick={() => shiftMonth(1)} className="rounded-lg px-3 py-1 text-text-secondary hover:text-accent transition-colors duration-200">→</button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Next month"
+            onClick={() => shiftMonth(1)}
+          >
+            <ChevronRight aria-hidden />
+          </Button>
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-1 text-center text-xs font-medium text-text-muted">
+        <div className="mt-2 grid grid-cols-7 gap-0.5 text-center text-xs font-medium text-text-muted sm:gap-1">
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <div key={d} className="py-1">{d}</div>)}
         </div>
         {loading ? (
           <div className="py-10 text-center text-sm text-text-muted">Loading available dates...</div>
         ) : (
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
             {calDays.map((d, i) => {
               if (d === null) return <div key={`b${i}`} />;
               const avail = dateIsAvailable(d);
@@ -577,9 +603,9 @@ function SelectDate({
                   key={d}
                   disabled={!avail}
                   onClick={() => selectDate(d)}
-                  className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`aspect-square rounded-control text-sm font-medium transition-all duration-(--dur-fast) ${
                     avail
-                      ? "bg-accent text-[#0E0F10] hover:bg-accent-hover"
+                      ? "bg-accent-fill text-[#0E0F10] hover:bg-accent-fill-hover"
                       : "text-text-muted"
                   }`}
                 >
@@ -614,9 +640,9 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
             <button
               key={s.start}
               onClick={() => onSelect(s)}
-              className={`rounded-lg border py-2.5 text-sm font-medium transition-all duration-200 ${
+              className={`inline-flex min-h-11 items-center justify-center rounded-control border text-sm font-medium transition-all duration-(--dur-fast) ${
                 selected === s.start
-                  ? "border-accent bg-accent text-[#0E0F10]"
+                  ? "border-accent bg-accent-fill text-[#0E0F10]"
                   : "border-border bg-surface text-text-secondary hover:border-border-accent hover:text-accent"
               }`}
             >
@@ -652,7 +678,7 @@ function PatientInfo({
     <div className="animate-slide-up">
       <BackLink onClick={onBack} label="Change time" />
       <p className="mb-3 mt-4 text-sm font-medium text-text-secondary">Your information</p>
-      <div className="space-y-4 rounded-xl border border-border bg-surface p-5 shadow">
+      <div className="space-y-4 rounded-card border border-border bg-surface p-5 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="First name" value={values.firstName} onChange={(v) => onChange("firstName", v)} error={errors.firstName} placeholder="John" />
           <Field label="Last name" value={values.lastName} onChange={(v) => onChange("lastName", v)} error={errors.lastName} placeholder="Doe" />
@@ -665,16 +691,16 @@ function PatientInfo({
             value={values.notes}
             onChange={(e) => onChange("notes", e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
             placeholder="Any concerns or preferences..."
           />
         </div>
       </div>
 
       {consentAccepted ? (
-        <div className="mt-4 rounded-xl border border-border-accent bg-success-bg p-4">
+        <div className="mt-4 rounded-card border border-border-accent bg-success-bg p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-sm text-white">✓</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-success text-sm text-white">✓</div>
             <div className="text-sm">
               <div className="font-semibold text-text">Data privacy consent recorded</div>
               <p className="mt-1 text-text-secondary">
@@ -687,7 +713,7 @@ function PatientInfo({
               </p>
               <button
                 onClick={onOpenConsent}
-                className="mt-2 text-xs font-medium text-accent hover:text-accent-hover transition-colors duration-200"
+                className="mt-2 -ml-1 inline-flex min-h-9 items-center rounded-control px-1 text-xs font-medium text-accent transition-colors duration-(--dur-fast) hover:text-accent-hover"
               >
                 View policy &amp; consent details
               </button>
@@ -695,9 +721,9 @@ function PatientInfo({
           </div>
         </div>
       ) : (
-        <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+        <div className="mt-4 rounded-card border border-border bg-surface p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">i</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-accent-soft text-sm font-bold text-accent">i</div>
             <div className="text-sm">
               <div className="font-semibold text-text">Data Privacy Consent</div>
               <p className="mt-1 text-text-secondary">
@@ -711,7 +737,7 @@ function PatientInfo({
               )}
               <button
                 onClick={onOpenConsent}
-                className="mt-2 rounded-lg border border-accent bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition-colors duration-200 hover:bg-accent hover:text-[#0E0F10]"
+                className="mt-2 inline-flex min-h-10 items-center rounded-control border border-accent bg-accent-soft px-3 text-xs font-semibold text-accent transition-colors duration-(--dur-fast) hover:bg-accent-fill hover:text-[#0E0F10]"
               >
                 Review privacy policy &amp; give consent
               </button>
@@ -723,7 +749,7 @@ function PatientInfo({
       <button
         onClick={onContinue}
         disabled={!consentAccepted}
-        className="gradient-gold mt-4 w-full rounded-lg py-3 font-semibold text-[#0E0F10] shadow transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        className="gradient-gold mt-4 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Continue to review
       </button>
@@ -754,11 +780,11 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full rounded-lg border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 ${
+        className={`w-full min-h-11 rounded-control border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) ${
           error
-            ? "border-error focus:border-error focus:ring-error"
-            : "border-border focus:border-accent focus:ring-ring"
-        }`}
+            ? "border-error focus:border-error"
+            : "border-border focus:border-accent"
+        } focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40`}
       />
       {error && <p className="mt-1 text-xs text-error">{error}</p>}
     </div>
@@ -784,7 +810,7 @@ function Review({
     <div className="animate-slide-up">
       <BackLink onClick={onBack} label="Edit details" />
       <p className="mb-3 mt-4 text-sm font-medium text-text-secondary">Review your appointment</p>
-      <div className="rounded-xl border border-border bg-surface p-5 shadow">
+      <div className="rounded-card border border-border bg-surface p-5 shadow-sm">
         <dl className="divide-y divide-border">
           <Row label="Service" value={service.name} />
           <Row label="Dentist" value={dentist.name} />
@@ -796,7 +822,7 @@ function Review({
         <button
           onClick={submit}
           disabled={submitting}
-          className="gradient-gold mt-5 w-full rounded-lg py-3 font-semibold text-[#0E0F10] shadow transition-all duration-200 hover:opacity-90 disabled:opacity-60"
+          className="gradient-gold mt-5 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90 disabled:opacity-60"
         >
           {submitting ? "Booking..." : "Confirm booking"}
         </button>
@@ -820,8 +846,8 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: () => void }) {
   return (
-    <div className="animate-scale-in rounded-2xl border border-border-accent bg-surface p-6 text-center shadow-lg">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-3xl text-success">
+    <div className="animate-scale-in rounded-card border border-border-accent bg-surface p-6 text-center shadow-lg">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-pill bg-success-bg text-3xl text-success">
         ✓
       </div>
       <h2 className="mt-4 text-xl font-bold text-text">Appointment Booked!</h2>
@@ -829,7 +855,7 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
         A confirmation email has been sent to <span className="font-medium text-text">{result.patientEmail || "your email"}</span>.
       </p>
 
-      <div className="mt-6 rounded-xl border border-border-accent bg-accent-soft p-4 text-left">
+      <div className="mt-6 rounded-card border border-border-accent bg-accent-soft p-4 text-left">
         <div className="text-xs font-semibold tracking-wide text-accent uppercase">Appointment Reference</div>
         <div className="mt-1 font-mono text-2xl font-bold text-accent">{result.referenceNumber}</div>
       </div>
@@ -843,10 +869,10 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
         <Row label="Status" value="Pending confirmation" />
       </dl>
 
-      <button onClick={onReset} className="gradient-gold mt-6 w-full rounded-lg py-3 font-semibold text-[#0E0F10] shadow transition-all duration-200 hover:opacity-90">
+      <button onClick={onReset} className="gradient-gold mt-6 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90">
         Book another appointment
       </button>
-      <Link href="/" className="mt-3 block text-sm font-medium text-accent hover:text-accent-hover transition-colors duration-200">
+      <Link href="/" className="mt-3 block text-sm font-medium text-accent transition-colors duration-(--dur-fast) hover:text-accent-hover">
         Return home
       </Link>
     </div>
@@ -885,7 +911,7 @@ function PrivacyConsentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-2xl border border-border-accent bg-surface p-0 shadow-2xl sm:max-w-lg"
+        className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-card border border-border-accent bg-surface p-0 shadow-xl sm:max-w-lg"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <DialogTitle className="text-base font-bold text-text">
@@ -893,7 +919,7 @@ function PrivacyConsentModal({
           </DialogTitle>
           <button
             onClick={() => onOpenChange(false)}
-            className="rounded-lg px-2 py-1 text-text-muted transition-colors duration-200 hover:bg-background-alt hover:text-text"
+            className="flex size-10 items-center justify-center rounded-control text-text-muted transition-colors duration-(--dur-fast) hover:bg-background-alt hover:text-text"
             aria-label="Close"
           >
             ✕
@@ -943,7 +969,7 @@ function PrivacyConsentModal({
             <p className="mt-1">
               You may access, correct, or request deletion of your data; object to processing; withdraw consent; or
               file a complaint with the National Privacy Commission. Contact us at{" "}
-              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent hover:text-accent-hover">
+              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
                 privacy@aetherdental.ph
               </a>
               .
@@ -953,7 +979,7 @@ function PrivacyConsentModal({
           <Link
             href="/privacy-policy"
             onClick={() => onOpenChange(false)}
-            className="inline-block rounded-lg border border-border bg-background-alt px-3 py-1.5 text-xs font-semibold text-accent transition-colors duration-200 hover:text-accent-hover"
+            className="inline-flex min-h-10 items-center rounded-control border border-border bg-background-alt px-3 text-xs font-semibold text-accent transition-colors duration-(--dur-fast) hover:text-accent-hover"
           >
             Read the full privacy policy →
           </Link>
@@ -981,7 +1007,7 @@ function PrivacyConsentModal({
                 value={signature}
                 onChange={(e) => setSignature(e.target.value)}
                 placeholder={fullName || "e.g. John Doe"}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
               />
               <p className="mt-1 text-xs text-text-muted">
                 Your typed full name acts as your electronic signature and will be recorded with the date and time of consent.
@@ -1002,18 +1028,21 @@ function PrivacyConsentModal({
         </div>
 
         <div className="flex gap-3 border-t border-border px-5 py-4">
-          <button
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1"
             onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-lg border border-border bg-background-alt py-2.5 text-sm font-medium text-text-secondary transition-colors duration-200 hover:text-text"
           >
             Not now
-          </button>
-          <button
+          </Button>
+          <Button
+            size="lg"
+            className="flex-1"
             onClick={handleAccept}
-            className="flex-1 rounded-lg bg-accent py-2.5 text-sm font-semibold text-[#0E0F10] transition-colors duration-200 hover:bg-accent-hover"
           >
             I agree
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1026,7 +1055,7 @@ function PrivacyConsentModal({
 
 function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <button onClick={onClick} className="text-sm font-medium text-accent hover:text-accent-hover transition-colors duration-200">
+    <button onClick={onClick} className="-ml-2 inline-flex min-h-9 items-center rounded-control px-2 text-sm font-medium text-accent transition-colors duration-(--dur-fast) hover:text-accent-hover">
       ← {label}
     </button>
   );
@@ -1034,7 +1063,7 @@ function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
 
 function EmptyState({ title, message, icon }: { title: string; message: string; icon: string }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface py-16 text-center">
+    <div className="flex flex-col items-center rounded-card border border-dashed border-border bg-surface py-16 text-center">
       <div className="text-4xl">{icon}</div>
       <h3 className="mt-3 text-lg font-semibold text-text">{title}</h3>
       <p className="mt-1 max-w-xs text-sm text-text-muted">{message}</p>
