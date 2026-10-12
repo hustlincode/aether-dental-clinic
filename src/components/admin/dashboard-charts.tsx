@@ -177,10 +177,23 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}
+        /* Explicit, even though the SVG initial value is already `none`.
+           Recharts forwards the Pie's `stroke` into this function as
+           `sectorProps.stroke`, and this function only destructures geometry +
+           fill — so `stroke="none"` on <Pie> never reaches the path. Saying it
+           here makes the intent explicit on the element that actually paints,
+           rather than relying on an inherited initial value three layers up. */
+        stroke="none"
+        strokeWidth={0}
         cornerRadius={3}
         opacity={dimmed ? 0.45 : 1}
         onMouseEnter={() => setActiveIndex(index)}
         onMouseLeave={() => setActiveIndex(-1)}
+        /* `outline: none` is inline (highest priority) so it beats the unlayered
+           global `:focus-visible` outline. Slices are not keyboard-reachable —
+           the legend buttons below carry the same state for that — so they must
+           not take a focus ring. Android's tap highlight is handled in
+           globals.css instead, since it is a UA overlay rather than a style. */
         style={{ cursor: "pointer", transition: "opacity 200ms ease", outline: "none" }}
       />
     );
@@ -276,10 +289,20 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                         <Cell key={entry.name} fill={slotColor(entry.name)} />
                       ))}
                     </Pie>
-                    <Tooltip content={<StatusTooltipContent total={totalAppointments} />} />
+                    {/* `wrapperStyle` lifts the tooltip above the centre Total overlay. Without an
+                        explicit z-index both are positioned elements and the one later in the DOM
+                        wins — and the overlay is later, so the tooltip rendered underneath it. */}
+                    <Tooltip
+                      content={<StatusTooltipContent total={totalAppointments} />}
+                      wrapperStyle={{ zIndex: 10, pointerEvents: "none" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                {/* `z-0` puts the centre Total at the bottom of the stacking order explicitly,
+                    so it does not depend on DOM order to lose to the tooltip. It stays
+                    above the chart's own painting (both sit inside the same `relative`
+                    wrapper) and keeps `pointer-events-none`, so slices stay clickable. */}
+                <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-bold text-text">{totalAppointments}</span>
                   <span className="text-xs text-text-muted">Total</span>
                 </div>

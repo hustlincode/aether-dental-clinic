@@ -574,6 +574,32 @@ html, body {
   height: 100%;
 }
 
+/* ─── Tap highlight (Android) ───
+   Chrome on Android paints a translucent overlay on the tapped element. On the
+   status-breakdown pie it reads as a border appearing around the slice you just
+   tapped, which looks like a selection state the chart does not actually have.
+   It is a UA overlay rather than a style, so it cannot be cancelled from the
+   element's own class — only here.
+
+   Safe to suppress globally because the interactive primitives all declare a
+   real pressed treatment: `active:` on Button, and focus/hover transitions
+   elsewhere. The chart slices are the exception — they carry only a hover
+   transform, and they are not keyboard-reachable, so they have no pressed state
+   to fall back on. That is acceptable: the legend buttons directly below the
+   chart carry the identical active state and DO respond to keyboard focus. */
+a,
+button,
+[role="button"],
+summary,
+label,
+input,
+select,
+textarea,
+.recharts-sector,
+.recharts-pie-sector path {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--background);
   color: var(--text);
