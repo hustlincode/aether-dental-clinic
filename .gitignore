@@ -45,6 +45,9 @@ next-env.d.ts
 # documentation (not needed in repo)
 *.md
 !README.md
+# THEME.md is the token reference the ESLint guardrails point contributors to
+# ("See THEME.md section Accent roles"), so it ships with the code.
+!THEME.md
 
 # agent configs
 /.agents/

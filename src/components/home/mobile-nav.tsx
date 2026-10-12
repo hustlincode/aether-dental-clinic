@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
 import {
   Sheet,
@@ -46,7 +47,7 @@ export function MobileNav() {
             <SheetClose key={link.href} asChild>
               <Link
                 href={link.href}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+                className="rounded-control px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
               >
                 {link.label}
               </Link>
@@ -55,7 +56,7 @@ export function MobileNav() {
           <SheetClose asChild>
             <Link
               href="/login"
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+              className="rounded-control px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
             >
               Staff login
             </Link>
@@ -63,12 +64,9 @@ export function MobileNav() {
         </nav>
         <div className="mt-auto p-4">
           <SheetClose asChild>
-            <Link
-              href="/book"
-              className="gradient-gold flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold text-[#0E0F10] shadow-md transition-opacity duration-200 hover:opacity-90"
-            >
-              Book Now
-            </Link>
+            <Button asChild size="default" className="w-full">
+              <Link href="/book">Book Now</Link>
+            </Button>
           </SheetClose>
         </div>
       </SheetContent>

@@ -10,7 +10,7 @@ const styles: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   const label = status.replace("_", " ");
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] || "bg-neutral-bg text-neutral-c"}`}>
+    <span className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold ${styles[status] || "bg-neutral-bg text-neutral-c"}`}>
       {label}
     </span>
   );

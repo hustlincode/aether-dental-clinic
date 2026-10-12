@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
 /**
@@ -16,7 +16,7 @@ function Avatar({
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
-      className={cn("relative flex size-9 shrink-0 overflow-hidden rounded-full", className)}
+      className={cn("relative flex size-9 shrink-0 overflow-hidden rounded-pill", className)}
       {...props}
     />
   );
@@ -43,7 +43,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground",
+        "flex size-full items-center justify-center rounded-pill bg-muted text-xs font-bold text-muted-foreground",
         className
       )}
       {...props}

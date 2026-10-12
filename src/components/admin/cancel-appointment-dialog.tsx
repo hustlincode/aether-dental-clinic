@@ -69,7 +69,7 @@ export function CancelAppointmentDialog({
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="Optional reason for the cancellation..."
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+            className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
           />
           <p className="text-xs text-text-muted">The remarks are saved to the appointment record.</p>
         </div>

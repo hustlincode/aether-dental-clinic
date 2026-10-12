@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
 import { NotificationBell } from "@/components/admin/notification-bell";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,14 +64,11 @@ export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderPr
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              className="flex items-center rounded-lg p-1 transition hover:bg-background-alt md:hidden"
-              aria-label="Open user menu"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-primary-foreground">
+            <Button variant="ghost" size="icon-sm" className="md:hidden" aria-label="Open user menu">
+              <div className="flex size-7 items-center justify-center rounded-pill bg-accent-fill text-caption font-bold text-primary-foreground">
                 {initial}
               </div>
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60 bg-surface">
             <div className="px-4 py-3">

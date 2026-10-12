@@ -72,7 +72,7 @@ export function AdminSidebar({
           with the header hamburger). The header has no burger in web view. */}
       <div className={`flex items-center justify-between px-3 py-4 ${collapsed ? "flex-col gap-3" : ""}`}>
         <Link href="/admin" className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-gold">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control gradient-gold">
             <Stethoscope className="h-5 w-5 text-primary-foreground" strokeWidth={2} aria-hidden />
           </span>
           {!collapsed && (
@@ -89,7 +89,7 @@ export function AdminSidebar({
               onClick={onToggleCollapse}
               aria-label="Toggle sidebar"
               title="Toggle sidebar"
-              className="hidden h-7 w-7 items-center justify-center rounded-lg text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text md:flex"
+              className="hidden size-9 items-center justify-center rounded-control text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text md:flex"
             >
               <PanelLeftClose className="h-4 w-4" aria-hidden />
             </button>
@@ -103,7 +103,7 @@ export function AdminSidebar({
         {navGroups.map(({ group, items }) => (
           <div key={group} className="space-y-1">
             {!collapsed && (
-              <p className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text-muted/70">
+              <p className="px-3 pb-0.5 pt-1 text-eyebrow font-semibold uppercase tracking-wider text-sidebar-text-muted">
                 {group}
               </p>
             )}
@@ -117,7 +117,7 @@ export function AdminSidebar({
                   href={item.href}
                   onClick={onCloseMobile}
                   title={collapsed ? item.label : undefined}
-                  className={`group relative flex items-center gap-3 rounded-lg transition-colors ${
+                  className={`group relative flex items-center gap-3 rounded-control transition-colors ${
                     collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
                   } ${
                     active
@@ -127,7 +127,7 @@ export function AdminSidebar({
                 >
                   {active && !collapsed && (
                     <span
-                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent"
+                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-pill bg-accent-fill"
                       aria-hidden
                     />
                   )}
@@ -158,7 +158,7 @@ export function AdminSidebar({
         <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : ""}`}>
           {!collapsed && (
             <div className="flex min-w-0 items-center gap-2 max-md:hidden">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary-foreground">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-accent-fill text-sm font-bold text-primary-foreground">
                 {initial}
               </div>
               <div className="min-w-0">
@@ -189,7 +189,7 @@ export function AdminSidebar({
       {/* Sidebar — mobile: fixed off-canvas drawer; desktop: relative flex child
           that collapses via the in-sidebar toggle (md:w-16 / md:w-64) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-sidebar-border transition-all duration-300 md:relative md:inset-auto ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-sidebar-border transition-all duration-(--dur-slow) md:relative md:inset-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${collapsed ? "md:w-16" : "md:w-64"}`}
       >

@@ -31,6 +31,7 @@ import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MobileNav } from "@/components/home/mobile-nav";
 import { MobileBookBar } from "@/components/home/mobile-book-bar";
@@ -287,36 +288,43 @@ export default async function HomePage() {
             <span className="text-accent">Dental</span>
           </Link>
           <nav aria-label="Primary" className="hidden items-center gap-6 text-sm font-medium text-text-secondary lg:flex">
-            <Link href="/#services" className="home-nav-link transition-colors duration-200 hover:text-accent">Services</Link>
-            <Link href="/#dentists" className="home-nav-link transition-colors duration-200 hover:text-accent">Dentists</Link>
-            <Link href="/#faq" className="home-nav-link transition-colors duration-200 hover:text-accent">FAQ</Link>
-            <Link href="/#contact" className="home-nav-link transition-colors duration-200 hover:text-accent">Contact</Link>
+            <Link href="/#services" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Services</Link>
+            <Link href="/#dentists" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Dentists</Link>
+            <Link href="/#faq" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">FAQ</Link>
+            <Link href="/#contact" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Contact</Link>
           </nav>
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/login"
-              className="hidden text-sm font-medium text-text-secondary transition-colors duration-200 hover:text-accent sm:block"
-            >
-              Staff login
-            </Link>
+            {/* "Staff login" — now a real control with a real target */}
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link href="/login">Staff login</Link>
+            </Button>
             <ThemeToggle />
-            <Link
-              href="/book"
-              className="gradient-gold hidden rounded-lg px-4 py-2 text-sm font-semibold text-[#0E0F10] shadow transition-opacity duration-200 hover:opacity-90 sm:inline-flex"
-            >
-              Book Now
-            </Link>
+            {/* "Book Now" — 44px hit, 36px visual, flat gold fill */}
+            <Button asChild size="default" className="hidden sm:inline-flex">
+              <Link href="/book">Book Now</Link>
+            </Button>
             <MobileNav />
           </div>
         </div>
       </header>
 
       <main>
-        {/* ── Hero (fills the viewport below the sticky header) ── */}
+        {/* ── Hero (fills the viewport below the sticky header) ──
+            Vertical padding is py-8 at every width below `sm`, then py-20.
+            py-16 (64px) top and bottom around a display headline ate most of the
+            first screen on a phone, pushing the booking preview card and both
+            CTAs below the fold.
+
+            No `xs` breakpoint here on purpose. Tailwind's `xs:` is a MIN-width
+            variant — it applies at 375px and ABOVE — so `py-16 xs:py-8` would
+            have given the large padding to the narrow screens and the small
+            padding to the wide ones, exactly backwards. Going below a threshold
+            needs `max-xs:`. Since both sides of 375px now want the same value,
+            the step is just noise. Horizontal padding is untouched. */}
         <section className="home-canvas flex min-h-[calc(100dvh-4rem)] items-center">
-          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-8 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
             <div>
-              <div className="home-eyebrow inline-flex items-center rounded-full border border-border-accent bg-accent-soft px-3 py-1.5">
+              <div className="home-eyebrow inline-flex items-center rounded-pill border border-border-accent bg-accent-soft px-3 py-1.5">
                 Trusted dental care · Online booking
               </div>
               <h1 className="home-display home-display-xl mt-4 text-text">
@@ -329,13 +337,13 @@ export default async function HomePage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/book"
-                  className="gradient-gold rounded-lg px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-200 hover:opacity-90"
+                  className="gradient-gold rounded-control px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
                 >
                   Book an appointment
                 </Link>
                 <Link
                   href="/#services"
-                  className="rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-text-secondary transition-all duration-200 hover:border-border-accent hover:bg-surface"
+                  className="inline-flex h-11 items-center rounded-control border border-border px-5 text-sm font-semibold text-text-secondary transition-all duration-(--dur-fast) hover:border-border-accent hover:bg-surface"
                 >
                   View services
                 </Link>
@@ -402,11 +410,11 @@ export default async function HomePage() {
             <Reveal stagger as="ol" className="home-steps mt-12 grid gap-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
               {BOOKING_STEPS.map((step, i) => (
                 <li key={step.title} className="card-surface home-step p-5">
-                  <span className="home-step__num gradient-gold flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-[#0E0F10]">
+                  <span className="home-step__num gradient-gold flex h-9 w-9 items-center justify-center rounded-pill text-sm font-bold text-[#0E0F10]">
                     {i + 1}
                   </span>
                   <h3 className="mt-3 font-semibold text-text">{step.title}</h3>
-                  <p className="mt-1 text-[0.9375rem] leading-[1.55] text-text-muted">{step.copy}</p>
+                  <p className="mt-1 text-body-sm text-text-muted">{step.copy}</p>
                 </li>
               ))}
             </Reveal>
@@ -430,11 +438,11 @@ export default async function HomePage() {
                     className="card-surface card-surface-hover home-card home-card--left home-card--lift-2 p-5"
                   >
                     <span className="home-card__rail" aria-hidden />
-                    <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                    <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-card bg-accent-soft text-accent">
                       <Icon className="size-5" aria-hidden />
                     </span>
                     <h3 className="mt-4 font-semibold text-text">{benefit.title}</h3>
-                    <p className="mt-1 text-[0.9375rem] leading-[1.55] text-text-muted">{benefit.copy}</p>
+                    <p className="mt-1 text-body-sm text-text-muted">{benefit.copy}</p>
                   </div>
                 );
               })}
@@ -464,7 +472,7 @@ export default async function HomePage() {
                     </Avatar>
                     <h3 className="mt-4 font-semibold text-text">{d.name}</h3>
                     <p className="home-accent-ink text-sm font-medium">{d.specialization}</p>
-                    <p className="mt-2 text-[0.9375rem] leading-[1.55] text-text-muted">
+                    <p className="mt-2 text-body-sm text-text-muted">
                       {CARE_PHILOSOPHIES[i % CARE_PHILOSOPHIES.length]}
                     </p>
                   </div>
@@ -493,7 +501,7 @@ export default async function HomePage() {
                   </blockquote>
                   <figcaption className="mt-4 flex items-center justify-between gap-3">
                     <span className="text-sm font-semibold text-text">{t.name}</span>
-                    <span className="home-accent-ink inline-flex items-center gap-1 rounded-full border border-border-accent bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-medium">
+                    <span className="home-accent-ink inline-flex items-center gap-1 rounded-pill border border-border-accent bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-medium">
                       <BadgeCheck className="size-3.5" aria-hidden />
                       {t.service}
                     </span>
@@ -515,7 +523,7 @@ export default async function HomePage() {
               {FAQ_ITEMS.map((item) => (
                 <AccordionItem key={item.q} value={item.q} className="border-border px-3">
                   <AccordionTrigger className="text-base font-semibold text-text">{item.q}</AccordionTrigger>
-                  <AccordionContent className="text-[0.9375rem] leading-[1.6] text-text-secondary">{item.a}</AccordionContent>
+                  <AccordionContent className="text-body-sm text-text-secondary">{item.a}</AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
@@ -532,7 +540,7 @@ export default async function HomePage() {
             <p className="mt-3 text-text-secondary">Confirmation sent instantly · No phone required</p>
             <Link
               href="/book"
-              className="gradient-gold mt-8 inline-block rounded-lg px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-200 hover:opacity-90"
+              className="gradient-gold mt-8 inline-block rounded-control px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
             >
               Book an appointment
             </Link>
@@ -629,15 +637,15 @@ export default async function HomePage() {
               </p>
             </div>
             <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-text-secondary">
-              <Link href="/#services" className="home-nav-link transition-colors duration-200 hover:text-accent">Services</Link>
-              <Link href="/#dentists" className="home-nav-link transition-colors duration-200 hover:text-accent">Dentists</Link>
-              <Link href="/#faq" className="home-nav-link transition-colors duration-200 hover:text-accent">FAQ</Link>
-              <Link href="/#contact" className="home-nav-link transition-colors duration-200 hover:text-accent">Contact</Link>
+              <Link href="/#services" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Services</Link>
+              <Link href="/#dentists" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Dentists</Link>
+              <Link href="/#faq" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">FAQ</Link>
+              <Link href="/#contact" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Contact</Link>
             </nav>
           </div>
           <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-border pt-4 text-xs text-text-muted sm:flex-row">
             <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
-            <Link href="/privacy-policy" className="home-nav-link transition-colors duration-200 hover:text-accent">
+            <Link href="/privacy-policy" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">
               Privacy Policy
             </Link>
           </div>
@@ -704,7 +712,7 @@ function ServiceCard({
     >
       <span className="home-card__rail" aria-hidden />
       <div className="flex items-start justify-between">
-        <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
+        <span className="home-card__icon flex h-11 w-11 items-center justify-center rounded-card bg-accent-soft text-accent">
           <Icon className="size-5" aria-hidden />
         </span>
         <span
@@ -719,7 +727,7 @@ function ServiceCard({
         {service.name}
       </h3>
       {service.description && (
-        <p className="mt-1.5 text-[0.9375rem] leading-[1.55] text-text-muted">{service.description}</p>
+        <p className="mt-1.5 text-body-sm text-text-muted">{service.description}</p>
       )}
       <div className="mt-auto flex items-center justify-between pt-5">
         <span className="home-accent-ink text-xl font-bold">{formatPeso(service.price)}</span>
@@ -752,20 +760,35 @@ function BookingPreview({
           <CalendarDays className="size-4 text-accent" aria-hidden />
           Book an appointment
         </span>
-        <span className="rounded-full border border-border-accent bg-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-accent">
+        <span className="rounded-pill border border-border-accent bg-accent-soft px-2.5 py-0.5 text-eyebrow font-semibold text-accent">
           Preview
         </span>
       </div>
 
-      {/* Step progress */}
-      <div className="mt-6 flex items-center justify-between gap-1 text-[11px] font-medium text-text-muted">
-        {["Service", "Dentist", "Date & time", "Confirm"].map((label, i) => {
+      {/* Step progress.
+          All four steps stay labelled at every width — a stepper that silently
+          loses a step reads as a bug, not as minimalism.
+
+          Each step carries a full and a short form. The short form exists only
+          to make the row fit a narrow phone: at 11px the row needs ~330px
+          against ~295px available at 375px, and the overflow is what squeezes
+          the columns. From `sm` up there is room for the real wording, so it
+          comes back. The whole row is `aria-hidden` (the booking steps are
+          announced by the real flow below), so the doubled text is never read
+          twice. */}
+      <div className="steps-label mt-6 flex items-center justify-between text-eyebrow font-medium text-text-muted">
+        {[
+          { full: "Service", short: "Service" },
+          { full: "Dentist", short: "Dentist" },
+          { full: "Date & time", short: "Dnt" },
+          { full: "Confirm", short: "Done" },
+        ].map((step, i) => {
           const state = i < 2 ? "done" : i === 2 ? "current" : "todo";
           return (
-            <span key={label} className="flex flex-1 items-center gap-1.5" aria-hidden>
+            <span key={step.full} className="flex flex-1 items-center gap-1" aria-hidden>
               <span
                 className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-pill text-micro font-bold",
                   state === "done" && "gradient-gold text-[#0E0F10]",
                   state === "current" && "border-2 border-accent text-accent",
                   state === "todo" && "border border-border text-text-muted"
@@ -773,7 +796,10 @@ function BookingPreview({
               >
                 {state === "done" ? <Check className="size-3" /> : i + 1}
               </span>
-              <span className={cn(state === "todo" && "hidden sm:inline")}>{label}</span>
+              <span>
+                <span className="sm:hidden">{step.short}</span>
+                <span className="hidden sm:inline">{step.full}</span>
+              </span>
             </span>
           );
         })}
@@ -789,7 +815,7 @@ function BookingPreview({
         <PreviewPill
           icon={
             <Avatar className="size-6">
-              <AvatarFallback className="bg-accent-soft text-[9px] font-bold text-accent">
+              <AvatarFallback className="bg-accent-soft text-caption font-bold text-accent">
                 {dentist ? initials(dentist.name) : "AD"}
               </AvatarFallback>
             </Avatar>
@@ -807,12 +833,12 @@ function BookingPreview({
       {/* Cost + CTA */}
       <div className="mt-6 flex items-center justify-between gap-3">
         <div>
-          <div className="text-[11px] text-text-muted">Estimated cost</div>
+          <div className="text-eyebrow text-text-muted">Estimated cost</div>
           <div className="text-xl font-bold text-accent">{service ? formatPeso(service.price) : "—"}</div>
         </div>
         <Link
           href="/book"
-          className="gradient-gold rounded-lg px-4 py-2.5 text-sm font-semibold text-[#0E0F10] shadow-md transition-opacity duration-200 hover:opacity-90"
+          className="gradient-gold rounded-control px-4 py-2.5 text-sm font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
         >
           Continue booking
         </Link>
@@ -824,7 +850,7 @@ function BookingPreview({
 
 function PreviewPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-alt px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-control border border-border bg-surface-alt px-3 py-2.5">
       <span className="flex items-center gap-2 text-text-muted">
         {icon}
         <span className="text-xs font-medium">{label}</span>
@@ -838,7 +864,7 @@ function Stars() {
   return (
     <div className="flex items-center gap-0.5" role="img" aria-label="Rated 5 out of 5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <Star key={i} className="size-4 fill-accent text-accent" aria-hidden />
+        <Star key={i} className="size-4 fill-accent-fill text-accent" aria-hidden />
       ))}
     </div>
   );

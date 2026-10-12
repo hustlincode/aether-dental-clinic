@@ -7,6 +7,7 @@ import { notificationColor, notificationIcon, typeLabel } from "./notification-m
 import { timeAgo } from "@/lib/time";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 
 export interface NotificationItem {
   id: string;
@@ -32,7 +33,7 @@ export function NotificationBell() {
   const [error, setError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
 
-  /* ─── Unread count (separate, lightweight fetch) ─── */
+  /* â”€â”€â”€ Unread count (separate, lightweight fetch) â”€â”€â”€ */
   useEffect(() => {
     let cancelled = false;
     fetch("/api/notifications/unread-count", { cache: "no-store" })
@@ -61,7 +62,7 @@ export function NotificationBell() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  /* ─── List (fresh fetch whenever the panel opens / retry is pressed) ─── */
+  /* â”€â”€â”€ List (fresh fetch whenever the panel opens / retry is pressed) â”€â”€â”€ */
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -81,7 +82,7 @@ export function NotificationBell() {
     };
   }, [open, retryKey]);
 
-  /* ─── Actions ─── */
+  /* â”€â”€â”€ Actions â”€â”€â”€ */
   async function markAllRead() {
     // Optimistic update with rollback so the UI can't desync from the server.
     const prevItems = items;
@@ -122,22 +123,23 @@ export function NotificationBell() {
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               aria-label={count > 0 ? `Notifications, ${count} unread` : "Notifications, no unread"}
               aria-haspopup="true"
               aria-expanded={open}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface transition-all hover:border-accent hover:bg-accent-soft"
             >
-              <Bell className="h-4 w-4 text-text-secondary" strokeWidth={2} aria-hidden />
+              <Bell className="size-4 text-text-secondary max-compact:size-5" strokeWidth={2} aria-hidden />
               {count > 0 && (
                 <span
-                  className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white"
+                  className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold leading-none text-white"
                   aria-hidden
                 >
                   {count > 99 ? "99+" : count}
                 </span>
               )}
-            </button>
+            </Button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>Notifications</TooltipContent>
@@ -146,7 +148,7 @@ export function NotificationBell() {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-surface p-0 shadow-lg"
+        className="w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-card border border-border bg-surface p-0 shadow-xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -155,24 +157,26 @@ export function NotificationBell() {
             <div className="text-xs text-text-muted">{count} unread</div>
           </div>
           {unreadItems && (
-            <button
+            <Button
               onClick={markAllRead}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft"
+              variant="ghost"
+              size="xs"
+              className="rounded-chip text-accent"
             >
-              <CheckCheck className="h-3.5 w-3.5" aria-hidden />
+              <CheckCheck aria-hidden />
               Mark all as read
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Body */}
-        <div className="max-h-[28rem] overflow-y-auto">
+        <div className="max-h-112 overflow-y-auto">
           {error ? (
             <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
               <p className="text-sm text-error">{error}</p>
               <button
                 onClick={() => setRetryKey((k) => k + 1)}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition hover:border-accent hover:bg-accent-soft hover:text-accent"
+                className="inline-flex h-10 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition hover:border-accent hover:bg-accent-soft hover:text-accent"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden />
                 Retry
@@ -182,7 +186,7 @@ export function NotificationBell() {
             <div className="space-y-2 px-4 py-4" aria-busy="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex animate-pulse gap-3">
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-background-alt" />
+                  <div className="h-9 w-9 shrink-0 rounded-pill bg-background-alt" />
                   <div className="flex-1 space-y-1.5 py-1">
                     <div className="h-3 w-3/4 rounded bg-background-alt" />
                     <div className="h-2.5 w-1/2 rounded bg-background-alt" />
@@ -208,7 +212,7 @@ export function NotificationBell() {
                         !n.isRead ? "bg-accent-soft/50" : ""
                       }`}
                     >
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${notificationColor(n.type)}`}>
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-pill ${notificationColor(n.type)}`}>
                         <Icon className="h-4 w-4" aria-hidden />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -217,11 +221,11 @@ export function NotificationBell() {
                             {typeLabel(n.type)}
                           </span>
                           {!n.isRead && (
-                            <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />
+                            <span className="h-2 w-2 shrink-0 rounded-pill bg-accent-fill" aria-label="Unread" />
                           )}
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug text-text-secondary">{n.message}</span>
-                        <span className="mt-1 block text-[11px] text-text-muted">{timeAgo(n.createdAt)}</span>
+                        <span className="mt-1 block text-eyebrow text-text-muted">{timeAgo(n.createdAt)}</span>
                       </span>
                     </button>
                   </li>
@@ -238,7 +242,7 @@ export function NotificationBell() {
               setOpen(false);
               if (pathname !== "/admin/notifications") router.push("/admin/notifications");
             }}
-            className="w-full rounded-md px-2 py-1.5 text-center text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
+            className="inline-flex min-h-10 w-full items-center justify-center rounded-chip px-2 text-center text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
           >
             View all notifications
           </button>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 export interface EmptyStateProps {
   icon?: LucideIcon;
@@ -26,7 +26,7 @@ export function EmptyState({
       )}
     >
       {Icon && (
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-background-alt text-text-muted">
+        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-background-alt text-text-muted">
           <Icon className="h-6 w-6" strokeWidth={1.5} aria-hidden />
         </span>
       )}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * Sticky mobile bottom "Book an appointment" bar.
@@ -16,20 +17,23 @@ export function MobileBookBar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur lg:hidden">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <Link
-          href="/book"
-          className="gradient-gold flex flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-[#0E0F10] shadow-md transition-opacity duration-200 hover:opacity-90"
-        >
-          Book an appointment
-        </Link>
-        <button
+        {/* `flex-1`, not `w-full`: the Button base carries `shrink-0`, and
+            `width:100%` + `flex-shrink:0` beside the 32px dismiss button
+            overflows the bar by 40px and pushes the ✕ off-screen.
+            `flex-1` resolves to `flex-basis:0` + `flex-grow:1`, so the CTA
+            takes exactly the space the dismiss button leaves. */}
+        <Button asChild size="default" className="flex-1">
+          <Link href="/book">Book an appointment</Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="Dismiss booking bar"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition hover:bg-background-alt hover:text-text"
         >
-          <X className="size-4" aria-hidden />
-        </button>
+          <X aria-hidden />
+        </Button>
       </div>
     </div>
   );

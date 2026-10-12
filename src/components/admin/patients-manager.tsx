@@ -5,6 +5,7 @@ import { Eye, MoreHorizontal, Pencil, Plus, RefreshCw, ToggleLeft, ToggleRight, 
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { StatusBadge } from "./status-badge";
+import { Button } from "@/components/ui/button";
 import { PatientFormModal, type PatientFormValues, type PatientFormInitialData } from "./patient-form-modal";
 import { PatientDetails } from "./patient-details";
 import {
@@ -208,7 +209,7 @@ export function PatientsManager({ role }: { role: string }) {
             className="flex items-center gap-3 text-left"
             title="View patient details"
           >
-            <span className="gradient-gold flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary-foreground">
+            <span className="gradient-gold flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-xs font-bold text-primary-foreground">
               {initials(patient.firstName, patient.lastName)}
             </span>
             <span className="min-w-0">
@@ -274,7 +275,7 @@ export function PatientsManager({ role }: { role: string }) {
       filterFn: "equalsString",
       cell: (info) => (
         <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+          className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
             info.getValue() === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
           }`}
         >
@@ -294,12 +295,9 @@ export function PatientsManager({ role }: { role: string }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent"
-                      aria-label="More actions"
-                    >
-                      <MoreHorizontal size={15} />
-                    </button>
+                    <Button variant="ghost" size="icon-xs" aria-label="More actions">
+                      <MoreHorizontal aria-hidden />
+                    </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>More actions</TooltipContent>
@@ -349,24 +347,21 @@ export function PatientsManager({ role }: { role: string }) {
         actions={
           <>
             {canManage && (
-              <button
+              <Button
+                size="default"
                 onClick={() => {
                   setEditingPatient(null);
                   setModalOpen(true);
                 }}
-                className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
               >
-                <Plus size={18} />
+                <Plus aria-hidden />
                 Add Patient
-              </button>
+              </Button>
             )}
-            <button
-              onClick={reload}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="default" onClick={reload}>
+              <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
               Refresh
-            </button>
+            </Button>
           </>
         }
       />
@@ -414,16 +409,16 @@ export function PatientsManager({ role }: { role: string }) {
             description="Get started by adding your first patient to the clinic records."
             action={
               canManage ? (
-                <button
+                <Button
+                  size="default"
                   onClick={() => {
                     setEditingPatient(null);
                     setModalOpen(true);
                   }}
-                  className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90"
                 >
-                  <Plus size={18} />
+                  <Plus aria-hidden />
                   Add Patient
-                </button>
+                </Button>
               ) : undefined
             }
           />

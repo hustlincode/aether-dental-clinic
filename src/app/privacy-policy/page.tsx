@@ -128,7 +128,7 @@ const sections = [
         </ul>
         <p className="mt-3">
           To exercise any of these rights, contact our Data Protection Officer at{" "}
-          <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent hover:text-accent-hover">
+          <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
             privacy@aetherdental.ph
           </a>
           . We will respond within a reasonable time, as provided under the DPA and its IRR.
@@ -170,10 +170,10 @@ export default function PrivacyPolicyPage() {
             Aether Dental
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/book" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
+            <Link href="/book" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
               Book an appointment
             </Link>
-            <Link href="/login" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors duration-200">
+            <Link href="/login" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
               Staff login
             </Link>
             <ThemeToggle />
@@ -182,7 +182,7 @@ export default function PrivacyPolicyPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-10">
-        <div className="rounded-xl border border-border bg-surface p-6 shadow">
+        <div className="rounded-card border border-border bg-surface p-6 shadow-sm">
           <p className="text-xs font-semibold tracking-wide text-accent uppercase">Aether Dental Clinic</p>
           <h1 className="mt-1 text-2xl font-bold text-text">Privacy Policy</h1>
           <p className="mt-1 text-sm text-text-muted">
@@ -198,13 +198,13 @@ export default function PrivacyPolicyPage() {
             ))}
           </div>
 
-          <div className="mt-4 rounded-lg border border-border-accent bg-accent-soft p-4 text-sm text-text-secondary">
+          <div className="mt-4 rounded-control border border-border-accent bg-accent-soft p-4 text-sm text-text-secondary">
             <div className="font-semibold text-text">Aether Dental Clinic</div>
             <p className="mt-1">123 Aether Ave., Bonifacio Global City, Taguig, Metro Manila</p>
             <p>+63 2 8123 4567 • hello@aetherdental.ph</p>
             <p className="mt-1">
               Data Protection Officer:{" "}
-              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent hover:text-accent-hover">
+              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
                 privacy@aetherdental.ph
               </a>
             </p>
@@ -214,7 +214,7 @@ export default function PrivacyPolicyPage() {
                 href="https://privacy.gov.ph"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-accent hover:text-accent-hover"
+                className="font-medium text-accent transition-colors hover:text-accent-hover"
               >
                 National Privacy Commission
               </a>{" "}
@@ -225,13 +225,13 @@ export default function PrivacyPolicyPage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/book"
-              className="gradient-gold rounded-lg px-5 py-2.5 text-center text-sm font-semibold text-[#0E0F10] shadow transition-opacity duration-200 hover:opacity-90"
+              className="gradient-gold rounded-control px-5 py-2.5 text-center text-sm font-semibold text-[#0E0F10] shadow-sm transition-opacity duration-(--dur-fast) hover:opacity-90"
             >
               Book an appointment
             </Link>
             <Link
               href="/"
-              className="rounded-lg border border-border bg-background-alt px-5 py-2.5 text-center text-sm font-medium text-text-secondary transition-colors duration-200 hover:text-accent"
+              className="rounded-control border border-border bg-background-alt px-5 py-2.5 text-center text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent"
             >
               Back to home
             </Link>

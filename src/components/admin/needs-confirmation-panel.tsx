@@ -7,6 +7,7 @@ import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
 import { SectionCard } from "./section-card";
 import { TableSkeleton } from "./table-skeleton";
+import { Button } from "@/components/ui/button";
 import { addDaysToKey, clinicDateKey } from "@/lib/clinic-time";
 
 type ConfirmationStatus = "SENT" | "FAILED" | "SKIPPED";
@@ -148,18 +149,14 @@ export function NeedsConfirmationPanel() {
       }
       padded={false}
       actions={
-        <button
-          onClick={check}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
+        <Button onClick={check} disabled={loading} size="default">
           {loading ? (
-            <Loader2 size={14} className="animate-spin" aria-hidden />
+            <Loader2 className="animate-spin" aria-hidden />
           ) : (
-            <CalendarSearch size={14} aria-hidden />
+            <CalendarSearch aria-hidden />
           )}
           {loading ? "Checking..." : "Check Appointments"}
-        </button>
+        </Button>
       }
     >
       {state === "idle" ? (
@@ -236,25 +233,25 @@ export function NeedsConfirmationPanel() {
                       <td className="px-4 py-3">
                         {cStatus === "SENT" ? (
                           <div>
-                            <span className="inline-flex rounded-full bg-success-bg px-2.5 py-0.5 text-xs font-semibold text-success">
+                            <span className="inline-flex rounded-pill bg-success-bg px-2.5 py-0.5 text-xs font-semibold text-success">
                               Sent
                             </span>
                             {item.confirmationEmailSentAt && (
-                              <p className="mt-1 text-[11px] text-text-muted">
+                              <p className="mt-1 text-eyebrow text-text-muted">
                                 {fmtWhen(item.confirmationEmailSentAt)}
                               </p>
                             )}
                           </div>
                         ) : cStatus === "FAILED" ? (
-                          <span className="inline-flex rounded-full bg-error-bg px-2.5 py-0.5 text-xs font-semibold text-error">
+                          <span className="inline-flex rounded-pill bg-error-bg px-2.5 py-0.5 text-xs font-semibold text-error">
                             Failed
                           </span>
                         ) : cStatus === "SKIPPED" ? (
-                          <span className="inline-flex rounded-full bg-neutral-bg px-2.5 py-0.5 text-xs font-semibold text-neutral-c">
+                          <span className="inline-flex rounded-pill bg-neutral-bg px-2.5 py-0.5 text-xs font-semibold text-neutral-c">
                             Skipped
                           </span>
                         ) : (
-                          <span className="inline-flex rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-semibold text-warning">
+                          <span className="inline-flex rounded-pill bg-warning-bg px-2.5 py-0.5 text-xs font-semibold text-warning">
                             Pending
                           </span>
                         )}
@@ -265,7 +262,7 @@ export function NeedsConfirmationPanel() {
                           onClick={() => sendConfirmation(item)}
                           disabled={noEmail || isSending}
                           title={noEmail ? "This patient has no email on file" : undefined}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex min-h-10 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSending ? (
                             <Loader2 size={12} className="animate-spin" aria-hidden />
@@ -289,7 +286,7 @@ export function NeedsConfirmationPanel() {
             </p>
             <button
               onClick={check}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
             >
               <RefreshCw size={12} aria-hidden />
               Check again

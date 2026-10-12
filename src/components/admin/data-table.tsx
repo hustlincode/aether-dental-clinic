@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -51,7 +52,7 @@ import {
 } from "@/components/ui/tooltip";
 
 declare module "@tanstack/table-core" {
-  // The type parameters must shadow the library's original generic declaration
+  // The type parameters must override the library's original generic declaration
   // even though the augmentation itself adds no generic-dependent members.
   /* eslint-disable @typescript-eslint/no-unused-vars */
   interface ColumnMeta<
@@ -200,7 +201,7 @@ function DataTableBody<TData extends RowData>({
                       <button
                         type="button"
                         onClick={toggleSort}
-                        className="inline-flex h-full w-full items-center gap-1.5 text-left"
+                        className="inline-flex h-full w-full items-center gap-1.5 rounded-xs text-left focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                       >
                         <table.FlexRender header={header} />
                         {sortDir === "asc" ? (
@@ -208,7 +209,10 @@ function DataTableBody<TData extends RowData>({
                         ) : sortDir === "desc" ? (
                           <ArrowDown className="h-3.5 w-3.5 shrink-0 text-accent" />
                         ) : (
-                          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-text-muted opacity-60" />
+                          // No `opacity-60`: --text-muted already clears AA on
+                          // --background-alt (4.64:1 light / 7.20:1 dark) and
+                          // dimming it put the glyph at 2.28:1 / 3.37:1.
+                          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                         )}
                       </button>
                     ) : (
@@ -315,8 +319,15 @@ export interface DataTableFilterConfig {
   options: DataTableFilterOption[];
 }
 
+// Same focus idiom as <Button>: no `outline-none`, so the global 2px
+// `var(--focus-ring)` outline is the accessible indicator and the ring pair is
+// decorative. `placeholder:text-text-muted` is the compliant token.
+//
+// Height is `h-9` (36px visual) and the TARGET is the same `::after` pseudo
+// the Button primitive uses, so the toolbar row reads as one density instead
+// of a 36px button beside a 44px input.
 const toolbarInputClass =
-  "h-9 rounded-lg border border-border bg-background-alt text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent/40";
+  "relative h-9 rounded-control border border-border bg-background-alt text-sm text-text placeholder:text-text-muted transition-[color,box-shadow] after:absolute after:left-0 after:right-0 after:-inset-y-1 after:content-[''] focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40";
 
 /**
  * Search box (global filter) + optional column-filter dropdowns on top of a
@@ -364,7 +375,8 @@ export function DataTableToolbar<TData extends RowData>({
           >
             <SelectTrigger
               aria-label={filter.label}
-              className="h-9 rounded-lg border-border bg-background-alt px-3 text-sm text-text focus-visible:ring-accent/40"
+              size="sm"
+              className="rounded-control border-border bg-background-alt px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40"
             >
               <SelectValue placeholder={filter.allLabel ?? `All ${filter.label}`} />
             </SelectTrigger>
@@ -397,6 +409,7 @@ export function DataTablePagination<TData extends RowData>({
 
   const from = pageIndex * pageSize + 1;
   const to = Math.min(rowCount, (pageIndex + 1) * pageSize);
+  const current = pageIndex + 1;
 
   return (
     <div className={cn("flex items-center justify-between gap-3 px-1", className)}>
@@ -408,50 +421,51 @@ export function DataTablePagination<TData extends RowData>({
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="outline"
+              size="icon-sm"
               type="button"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
               aria-label="Previous page"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
+              <ChevronLeft aria-hidden />
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Previous page</TooltipContent>
         </Tooltip>
-        {pageItems(pageIndex + 1, pageCount).map((item, i) =>
-          item === "..." ? (
-            <span key={`gap-${i}`} className="px-1 text-xs text-text-muted">
-              …
-            </span>
-          ) : (
-            <button
-              key={item}
-              type="button"
-              onClick={() => table.setPageIndex(item - 1)}
-              aria-current={item === pageIndex + 1 ? "page" : undefined}
-              className={
-                item === pageIndex + 1
-                  ? "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-semibold text-primary-foreground"
-                  : "inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs text-text-secondary hover:bg-accent-soft hover:text-accent"
-              }
-            >
-              {item}
-            </button>
-          )
-        )}
+        {/* Both windows stay in the DOM; exactly one is displayed at any
+            width, and `display:none` keeps the hidden copy out of the tab
+            order and the accessibility tree. The wide 9-slot window (7 numbers
+            + two "…" separators) measures ~296px, and with prev/next plus their
+            gaps it is ~364px — still wider than a 360px viewport, so the
+            condensed `1 … c … n` copy below is load-bearing and stays. */}
+        <div className="hidden items-center gap-1 sm:flex">
+          <PageNumbers
+            items={pageItems(current, pageCount, 2)}
+            current={current}
+            onSelect={(item) => table.setPageIndex(item - 1)}
+          />
+        </div>
+        <div className="flex items-center gap-1 sm:hidden">
+          <PageNumbers
+            items={pageItems(current, pageCount, 0)}
+            current={current}
+            onSelect={(item) => table.setPageIndex(item - 1)}
+          />
+        </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="outline"
+              size="icon-sm"
               type="button"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
               aria-label="Next page"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+              <ChevronRight aria-hidden />
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Next page</TooltipContent>
         </Tooltip>
@@ -460,12 +474,58 @@ export function DataTablePagination<TData extends RowData>({
   );
 }
 
-function pageItems(current: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 7) {
+/** Numbered page buttons; `siblings` controls how many pages sit either side of the current one. */
+function PageNumbers({
+  items,
+  current,
+  onSelect,
+}: {
+  items: (number | "...")[];
+  current: number;
+  onSelect: (page: number) => void;
+}) {
+  return (
+    <>
+      {items.map((item, i) =>
+        item === "..." ? (
+          <span key={`gap-${i}`} className="px-1 text-xs text-text-muted">
+            …
+          </span>
+        ) : (
+          <Button
+            key={item}
+            type="button"
+            variant={item === current ? "default" : "ghost"}
+            size="icon-sm"
+            onClick={() => onSelect(item)}
+            aria-current={item === current ? "page" : undefined}
+            className={cn(
+              "text-xs font-semibold",
+              // `ghost` carries no ink of its own; the inactive page number
+              // keeps the secondary text colour it always had. The active one
+              // gets its ink from the `default` variant.
+              item !== current && "text-text-secondary",
+            )}
+          >
+            {item}
+          </Button>
+        ),
+      )}
+    </>
+  );
+}
+
+/**
+ * Page numbers for the current window. `siblings` = how many pages to show either
+ * side of the current one; `siblings: 0` yields the compact `1 … c … n` bar used
+ * on narrow viewports, where a 40px target per button cannot fit seven of them.
+ */
+function pageItems(current: number, totalPages: number, siblings: number): (number | "...")[] {
+  if (totalPages <= siblings * 2 + 3) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
   const pages = new Set<number>([1, totalPages]);
-  for (let p = current - 2; p <= current + 2; p++) {
+  for (let p = current - siblings; p <= current + siblings; p++) {
     if (p >= 1 && p <= totalPages) pages.add(p);
   }
   const sorted = [...pages].sort((a, b) => a - b);

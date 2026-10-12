@@ -7,10 +7,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { patientFormSchema, type PatientFormValues } from "@/lib/validations";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type { PatientFormValues };
 
@@ -66,17 +67,17 @@ function applyServerErrors(form: UseFormReturn<PatientFormValues>, details: unkn
   }
 }
 
-// ─── Shared field styling (keeps the previous visual design) ─────────────────
+// â”€â”€â”€ Shared field styling (keeps the previous visual design) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const inputClass =
-  "h-auto w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus:outline-none focus-visible:border-accent focus-visible:ring-0 aria-invalid:border-border aria-invalid:ring-0 dark:bg-surface-alt";
+  "min-h-11 w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 aria-invalid:border-border aria-invalid:ring-0 dark:bg-surface-alt";
 
 const textareaClass =
-  "field-sizing-fixed min-h-0 w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus:outline-none focus-visible:border-accent focus-visible:ring-0 aria-invalid:border-border aria-invalid:ring-0 resize-none dark:bg-surface-alt";
+  "field-sizing-fixed min-h-0 w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 aria-invalid:border-border aria-invalid:ring-0 resize-none dark:bg-surface-alt";
 
 const labelClass = "block text-text-secondary data-[error=true]:text-text-secondary";
 
-// ─── Patient Form Modal ──────────────────────────────────────────────────────
+// â”€â”€â”€ Patient Form Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function PatientFormModal({
   open,
@@ -124,7 +125,7 @@ export function PatientFormModal({
       await onSave(values);
     } catch (err) {
       // Map server-side 422 details (if any) to per-field errors. The parent
-      // already toasts the failure, so we intentionally do NOT rethrow — this
+      // already toasts the failure, so we intentionally do NOT rethrow â€” this
       // prevents an unhandled promise rejection in the browser console.
       if (err && typeof err === "object" && "details" in err) {
         const details = (err as { details?: unknown }).details;
@@ -135,10 +136,10 @@ export function PatientFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-2xl border border-border-strong bg-surface p-6 shadow-lg sm:max-w-md">
+      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
         <div className="flex items-center justify-between mb-5">
           <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text">
+          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
         </div>
@@ -261,7 +262,7 @@ export function PatientFormModal({
                       <button
                         type="button"
                         onClick={() => field.onChange(field.value === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                        className="flex items-center gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm font-medium transition hover:border-border-accent"
+                        className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-3 text-sm font-medium transition hover:border-border-accent"
                       >
                         {field.value === "ACTIVE" ? (
                           <ToggleRight size={20} className="text-success" />
@@ -281,20 +282,12 @@ export function PatientFormModal({
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-alt"
-              >
+              <Button type="button" variant="ghost" size="default" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-              >
+              </Button>
+              <Button type="submit" size="default" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : initialData ? "Update Patient" : "Add Patient"}
-              </button>
+              </Button>
             </div>
           </form>
         </Form>

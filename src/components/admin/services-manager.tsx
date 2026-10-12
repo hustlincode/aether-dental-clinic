@@ -5,6 +5,7 @@ import { Plus, Pencil, ToggleLeft, ToggleRight, X, Stethoscope, MoreHorizontal }
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,7 @@ import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
 import { TableSkeleton } from "./table-skeleton";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Service {
   id: string;
@@ -57,7 +58,7 @@ const EMPTY_FORM: FormData = {
   status: "ACTIVE",
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatPrice(price: string | number): string {
   const num = typeof price === "string" ? Number(price) : price;
@@ -71,11 +72,11 @@ function formatDuration(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// ─── Columns (module-scope for referential stability) ────────────────────────
+// â”€â”€â”€ Columns (module-scope for referential stability) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const columnHelper = createColumnHelper<FilterableDataTableFeatures, Service>();
 
-// ─── Service Modal ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Service Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ServiceModal({
   open,
@@ -150,10 +151,10 @@ function ServiceModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-2xl border border-border-strong bg-surface p-6 shadow-lg sm:max-w-md">
+      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
         <div className="flex items-center justify-between mb-5">
           <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-text">
+          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
         </div>
@@ -169,7 +170,7 @@ function ServiceModal({
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none"
+              className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
               placeholder="e.g. Dental Cleaning"
             />
             {errors.name && <p className="mt-1 text-xs text-error">{errors.name}</p>}
@@ -182,7 +183,7 @@ function ServiceModal({
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none resize-none"
+              className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 resize-none"
               placeholder="Brief description of the service (optional)"
             />
           </div>
@@ -199,14 +200,14 @@ function ServiceModal({
                 max={600}
                 value={form.durationMin}
                 onChange={(e) => setForm((f) => ({ ...f, durationMin: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none"
+                className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 placeholder="30"
               />
               {errors.durationMin && <p className="mt-1 text-xs text-error">{errors.durationMin}</p>}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-text-secondary">
-                Price (₱) <span className="text-error">*</span>
+                Price (â‚±) <span className="text-error">*</span>
               </label>
               <input
                 type="number"
@@ -214,7 +215,7 @@ function ServiceModal({
                 step="0.01"
                 value={form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus:outline-none"
+                className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
                 placeholder="0.00"
               />
               {errors.price && <p className="mt-1 text-xs text-error">{errors.price}</p>}
@@ -228,7 +229,7 @@ function ServiceModal({
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, status: f.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" }))}
-                className="flex items-center gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm font-medium transition hover:border-border-accent"
+                className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-3 text-sm font-medium transition hover:border-border-accent"
               >
                 {form.status === "ACTIVE" ? (
                   <ToggleRight size={20} className="text-success" />
@@ -244,20 +245,12 @@ function ServiceModal({
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-alt"
-            >
+            <Button type="button" variant="ghost" size="default" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="gradient-gold rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" size="default" disabled={saving}>
               {saving ? "Saving..." : initialData ? "Update Service" : "Create Service"}
-            </button>
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -265,7 +258,7 @@ function ServiceModal({
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ServicesManager() {
   const [services, setServices] = useState<Service[]>([]);
@@ -276,7 +269,7 @@ export function ServicesManager() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  // ─── Data fetching ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -312,7 +305,7 @@ export function ServicesManager() {
     };
   }, [reloadKey]);
 
-  // ─── CRUD handlers ──────────────────────────────────────────────────────
+  // â”€â”€â”€ CRUD handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function handleCreate(data: FormData) {
     try {
@@ -381,7 +374,7 @@ export function ServicesManager() {
     }
   }
 
-  // ─── Table columns ──────────────────────────────────────────────────────
+  // â”€â”€â”€ Table columns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const columns = columnHelper.columns([
     columnHelper.accessor((s) => s.name, {
@@ -415,7 +408,7 @@ export function ServicesManager() {
       filterFn: "equalsString",
       cell: (info) => (
         <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+          className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
             info.getValue() === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
           }`}
         >
@@ -436,9 +429,9 @@ export function ServicesManager() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
-                    <button className="rounded-lg p-2 text-text-muted transition hover:bg-surface-alt hover:text-accent" aria-label="More actions">
-                      <MoreHorizontal size={15} />
-                    </button>
+                    <Button variant="ghost" size="icon-xs" aria-label="More actions">
+                      <MoreHorizontal aria-hidden />
+                    </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>More actions</TooltipContent>
@@ -460,16 +453,16 @@ export function ServicesManager() {
     }),
   ]);
 
-  // ─── Table instance ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Table instance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const table = useDataTable({ columns, data: services, getRowId: (s) => s.id });
 
-  // ─── Derived state ──────────────────────────────────────────────────────
+  // â”€â”€â”€ Derived state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const filteredCount = table.getFilteredRowModel().rows.length;
   const statusFilterValue = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "";
 
-  // ─── Render ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <PageContainer>
@@ -478,16 +471,16 @@ export function ServicesManager() {
         title="Services"
         description="Manage your clinic's services, pricing, and durations."
         actions={
-          <button
+          <Button
+            size="default"
             onClick={() => {
               setEditingService(null);
               setModalOpen(true);
             }}
-            className="gradient-gold inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
           >
-            <Plus size={18} />
+            <Plus aria-hidden />
             Add Service
-          </button>
+          </Button>
         }
       />
 
@@ -524,7 +517,7 @@ export function ServicesManager() {
             <div className="overflow-x-auto">
               <DataTable table={table} />
             </div>
-            <DataTablePagination table={table} />
+            <DataTablePagination table={table} className="border-t border-border px-4 py-3" />
           </>
         )}
       </SectionCard>
