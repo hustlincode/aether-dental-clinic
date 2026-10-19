@@ -1,6 +1,7 @@
 import { PrismaClient, Role, AppointmentStatus, DayOfWeek, ServiceStatus, DentistStatus, PatientStatus, NotificationType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -99,16 +100,46 @@ async function main() {
   console.log(`Created ${services.length} services`);
 
   // --- Users ---
+  // No shipped default passwords: every staff account gets a strong generated
+  // password unless one is provided via env. Generated values are printed once
+  // below — store them somewhere safe before closing the terminal.
   function hash(pw: string) {
     return bcrypt.hashSync(pw, 10);
   }
+  function staffPassword(envVar: string): { password: string; generated: boolean } {
+    const provided = process.env[envVar]?.trim();
+    if (provided) return { password: provided, generated: false };
+    return { password: randomBytes(12).toString("base64url"), generated: true };
+  }
+
+  const adminPassword = staffPassword("SEED_ADMIN_PASSWORD");
   const adminUser = await prisma.user.create({
-    data: { name: "Alex Ramos", email: "admin@aetherdental.ph", passwordHash: hash("admin123"), role: Role.ADMIN },
+    data: { name: "Alex Ramos", email: "admin@aetherdental.ph", passwordHash: hash(adminPassword.password), role: Role.ADMIN },
   });
+
+  const receptionistPassword = staffPassword("SEED_RECEPTIONIST_PASSWORD");
   const receptionistUser = await prisma.user.create({
-    data: { name: "Mia Cruz", email: "reception@aetherdental.ph", passwordHash: hash("reception123"), role: Role.RECEPTIONIST },
+    data: { name: "Mia Cruz", email: "reception@aetherdental.ph", passwordHash: hash(receptionistPassword.password), role: Role.RECEPTIONIST },
   });
-  console.log("Created users: admin@aetherdental.ph / admin123, reception@aetherdental.ph / reception123");
+
+  // Dedicated account backing the public read-only demo session. Its password is
+  // random and never surfaced: visitors enter through the passwordless "demo"
+  // provider (see src/auth.ts), which always flags the session read-only.
+  const demoEmail = (process.env.DEMO_EMAIL || "demo@aetherdental.ph").toLowerCase();
+  await prisma.user.create({
+    data: {
+      name: "Demo Visitor",
+      email: demoEmail,
+      passwordHash: hash(randomBytes(32).toString("hex")),
+      role: Role.ADMIN,
+    },
+  });
+
+  console.log(
+    `Created users: admin@aetherdental.ph${adminPassword.generated ? ` (generated password: ${adminPassword.password})` : ""}, ` +
+      `reception@aetherdental.ph${receptionistPassword.generated ? ` (generated password: ${receptionistPassword.password})` : ""}`
+  );
+  console.log(`Created demo user: ${demoEmail} (passwordless, read-only demo access)`);
 
   // --- Dentists ---
   const dentistDefs = [
@@ -119,6 +150,7 @@ async function main() {
   ];
 
   const dentists: string[] = [];
+  const dentistLogins: { email: string; password: string; generated: boolean }[] = [];
   for (const d of dentistDefs) {
     const dentist = await prisma.dentist.create({
       data: { ...d, status: DentistStatus.ACTIVE },
@@ -146,18 +178,27 @@ async function main() {
       });
     }
 
-    // Create a linked user for the dentist role (email/password login)
+    // Create a linked user for the dentist role (email/password login).
+    // Same policy as other staff: generated password unless SEED_DENTIST_PASSWORD is set.
     const dentUser = `dentist.${d.name.replace(/[^a-z]/gi, "").toLowerCase().replace(/dr/g, "")}@aetherdental.ph`;
+    const dentPassword = staffPassword("SEED_DENTIST_PASSWORD");
     await prisma.user.create({
       data: {
         name: d.name,
         email: dentUser,
-        passwordHash: hash("dentist123"),
+        passwordHash: hash(dentPassword.password),
         role: Role.DENTIST,
       },
     });
+    dentistLogins.push({ email: dentUser, password: dentPassword.password, generated: dentPassword.generated });
   }
   console.log(`Created ${dentists.length} dentists`);
+  if (dentistLogins.some((login) => login.generated)) {
+    console.log("Dentist logins (generated passwords — store these):");
+    for (const login of dentistLogins) console.log(`  ${login.email} -> ${login.password}`);
+  } else {
+    console.log("Dentist logins created (password from SEED_DENTIST_PASSWORD).");
+  }
 
   // --- Patients ---
   // 25 patients that will receive appointments (indices 0-24)
