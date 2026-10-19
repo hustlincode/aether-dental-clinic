@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireRole, ok, fail } from "@/lib/api";
+import { requireRole, requireWriteRole, ok, fail } from "@/lib/api";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -37,7 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 // POST /api/dentists/[id]/blocked-dates - block a date for this dentist (ADMIN only)
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof createBlockedDateSchema>;

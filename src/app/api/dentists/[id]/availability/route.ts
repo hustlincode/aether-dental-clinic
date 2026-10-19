@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireRole, ok, fail } from "@/lib/api";
+import { requireRole, requireWriteRole, ok, fail } from "@/lib/api";
 
 // ─── Zod schema for the weekly availability editor ───────────────────────────
 // Each entry mirrors the Availability model. Times are stored as zero-padded
@@ -93,7 +93,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 // persists break windows exactly as the scheduling engine reads them.
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof putAvailabilitySchema>;

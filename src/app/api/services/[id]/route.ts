@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireRole, ok, fail } from "@/lib/api";
+import { requireWriteRole, ok, fail } from "@/lib/api";
 
 // ─── Zod schema for updating a service (partial, at least one field required) ─
 const updateServiceSchema = z
@@ -19,7 +19,7 @@ const updateServiceSchema = z
 // Admin only: update an existing service
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await requireRole("ADMIN");
+  const { error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof updateServiceSchema>;
@@ -72,7 +72,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 // Admin only: delete a service (only if no appointments reference it)
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await requireRole("ADMIN");
+  const { error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   try {

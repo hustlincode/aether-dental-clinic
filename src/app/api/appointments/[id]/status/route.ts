@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppointmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/api";
+import { requireWriteAuth } from "@/lib/api";
 import { sendAppointmentEmail } from "@/lib/email";
 import {
   notifyAppointmentCancelled,
@@ -20,7 +20,7 @@ const statusSchema = z.object({
 // Update the status of an appointment (staff only, role-scoped)
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireAuth();
+  const { user, error } = await requireWriteAuth();
   if (error) return error;
 
   try {

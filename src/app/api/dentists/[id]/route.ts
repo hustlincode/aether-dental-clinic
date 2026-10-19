@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAuth, requireRole, ok, fail } from "@/lib/api";
+import { requireAuth, requireWriteRole, ok, fail } from "@/lib/api";
 
 // ─── Zod schema for updating a dentist (partial, at least one field required) ─
 const updateDentistSchema = z
@@ -76,7 +76,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 // PATCH /api/dentists/[id] - update a dentist (ADMIN only)
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof updateDentistSchema>;

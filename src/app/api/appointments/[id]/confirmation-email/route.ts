@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/api";
+import { requireWriteRole } from "@/lib/api";
 import { sendConfirmationEmail } from "@/lib/confirmations";
 
 // POST /api/appointments/[id]/confirmation-email
@@ -7,7 +7,7 @@ import { sendConfirmationEmail } from "@/lib/confirmations";
 // ADMIN / RECEPTIONIST only.
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireRole("ADMIN", "RECEPTIONIST");
+  const { user, error } = await requireWriteRole("ADMIN", "RECEPTIONIST");
   if (error) return error;
 
   try {

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { requireRole, ok, fail } from "@/lib/api";
+import { requireWriteRole, ok, fail } from "@/lib/api";
 
 // DELETE /api/dentists/[id]/blocked-dates/[blockedId] - remove a blocked date (ADMIN only)
 // Scoped to the owning dentist so one dentist can never remove another's block.
@@ -8,7 +8,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; blockedId: string }> }
 ) {
   const { id, blockedId } = await params;
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   try {

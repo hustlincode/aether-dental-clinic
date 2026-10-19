@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireAuth, requireRole, ok, fail } from "@/lib/api";
+import { requireAuth, requireWriteRole, ok, fail } from "@/lib/api";
 import { notifyPatientCreated } from "@/lib/notifications";
 
 // ─── Zod schema for creating a patient ───────────────────────────────────────
@@ -94,7 +94,7 @@ export async function GET(req: Request) {
 
 // POST /api/patients - create a patient (ADMIN / RECEPTIONIST)
 export async function POST(req: Request) {
-  const { user, error } = await requireRole("ADMIN", "RECEPTIONIST");
+  const { user, error } = await requireWriteRole("ADMIN", "RECEPTIONIST");
   if (error) return error;
 
   let body: z.infer<typeof createPatientSchema>;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireRole, ok, fail } from "@/lib/api";
+import { requireWriteRole, ok, fail } from "@/lib/api";
 
 const statusSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]),
@@ -9,7 +9,7 @@ const statusSchema = z.object({
 // PATCH /api/dentists/[id]/status - activate/deactivate a dentist (ADMIN only)
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof statusSchema>;

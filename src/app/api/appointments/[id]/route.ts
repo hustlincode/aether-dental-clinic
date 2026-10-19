@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/api";
+import { requireWriteAuth } from "@/lib/api";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { sendAppointmentEmail } from "@/lib/email";
 import { notifyAppointmentRescheduled } from "@/lib/notifications";
@@ -57,7 +57,7 @@ function fmtDateKey(d: Date): string {
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireAuth();
+  const { user, error } = await requireWriteAuth();
   if (error) return error;
 
   let body: z.infer<typeof updateSchema>;

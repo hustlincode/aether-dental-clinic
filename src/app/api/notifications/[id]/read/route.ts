@@ -1,11 +1,13 @@
-import { requireAuth, ok, fail } from "@/lib/api";
+import { requireWriteAuth, ok, fail } from "@/lib/api";
 import { markNotificationAsRead } from "@/lib/notifications";
 
 // PATCH /api/notifications/[id]/read
 // Marks a single notification as read. Ownership is verified server-side.
+// Write guard: demo sessions are read-only, so they cannot touch even
+// user-scoped state (which may belong to the fallback account).
 export async function PATCH(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, error } = await requireAuth();
+  const { user, error } = await requireWriteAuth();
   if (error) return error;
 
   try {

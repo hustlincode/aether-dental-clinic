@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getSessionUser, requireRole, ok, fail } from "@/lib/api";
+import { getSessionUser, requireWriteRole, ok, fail } from "@/lib/api";
 
 // ─── Zod schema for creating a dentist ───────────────────────────────────────
 const createDentistSchema = z.object({
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
 // POST /api/dentists - create a dentist (ADMIN only)
 export async function POST(req: Request) {
-  const { user, error } = await requireRole("ADMIN");
+  const { user, error } = await requireWriteRole("ADMIN");
   if (error) return error;
 
   let body: z.infer<typeof createDentistSchema>;

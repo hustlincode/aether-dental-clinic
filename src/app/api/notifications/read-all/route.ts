@@ -1,10 +1,12 @@
-import { requireAuth, ok, fail } from "@/lib/api";
+import { requireWriteAuth, ok, fail } from "@/lib/api";
 import { markAllNotificationsAsRead } from "@/lib/notifications";
 
 // PATCH /api/notifications/read-all
 // Marks every unread notification of the authenticated user as read.
+// Write guard: demo sessions are read-only, so they cannot touch even
+// user-scoped state (which may belong to the fallback account).
 export async function PATCH() {
-  const { user, error } = await requireAuth();
+  const { user, error } = await requireWriteAuth();
   if (error) return error;
 
   try {
