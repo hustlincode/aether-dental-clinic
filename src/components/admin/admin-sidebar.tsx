@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -71,10 +72,18 @@ export function AdminSidebar({
           Desktop-only button (hidden on mobile: the off-canvas drawer is closed
           with the header hamburger). The header has no burger in web view. */}
       <div className={`flex items-center justify-between px-3 py-4 ${collapsed ? "flex-col gap-3" : ""}`}>
-        <Link href="/admin" className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control gradient-gold">
-            <Stethoscope className="h-5 w-5 text-primary-foreground" strokeWidth={2} aria-hidden />
-          </span>
+        <Link
+          href="/admin"
+          aria-label="Aether Dental admin home"
+          className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}
+        >
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0"
+          />
           {!collapsed && (
             <span className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-sidebar-text">Aether Dental</span>

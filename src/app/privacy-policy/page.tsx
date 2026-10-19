@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -166,8 +167,9 @@ export default function PrivacyPolicyPage() {
       {/* Header */}
       <header className="bg-surface border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" className="gradient-gold-text text-xl font-bold">
-            Aether Dental
+          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
+            <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
+            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/book" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
@@ -241,9 +243,12 @@ export default function PrivacyPolicyPage() {
 
       <footer className="border-t border-border bg-surface">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-text-muted sm:flex-row">
-          <div className="font-bold">
-            <span className="text-text">Aether </span>
-            <span className="text-accent">Dental</span>
+          <div className="flex items-center gap-2 font-bold">
+            <Image src="/logo.svg" alt="" width={24} height={24} className="h-6 w-6" />
+            <span>
+              <span className="text-text">Aether </span>
+              <span className="text-accent">Dental</span>
+            </span>
           </div>
           <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
         </div>

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -283,10 +284,12 @@ export default async function HomePage() {
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b border-border bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link href="/" aria-label="Aether Dental home" className="home-display text-xl font-semibold">
-            <span className="text-text">Aether </span>
-            <span className="text-accent">Dental</span>
-          </Link>
+          <Logo
+            href="/"
+            priority
+            wordmarkClassName="home-display text-xl"
+            markClassName="h-8 w-8 sm:h-9 sm:w-9"
+          />
           <nav aria-label="Primary" className="hidden items-center gap-6 text-sm font-medium text-text-secondary lg:flex">
             <Link href="/#services" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Services</Link>
             <Link href="/#dentists" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">Dentists</Link>
@@ -628,10 +631,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-start">
             <div className="text-center sm:text-left">
-              <div className="home-display text-lg font-semibold">
-                <span className="text-text">Aether </span>
-                <span className="text-accent">Dental</span>
-              </div>
+              <Logo href="/" wordmarkClassName="home-display text-lg" markClassName="h-8 w-8" />
               <p className="mt-2 text-sm text-text-muted">
                 Member, Philippine Dental Association · Licensed dental practice
               </p>

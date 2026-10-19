@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -308,8 +309,9 @@ export default function BookPage() {
       {/* Header */}
       <header className="bg-surface border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" className="gradient-gold-text text-xl font-bold">
-            Aether Dental
+          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
+            <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
+            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/privacy-policy" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">

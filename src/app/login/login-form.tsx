@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export interface LoginFormProps {
@@ -81,12 +82,15 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <div className="text-2xl font-bold">
-            <span className="text-text">Aether </span>
-            <span className="text-accent">Dental</span>
-          </div>
-          <p className="mt-1 text-sm text-text-muted">Clinic Management</p>
+        <div className="mb-6 flex justify-center">
+          <Logo
+            href={null}
+            variant="stacked"
+            showTagline
+            markClassName="h-14 w-14"
+            wordmarkClassName="text-2xl font-bold"
+            taglineClassName="text-sm"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="animate-scale-in rounded-card border border-border bg-surface p-6 shadow-lg">

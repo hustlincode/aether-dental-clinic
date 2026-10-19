@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
 import {
@@ -37,8 +38,7 @@ export function MobileNav() {
       <SheetContent side="right" className="w-68 sm:max-w-sm">
         <SheetHeader className="border-b border-border">
           <SheetTitle>
-            <span className="text-text">Aether </span>
-            <span className="text-accent">Dental</span>
+            <Logo href={null} wordmarkClassName="text-base" markClassName="h-7 w-7" />
           </SheetTitle>
           <SheetDescription>Explore our services, team, and FAQs.</SheetDescription>
         </SheetHeader>
