@@ -1,65 +1,81 @@
-
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "architect",
-  "agent": {
-    "architect": {
-      "description": "Lead architect and orchestrator for autonomous web application development.",
+  "default_agent": "main-agent",
+  "agents": {
+    "main-agent": {
+      "description": "Lead Architect responsible for technical decisions, project planning, sub-agent orchestration, integration, and final approval.",
       "mode": "primary",
-      "model": "opencode/big-pickle",
-      "permission": {
-        "read": "allow",
-        "edit": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "list": "allow",
-        "bash": "allow",
-        "task": "allow",
-        "todowrite": "allow",
-        "webfetch": "allow",
-        "websearch": "allow",
-        "lsp": "allow",
-        "skill": "allow",
-        "jev_*": "allow"
-      }
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "allow" },
+        { "action": "edit", "resource": "*", "effect": "allow" },
+        { "action": "glob", "resource": "*", "effect": "allow" },
+        { "action": "grep", "resource": "*", "effect": "allow" },
+        { "action": "list", "resource": "*", "effect": "allow" },
+        { "action": "shell", "resource": "*", "effect": "allow" },
+        { "action": "subagent", "resource": "*", "effect": "allow" },
+        { "action": "todowrite", "resource": "*", "effect": "allow" },
+        { "action": "webfetch", "resource": "*", "effect": "allow" },
+        { "action": "websearch", "resource": "*", "effect": "allow" },
+        { "action": "lsp", "resource": "*", "effect": "allow" },
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     },
-    "developer": {
-      "description": "Implements features and fixes bugs.",
+    "project-planner": {
+      "description": "Technical project manager specializing in requirements breakdown, task dependencies, milestones, Mermaid flowcharts, and implementation planning.",
       "mode": "subagent",
-      "model": "opencode/big-pickle",
-      "permission": {
-        "read": "allow",
-        "edit": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": "allow",
-        "jev_*": "allow"
-      }
+      "model": "opencode/glm-5.3-flash-free",
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "allow" },
+        { "action": "edit", "resource": "*", "effect": "allow" },
+        { "action": "glob", "resource": "*", "effect": "allow" },
+        { "action": "grep", "resource": "*", "effect": "allow" },
+        { "action": "list", "resource": "*", "effect": "allow" },
+        { "action": "todowrite", "resource": "*", "effect": "allow" }
+      ]
     },
-    "reviewer": {
-      "description": "Reviews code quality, correctness, and security.",
+    "senior-ui-ux": {
+      "description": "Senior UI/UX designer specializing in visual hierarchy, design systems, responsive interfaces, accessibility, and user experience.",
       "mode": "subagent",
-      "model": "opencode/big-pickle",
-      "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "jev_*": "allow"
-      }
-    }
-  },
-  "mcp": {
-    "jev": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "github:codaaiteam/jev-mcp"
-      ],
-      "environment": {
-        "TYPESAFE_API_KEY": "{env:TYPESAFE_API_KEY}"
-      },
-      "enabled": true
+      "model": "opencode/glm-5.3-flash-free",
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "allow" },
+        { "action": "edit", "resource": "*", "effect": "allow" },
+        { "action": "glob", "resource": "*", "effect": "allow" },
+        { "action": "grep", "resource": "*", "effect": "allow" },
+        { "action": "list", "resource": "*", "effect": "allow" },
+        { "action": "webfetch", "resource": "*", "effect": "allow" },
+        { "action": "websearch", "resource": "*", "effect": "allow" },
+        { "action": "lsp", "resource": "*", "effect": "allow" }
+      ]
+    },
+    "senior-developer": {
+      "description": "Senior software developer responsible for feature implementation, clean code, maintainability, performance, security, and engineering best practices.",
+      "mode": "subagent",
+      "model": "opencode/glm-5.3-flash-free",
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "allow" },
+        { "action": "edit", "resource": "*", "effect": "allow" },
+        { "action": "glob", "resource": "*", "effect": "allow" },
+        { "action": "grep", "resource": "*", "effect": "allow" },
+        { "action": "list", "resource": "*", "effect": "allow" },
+        { "action": "shell", "resource": "*", "effect": "allow" },
+        { "action": "todowrite", "resource": "*", "effect": "allow" },
+        { "action": "lsp", "resource": "*", "effect": "allow" }
+      ]
+    },
+    "qa-engineer": {
+      "description": "Independent QA engineer specializing in functional testing, regression detection, accessibility verification, defect reporting, and release readiness.",
+      "mode": "subagent",
+      "model": "opencode/glm-5.3-flash-free",
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "allow" },
+        { "action": "glob", "resource": "*", "effect": "allow" },
+        { "action": "grep", "resource": "*", "effect": "allow" },
+        { "action": "list", "resource": "*", "effect": "allow" },
+        { "action": "shell", "resource": "*", "effect": "allow" },
+        { "action": "lsp", "resource": "*", "effect": "allow" }
+      ]
     }
   }
 }
