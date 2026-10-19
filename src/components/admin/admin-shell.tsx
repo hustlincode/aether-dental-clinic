@@ -16,7 +16,7 @@ export interface AdminNavItem {
 /* ─── Props ─── */
 export interface AdminShellProps {
   navItems: AdminNavItem[];
-  user: { name: string; role: string };
+  user: { name: string; role: string; isDemo?: boolean };
   children: ReactNode;
 }
 
@@ -93,6 +93,18 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminHeader onToggleSidebar={toggleMobile} user={user} mobileOpen={mobileOpen} />
+        {user.isDemo && (
+          <div
+            role="status"
+            className="flex items-center justify-center gap-2 border-b border-border bg-background-alt px-4 py-2 text-center text-xs text-text-secondary"
+          >
+            <span className="size-2 shrink-0 rounded-pill bg-accent-fill" aria-hidden />
+            <span>
+              <span className="font-semibold text-text">Demo mode.</span> You are exploring seeded data —
+              clinic data is read-only.
+            </span>
+          </div>
+        )}
         <main className="admin-canvas flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>

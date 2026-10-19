@@ -28,7 +28,7 @@ const pageTitleMap: Record<string, string> = {
 /* ─── Props ─── */
 export interface AdminHeaderProps {
   onToggleSidebar: () => void;
-  user: { name: string; role: string };
+  user: { name: string; role: string; isDemo?: boolean };
   mobileOpen: boolean;
 }
 
@@ -36,7 +36,7 @@ export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderPr
   const pathname = usePathname();
   const title = pageTitleMap[pathname] ?? "Admin";
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
-  const roleLabel = user.role?.toLowerCase() ?? "staff";
+  const roleLabel = user.isDemo ? "Demo viewer" : user.role?.toLowerCase() ?? "staff";
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface/85 px-4 backdrop-blur">

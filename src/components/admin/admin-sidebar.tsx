@@ -33,7 +33,7 @@ const iconMap: Record<string, LucideIcon> = {
 /* ─── Props ─── */
 export interface AdminSidebarProps {
   navItems: AdminNavItem[];
-  user: { name: string; role: string };
+  user: { name: string; role: string; isDemo?: boolean };
   collapsed: boolean;
   onToggleCollapse: () => void;
   mobileOpen: boolean;
@@ -50,7 +50,7 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
-  const roleLabel = user.role?.toLowerCase() ?? "staff";
+  const roleLabel = user.isDemo ? "Demo viewer" : user.role?.toLowerCase() ?? "staff";
 
   /* ─── Group nav items by their optional `group` label ─── */
   const navGroups = navItems.reduce<{ group: string; items: AdminNavItem[] }[]>(

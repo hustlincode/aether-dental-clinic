@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const role = (user.role || "RECEPTIONIST") as string;
   const name = user.name || "Staff";
+  const isDemo = user.isDemo === true;
 
   const navItems = [
     { href: "/admin", label: "Dashboard", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Overview" },
@@ -30,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ].filter((n) => n.roles.includes(role));
 
   return (
-    <AdminShell navItems={navItems} user={{ name, role }}>
+    <AdminShell navItems={navItems} user={{ name, role, isDemo }}>
       {children}
     </AdminShell>
   );
