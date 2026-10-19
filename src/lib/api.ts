@@ -5,6 +5,15 @@ import { ZodError } from "zod";
 
 export type ApiRole = "ADMIN" | "RECEPTIONIST" | "DENTIST";
 
+export interface ApiSessionUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  /** Public read-only demo session — never allowed to mutate clinic data. */
+  isDemo?: boolean;
+}
+
 /**
  * Returns the current authenticated session's user, or null.
  */
@@ -12,7 +21,14 @@ export async function getSessionUser() {
   const session = await auth();
   const user = session?.user;
   if (!user?.id) return null;
-  return user as { id: string; name: string; email: string; role: string };
+  return user as ApiSessionUser;
+}
+
+const DEMO_READ_ONLY_MESSAGE =
+  "This is a read-only demo. Sign in with a staff account to make changes.";
+
+function demoReadOnlyError() {
+  return NextResponse.json({ success: false, message: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
 }
 
 /**
@@ -45,6 +61,31 @@ export async function requireRole(...roles: ApiRole[]) {
       error: NextResponse.json({ success: false, message: "You do not have permission to perform this action." }, { status: 403 }),
     };
   }
+  return { user, error: null };
+}
+
+/**
+ * Guards a *mutating* API route: like `requireAuth`, but demo sessions are
+ * rejected with 403. The public showcase demo can read every page while the
+ * seeded clinic data stays intact.
+ *
+ * Every POST/PATCH/PUT/DELETE handler must use this (or `requireWriteRole`)
+ * instead of the read-only guards.
+ */
+export async function requireWriteAuth() {
+  const { user, error } = await requireAuth();
+  if (error) return { user: null, error };
+  if (user!.isDemo) return { user: null, error: demoReadOnlyError() };
+  return { user, error: null };
+}
+
+/**
+ * Role-guarded variant of `requireWriteAuth` for admin/reception mutations.
+ */
+export async function requireWriteRole(...roles: ApiRole[]) {
+  const { user, error } = await requireRole(...roles);
+  if (error) return { user: null, error };
+  if (user!.isDemo) return { user: null, error: demoReadOnlyError() };
   return { user, error: null };
 }
 

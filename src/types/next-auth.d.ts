@@ -6,12 +6,15 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      /** True for the public read-only showcase session (see src/auth.ts). */
+      isDemo?: boolean;
     } & DefaultSession["user"];
   }
 
   interface User {
     id: string;
     role: string;
+    isDemo?: boolean;
   }
 }
 
@@ -19,5 +22,6 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
     role?: string;
+    isDemo?: boolean;
   }
 }
