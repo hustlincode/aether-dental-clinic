@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireWriteRole, ok, fail } from "@/lib/api";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // ─── Zod schema for creating a service ───────────────────────────────────────
 const createServiceSchema = z.object({
@@ -83,6 +84,8 @@ export async function POST(req: Request) {
         status: body.status ?? "ACTIVE",
       },
     });
+
+    revalidateHomepage();
 
     return ok(service, 201);
   } catch (err: unknown) {
