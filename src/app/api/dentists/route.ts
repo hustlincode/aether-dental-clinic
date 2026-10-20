@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSessionUser, requireWriteRole, ok, fail } from "@/lib/api";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // ─── Zod schema for creating a dentist ───────────────────────────────────────
 const createDentistSchema = z.object({
@@ -88,6 +89,8 @@ export async function POST(req: Request) {
         userId: user.id,
       },
     });
+
+    revalidateHomepage();
 
     return ok(dentist, 201);
   } catch (err: unknown) {
