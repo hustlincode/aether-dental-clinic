@@ -140,6 +140,26 @@ Open [http://localhost:3000](http://localhost:3000):
 - `npx prisma db seed` — (re)seed demo data (prints generated staff passwords)
 - `npx prisma db push` — sync schema to database
 
+## Caching
+The public homepage (`/`) is an Incremental Static Regeneration route
+(`export const revalidate = 300`). It is prerendered at build time and served
+from the Full Route Cache, so a client-side navigation to it does not re-query
+the database on every visit.
+
+Two consequences to be aware of:
+
+- **`npm run build` needs `DATABASE_URL` to be reachable.** The homepage is
+  prerendered during the build, so the build fails if the database is not
+  reachable from the build machine. Previously only runtime needed the database.
+- **Content changes are picked up immediately, not after 5 minutes.** Every API
+  route that mutates homepage-visible data (services, dentists, patients,
+  appointments) calls `revalidateHomepage()` from `src/lib/home-cache.ts`,
+  which invalidates the cached page. The 5-minute window is only a safety net
+  for changes made outside the app.
+
+`/login`, `/book` and `/privacy-policy` are unaffected: the first is dynamic
+but cheap, the other two are static.
+
 ## Database
 Models: `User`, `Patient`, `Dentist`, `Service`, `Appointment`, `Availability`, `BlockedDate`, `ClinicSetting`, `Activity`, `EmailLog`.
 
