@@ -121,18 +121,43 @@ function DropdownMenuRadioGroup({
 function DropdownMenuRadioItem({
   className,
   children,
+  indicator = "start",
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
+  /**
+   * Which edge the radio dot sits on.
+   *
+   * "start" is the Radix/shadcn convention: the dot is a leading state column,
+   * so a row reads dot → icon → label.
+   *
+   * "end" moves the dot to the trailing edge. The row then reads icon → label
+   * as one unbroken pair with the state marker outside it, which is what a menu
+   * whose content is an icon-and-its-label wants.
+   */
+  indicator?: "start" | "end"
+}) {
+  const atEnd = indicator === "end"
+
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
+      data-indicator={indicator}
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none focus:bg-accent-soft focus:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 text-sm outline-hidden select-none focus:bg-accent-soft focus:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        atEnd ? "pr-8 pl-2" : "pr-2 pl-8",
         className
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      {/* Centred on the row with an explicit offset rather than the static
+          position, so the dot lands on the same axis as the label no matter
+          how tall the row's content is. */}
+      <span
+        className={cn(
+          "pointer-events-none absolute top-1/2 flex size-3.5 -translate-y-1/2 items-center justify-center",
+          atEnd ? "right-2" : "left-2"
+        )}
+      >
         <DropdownMenuPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />
         </DropdownMenuPrimitive.ItemIndicator>
