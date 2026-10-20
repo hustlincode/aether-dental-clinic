@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireWriteRole, ok, fail } from "@/lib/api";
 import { notifyPatientCreated } from "@/lib/notifications";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // ─── Zod schema for creating a patient ───────────────────────────────────────
 const createPatientSchema = z.object({
@@ -141,6 +142,8 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Failed to create patient notification:", e);
     }
+
+    revalidateHomepage();
 
     return ok(patient, 201);
   } catch (err: unknown) {
