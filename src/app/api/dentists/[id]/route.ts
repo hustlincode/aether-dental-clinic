@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireWriteRole, ok, fail } from "@/lib/api";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // ─── Zod schema for updating a dentist (partial, at least one field required) ─
 const updateDentistSchema = z
@@ -123,6 +124,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         userId: user.id,
       },
     });
+
+    revalidateHomepage();
 
     return ok(updated);
   } catch (err: unknown) {
