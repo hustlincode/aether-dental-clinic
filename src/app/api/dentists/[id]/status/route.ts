@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireWriteRole, ok, fail } from "@/lib/api";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 const statusSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]),
@@ -48,6 +49,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         userId: user.id,
       },
     });
+
+    revalidateHomepage();
 
     return ok(updated);
   } catch (err) {
