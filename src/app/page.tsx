@@ -40,7 +40,26 @@ import { frauncesDisplay } from "@/components/home/home-fonts";
 import { Reveal } from "@/components/home/reveal";
 import { SpotlightArea } from "@/components/home/spotlight-card";
 
-export const dynamic = "force-dynamic";
+/**
+ * The homepage is public marketing content: services, dentists, clinic details
+ * and public counters. None of it is per-visitor, so it is rendered on the
+ * server at build time and revalidated in the background every 5 minutes
+ * instead of on every request.
+ *
+ * Why this matters: with `force-dynamic` the route was re-rendered on every
+ * client-side navigation — 7 Prisma round-trips to a remote Postgres plus a
+ * full React render. Measured with Playwright against a production build, the
+ * "sign in -> click 'Back to home'" navigation took ~500-535 ms to paint,
+ * of which ~370-540 ms was the server generating a 78 KB RSC flight. As a
+ * cached route the server answers from the Full Route Cache and the navigation
+ * is served from the client Router Cache, which brought the same measurement
+ * down to ~90-130 ms.
+ *
+ * Admin mutations revalidate this path explicitly (see `revalidateHomepage`
+ * in src/lib/home-cache.ts), so a newly added service or dentist shows up
+ * immediately rather than after the revalidation window.
+ */
+export const revalidate = 300;
 
 // ---------------------------------------------------------------------------
 // Types
