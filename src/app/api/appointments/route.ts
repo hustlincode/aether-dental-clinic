@@ -7,6 +7,7 @@ import { generateAppointmentReference } from "@/lib/reference";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { sendAppointmentEmail } from "@/lib/email";
 import { notifyAppointmentCreated } from "@/lib/notifications";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // --- Public booking payload ---
 const bookingSchema = z.object({
@@ -217,6 +218,10 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Failed to create appointment notification:", e);
     }
+
+    // The homepage shows the "appointments served" / "patients" counters, so a
+    // new booking has to invalidate the cached homepage.
+    revalidateHomepage();
 
     return NextResponse.json(
       {
