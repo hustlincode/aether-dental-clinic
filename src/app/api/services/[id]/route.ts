@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireWriteRole, ok, fail } from "@/lib/api";
+import { revalidateHomepage } from "@/lib/home-cache";
 
 // ─── Zod schema for updating a service (partial, at least one field required) ─
 const updateServiceSchema = z
@@ -58,6 +59,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data,
     });
 
+    revalidateHomepage();
+
     return ok(updated);
   } catch (err: unknown) {
     if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
@@ -90,6 +93,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     await prisma.service.delete({ where: { id } });
+
+    revalidateHomepage();
 
     return ok({ deleted: true });
   } catch (err) {
