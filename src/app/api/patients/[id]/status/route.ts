@@ -29,27 +29,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const existing = await prisma.patient.findUnique({ where: { id } });
-    if (!existing) {
-      return fail("Patient not found.", 404);
-    }
-
-    const updated = await prisma.patient.update({
-      where: { id },
-      data: { status: body.status },
+    const updated = await prisma.$transaction(async (tx) => {
+      const change = await tx.patient.updateMany({
+        where: { id, status: { not: body.status } },
+        data: { status: body.status },
+      });
+      const updated = await tx.patient.findUnique({ where: { id } });
+      if (!updated || change.count === 0) return updated;
+      await tx.activity.create({
+        data: {
+          action: body.status === "ACTIVE" ? "Patient activated" : "Patient deactivated",
+          entity: "Patient",
+          entityId: updated.id,
+          description: `${user.name} ${body.status === "ACTIVE" ? "activated" : "deactivated"} patient ${updated.firstName} ${updated.lastName}`,
+          userId: user.id,
+        },
+      });
+      return updated;
     });
 
-    await prisma.activity.create({
-      data: {
-        action: body.status === "ACTIVE" ? "Patient activated" : "Patient deactivated",
-        entity: "Patient",
-        entityId: updated.id,
-        description: `${user.name} ${body.status === "ACTIVE" ? "activated" : "deactivated"} patient ${updated.firstName} ${updated.lastName}`,
-        userId: user.id,
-      },
-    });
-
-    return ok(updated);
+    return updated ? ok(updated) : fail("Patient not found.", 404);
   } catch (err) {
     console.error("PATCH /api/patients/[id]/status failed:", err);
     return fail("Unable to update patient status.", 500);
