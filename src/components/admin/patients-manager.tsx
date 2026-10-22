@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Eye, MoreHorizontal, Pencil, Plus, RefreshCw, ToggleLeft, ToggleRight, UserX, Users } from "lucide-react";
-import { createColumnHelper } from "@tanstack/react-table";
+import { type ColumnFiltersState, type PaginationState, type SortingState, createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { StatusBadge } from "./status-badge";
 import { Button } from "@/components/ui/button";
@@ -75,43 +75,61 @@ export function PatientsManager({ role }: { role: string }) {
   const [detailsId, setDetailsId] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
+  const [sorting, setSorting] = useState<SortingState>([{ id: "patient", desc: false }]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [search, setSearch] = useState("");
+  const [total, setTotal] = useState(0);
+  const qs = new URLSearchParams({
+    page: String(pagination.pageIndex + 1), pageSize: String(pagination.pageSize),
+    sort: sorting[0]?.id || "patient", order: sorting[0]?.desc ? "desc" : "asc",
+  });
+  if (search.trim()) qs.set("search", search.trim());
+  for (const filter of columnFilters) {
+    if (filter.id === "status") qs.set("status", String(filter.value));
+    if (filter.id === "appointments") qs.set("hasAppointments", filter.value === "has" ? "1" : "0");
+  }
+  const queryString = qs.toString();
 
   // ─── Data fetching ───────────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/patients?all=true")
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.message);
-        if (!cancelled) {
-          const raw = body.data;
-          const list: Patient[] = Array.isArray(raw) ? raw : raw?.patients ?? [];
-          setPatients(list);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load patients.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const timer = setTimeout(() => {
+      setLoading(true);
+      setError("");
+      fetch(`/api/patients?${queryString}`)
+        .then(async (res) => {
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.message);
+          if (!cancelled) {
+            const raw = body.data;
+            const list: Patient[] = Array.isArray(raw) ? raw : raw?.patients ?? [];
+            setPatients(list);
+            const total = body.data?.pagination?.total ?? body.data?.total ?? 0;
+            setTotal(total);
+            const lastPage = Math.max(0, Math.ceil(total / 20) - 1);
+            setPagination((current) => current.pageIndex > lastPage ? { ...current, pageIndex: lastPage } : current);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load patients.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 250);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [refreshKey]);
-
-  /* Loading is toggled by user actions (never synchronously inside the effect
-     body), so the initial state starts as true and every interaction re-shows it. */
-  function beginLoad() {
-    setLoading(true);
-    setError("");
-  }
+  }, [refreshKey, queryString]);
 
   function reload() {
-    beginLoad();
+    setLoading(true);
+    setError("");
     setRefreshKey((k) => k + 1);
   }
 
@@ -252,6 +270,7 @@ export function PatientsManager({ role }: { role: string }) {
       },
       {
         id: "lastAppointment",
+        enableSorting: false,
         header: "Last Appointment",
         meta: { cellClassName: "hidden lg:table-cell" },
         cell: (info) => {
@@ -334,7 +353,27 @@ export function PatientsManager({ role }: { role: string }) {
 
   // ─── Table instance (full client-side feature set) ──────────────────────
 
-  const table = useDataTable({ columns, data: patients, getRowId: (p) => p.id });
+  const table = useDataTable({
+    columns, data: patients, getRowId: (p) => p.id,
+    options: {
+      manualPagination: true, manualFiltering: true, manualSorting: true,
+      rowCount: total, autoResetPageIndex: false, enableMultiSort: false,
+      state: { pagination, sorting, columnFilters, globalFilter: search },
+      onPaginationChange: setPagination,
+      onSortingChange: (updater) => {
+        setSorting(updater);
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
+      },
+      onColumnFiltersChange: (updater) => {
+        setColumnFilters(updater);
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
+      },
+      onGlobalFilterChange: (updater) => {
+        setSearch((current) => (typeof updater === "function" ? updater(current) : updater) || "");
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
+      },
+    },
+  });
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -370,6 +409,7 @@ export function PatientsManager({ role }: { role: string }) {
       <DataTableToolbar
         table={table}
         searchPlaceholder="Search patients..."
+        searchMaxLength={200}
         filters={[
           {
             columnId: "status",
@@ -406,7 +446,7 @@ export function PatientsManager({ role }: { role: string }) {
           <EmptyState
             icon={Users}
             title="No patients found"
-            description="Get started by adding your first patient to the clinic records."
+            description={search || columnFilters.length ? "Try adjusting your search or filters." : "Get started by adding your first patient to the clinic records."}
             action={
               canManage ? (
                 <Button
