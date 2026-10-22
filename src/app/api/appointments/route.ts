@@ -7,23 +7,25 @@ import { generateAppointmentReference } from "@/lib/reference";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { sendAppointmentEmail } from "@/lib/email";
 import { notifyAppointmentCreated } from "@/lib/notifications";
+import { appointmentEnd, isValidDateKey, isValidTime } from "@/lib/appointment-rules";
+import { AppointmentError, appointmentTransaction } from "@/lib/appointment-transaction";
 import { revalidateHomepage } from "@/lib/home-cache";
 
 // --- Public booking payload ---
 const bookingSchema = z.object({
-  serviceId: z.string().min(1),
-  dentistId: z.string().min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format."),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:mm format."),
-  firstName: z.string().min(1, "First name is required."),
-  lastName: z.string().min(1, "Last name is required."),
-  email: z.string().email("Please provide a valid email address."),
-  phone: z.string().min(7, "Please provide a valid phone number."),
-  notes: z.string().optional(),
+  serviceId: z.string().min(1).max(100),
+  dentistId: z.string().min(1).max(100),
+  date: z.string().refine(isValidDateKey, "Date must be a real date in YYYY-MM-DD format."),
+  startTime: z.string().refine(isValidTime, "Time must be a valid HH:mm time."),
+  firstName: z.string().trim().min(1, "First name is required.").max(100),
+  lastName: z.string().trim().min(1, "Last name is required.").max(100),
+  email: z.string().trim().email("Please provide a valid email address.").max(254),
+  phone: z.string().trim().min(7, "Please provide a valid phone number.").max(30),
+  notes: z.string().max(4000).optional(),
   // Data Privacy Act (RA 10173): explicit, informed consent is required before
   // collecting/processing personal information (health-related data is sensitive).
   dataPrivacyConsent: z.boolean().optional(),
-  dataPrivacySignature: z.string().optional(),
+  dataPrivacySignature: z.string().max(250).optional(),
 });
 
 function fmtTime(hhmm: string): string {
@@ -87,84 +89,23 @@ export async function POST(req: Request) {
 
   try {
     const appointmentDate = new Date(`${date}T00:00:00.000Z`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (appointmentDate < today) {
-      return NextResponse.json({ success: false, message: "Appointments cannot be booked in the past." }, { status: 400 });
-    }
-
-    const [service, dentist] = await Promise.all([
-      prisma.service.findUnique({ where: { id: serviceId } }),
-      prisma.dentist.findUnique({ where: { id: dentistId } }),
-    ]);
-
-    if (!service || service.status !== "ACTIVE") {
-      return NextResponse.json({ success: false, message: "This service is not available for booking." }, { status: 400 });
-    }
-    if (!dentist || dentist.status !== "ACTIVE") {
-      return NextResponse.json({ success: false, message: "This dentist is not available for booking." }, { status: 400 });
-    }
-
-    // Compute end time from service duration
-    const [sh, sm] = startTime.split(":").map(Number);
-    const startMin = sh * 60 + sm;
-    const endMin = startMin + service.durationMin;
-    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-
-    // Server-side double-booking prevention
-    const available = await isSlotAvailable(dentistId, startTime, endTime, appointmentDate);
-    if (!available) {
-      return NextResponse.json(
-        { success: false, message: "This appointment slot is no longer available. Please select another time." },
-        { status: 409 }
-      );
-    }
-
-    // Find or create the patient
-    let patient = await prisma.patient.findFirst({
-      where: {
-        OR: [
-          { email: email.toLowerCase() },
-          { phone },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (!patient) {
-      patient = await prisma.patient.create({
-        data: {
-          firstName,
-          lastName,
-          email: email.toLowerCase(),
-          phone,
-          notes: notes || null,
-        },
-      });
-    }
-
     const referenceNumber = await generateAppointmentReference(appointmentDate);
-
-    // Transactionally create the appointment + activity log
-    const appointment = await prisma.$transaction(async (tx) => {
-      // Re-check within the transaction to reduce race conditions
-      const conflict = await tx.appointment.findFirst({
-        where: {
-          dentistId,
-          appointmentDate,
-          status: { notIn: ["CANCELLED", "NO_SHOW"] },
-          OR: [
-            { startTime: { lte: startTime }, endTime: { gt: startTime } },
-            { startTime: { lt: endTime }, endTime: { gte: endTime } },
-            { startTime: { gte: startTime }, endTime: { lte: endTime } },
-          ],
-        },
-      });
-      if (conflict) {
-        throw new BookingConflictError();
+    const appointment = await appointmentTransaction(async (tx) => {
+      const [service, dentist] = await Promise.all([
+        tx.service.findUnique({ where: { id: serviceId } }),
+        tx.dentist.findUnique({ where: { id: dentistId } }),
+      ]);
+      if (!service || service.status !== "ACTIVE" || !dentist || dentist.status !== "ACTIVE") {
+        throw new AppointmentError("This service or dentist is not available for booking.", 400);
       }
-
+      const endTime = appointmentEnd(startTime, service.durationMin);
+      if (!endTime || !await isSlotAvailable(dentistId, startTime, endTime, appointmentDate, undefined, tx)) {
+        throw new AppointmentError("This appointment slot is no longer available. Please select another time.");
+      }
+      // Contact details do not prove ownership of an existing patient record.
+      const patient = await tx.patient.create({
+        data: { firstName, lastName, email: email.toLowerCase(), phone, notes: notes || null },
+      });
       const created = await tx.appointment.create({
         data: {
           referenceNumber,
@@ -177,7 +118,7 @@ export async function POST(req: Request) {
           dataPrivacyConsent: true,
           dataPrivacyConsentAt: new Date(),
           dataPrivacyConsentSignature: providedSignature,
-          patientId: patient!.id,
+          patientId: patient.id,
           dentistId,
           serviceId,
           createdById: sessionUser?.id || null,
@@ -202,13 +143,17 @@ export async function POST(req: Request) {
     // Failures are logged and never roll back the appointment.
     // New bookings are PENDING, so we send a "request received" email here.
     // The actual confirmation email is sent only when staff confirms the status.
-    const emailResult = await sendAppointmentEmail("appointment_pending", patient!.email || email, {
+    const { service, dentist } = appointment;
+    const emailResult = await sendAppointmentEmail("appointment_pending", email, {
       patientName: `${firstName} ${lastName}`,
       referenceNumber,
       serviceName: service.name,
       dentistName: dentist.name,
       date: fmtDate(date),
       time: fmtTime(startTime),
+    }).catch((error) => {
+      console.error("Appointment request email failed:", error);
+      return { ok: false, status: "FAILED" };
     });
 
     // In-app notifications are created only after the DB transaction succeeded
@@ -221,21 +166,21 @@ export async function POST(req: Request) {
 
     // The homepage shows the "appointments served" / "patients" counters, so a
     // new booking has to invalidate the cached homepage.
-    revalidateHomepage();
+    try { revalidateHomepage(); } catch (error) { console.error("Homepage revalidation failed:", error); }
 
     return NextResponse.json(
       {
         success: true,
         message: emailResult.ok
           ? "Your appointment request has been received! We will confirm it shortly."
-          : "Your appointment was created successfully, but we could not send a confirmation email.",
+          : "Your appointment request was received, but we could not send the request receipt email.",
         data: {
           referenceNumber,
           appointmentId: appointment.id,
           subject: {
             referenceNumber,
             patientName: `${firstName} ${lastName}`,
-            patientEmail: patient!.email || email,
+            patientEmail: email,
             serviceName: service.name,
             dentistName: dentist.name,
             date: fmtDate(date),
@@ -248,15 +193,14 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
-    if (err instanceof BookingConflictError) {
-      return NextResponse.json({ success: false, message: "This appointment slot is no longer available. Please select another time." }, { status: 409 });
+    if (err instanceof AppointmentError) {
+      return NextResponse.json({ success: false, message: err.message }, { status: err.status });
     }
     console.error("POST /api/appointments failed:", err);
     return NextResponse.json({ success: false, message: "Unable to create the appointment. Please try again." }, { status: 500 });
   }
 }
 
-class BookingConflictError extends Error {}
 
 // GET /api/appointments - authenticated; list appointments with filters (staff)
 export async function GET(req: Request) {
@@ -273,12 +217,16 @@ export async function GET(req: Request) {
     const search = searchParams.get("search")?.trim() || undefined;
     const sort = searchParams.get("sort"); // "date:asc" (default) | "date:desc"
 
-    // Validate from/to date range params (YYYY-MM-DD)
-    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-    if (from && !dateRe.test(from)) {
+    if (date && !isValidDateKey(date)) {
+      return NextResponse.json({ success: false, message: "Invalid appointment date." }, { status: 400 });
+    }
+    if (status && !Object.values(AppointmentStatus).includes(status as AppointmentStatus)) {
+      return NextResponse.json({ success: false, message: "Invalid appointment status." }, { status: 400 });
+    }
+    if (from && !isValidDateKey(from)) {
       return NextResponse.json({ success: false, message: "Invalid 'from' date. Use YYYY-MM-DD format." }, { status: 400 });
     }
-    if (to && !dateRe.test(to)) {
+    if (to && !isValidDateKey(to)) {
       return NextResponse.json({ success: false, message: "Invalid 'to' date. Use YYYY-MM-DD format." }, { status: 400 });
     }
 
