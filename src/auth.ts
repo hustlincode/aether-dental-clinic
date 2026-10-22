@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { isDemoEnabled, isDemoEmail, refreshAuthToken } from "@/lib/auth-policy";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -17,16 +18,12 @@ const credentialsSchema = z.object({
  * Every session it creates is flagged `isDemo`, and the API layer rejects all
  * mutating requests from demo sessions (see `requireWriteAuth` in lib/api.ts).
  *
- * `DEMO_MODE="false"` removes the provider entirely (and hides the button on
- * /login). Set it before the deployment ever holds real patient data.
+ * Only an explicit development DEMO_MODE="true" enables the provider.
+ * Production always rejects demo access, including existing demo sessions.
  */
 const DEFAULT_DEMO_EMAIL = "demo@aetherdental.ph";
 const demoEmail = (process.env.DEMO_EMAIL || DEFAULT_DEMO_EMAIL).toLowerCase();
-const demoEnabled = process.env.DEMO_MODE !== "false";
-
-function isDemoEmail(email: string | null | undefined): boolean {
-  return !!email && email.toLowerCase() === demoEmail;
-}
+const demoEnabled = isDemoEnabled();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -57,7 +54,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
-        // NextAuth authorize() return type doesn't include custom fields — cast is intentional.
         return {
           id: user.id,
           name: user.name,
@@ -66,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Even if the demo account's password ever becomes known, a session
           // opened with it must never gain write access.
           isDemo: isDemoEmail(user.email),
-        } as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- NextAuth authorize() return type is not augmented for custom fields
+        };
       },
     }),
     ...(demoEnabled
@@ -92,7 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 email: demoUser.email,
                 role: demoUser.role,
                 isDemo: true,
-              } as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- NextAuth authorize() return type is not augmented for custom fields
+              };
             },
           }),
         ]
@@ -101,17 +97,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id; // eslint-disable-line @typescript-eslint/no-explicit-any -- NextAuth JWT callback typed as generic User
-        token.role = (user as any).role; // eslint-disable-line @typescript-eslint/no-explicit-any -- NextAuth JWT callback typed as generic User
-        token.isDemo = (user as any).isDemo === true; // eslint-disable-line @typescript-eslint/no-explicit-any -- NextAuth JWT callback typed as generic User
+        token.id = user.id;
+        token.isDemo = user.isDemo === true;
       }
-      return token;
+      return refreshAuthToken(token);
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string; // eslint-disable-line @typescript-eslint/no-explicit-any -- Augmenting session with custom JWT fields
-        (session.user as any).role = token.role as string; // eslint-disable-line @typescript-eslint/no-explicit-any -- Augmenting session with custom JWT fields
-        (session.user as any).isDemo = token.isDemo === true; // eslint-disable-line @typescript-eslint/no-explicit-any -- Augmenting session with custom JWT fields
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.name = token.name;
+        session.user.email = token.email as string;
+        session.user.isDemo = token.isDemo === true;
       }
       return session;
     },
