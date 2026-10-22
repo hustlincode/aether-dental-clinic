@@ -20,14 +20,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://aetherdental.ph"),
   title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
   description:
-    "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. See clear service prices, choose a dentist, and get an instant email confirmation — no phone calls needed.",
+    "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. See clear service prices, choose a dentist, and receive confirmation from clinic staff.",
   openGraph: {
     type: "website",
     locale: "en_PH",
     siteName: "Aether Dental",
     title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
     description:
-      "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, instant confirmation.",
+      "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, confirmation from clinic staff.",
     url: "/",
     images: [
       {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
     description:
-      "Book your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, instant confirmation.",
+      "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, confirmation from clinic staff.",
     images: ["/og.svg"],
   },
 };
