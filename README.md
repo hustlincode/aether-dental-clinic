@@ -19,8 +19,8 @@ It opens a **passwordless, read-only** session: every page and report is
 browsable, but every mutating API route — including notification read state —
 rejects demo sessions, so the seeded clinic data stays intact.
 
-- Disabled by default. Development requires `DEMO_MODE="true"`; production
-  always disables the button, provider, and existing demo sessions.
+- Disabled by default. Set `DEMO_MODE="true"` to enable the button and provider,
+  including in production. Disabling it also rejects existing demo sessions.
 - The demo session is backed by the dedicated `demo@aetherdental.ph` account
   created by the seed (override with `DEMO_EMAIL`). On older databases without
   that account it falls back to the seeded admin, still read-only.
@@ -83,7 +83,7 @@ SMTP_PASS=""
 SMTP_FROM="Aether Dental <no-reply@aetherdental.local>"
 EMAIL_PREVIEW_MODE="true"
 
-# Development-only read-only demo; production always rejects demo access.
+# Read-only showcase demo; enable only on deployments containing demo data.
 DEMO_MODE="false"
 
 # Optional: dedicated demo account (created by the seed).
@@ -123,7 +123,7 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000):
 - Book an appointment at `/book`
 - Staff login at `/login` → admin dashboard at `/admin`
-- Development visitors can enable `DEMO_MODE="true"` for read-only dashboard access
+- Enable `DEMO_MODE="true"` for read-only dashboard access, including production
 
 ## Going Live (Security Checklist)
 - [ ] Set `DEMO_MODE="false"` if the database will hold real patient data.

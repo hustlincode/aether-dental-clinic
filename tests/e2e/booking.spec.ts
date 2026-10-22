@@ -56,7 +56,7 @@ test("booking labels, error focus and pending/email failure result reflect actua
   await expect(page.getByText("Your appointment is confirmed.", { exact: true })).toHaveCount(0);
 });
 
-test("login inputs have accessible names and production has no passwordless demo", async ({ page }) => {
+test("login inputs have accessible names and demo is hidden when disabled", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
