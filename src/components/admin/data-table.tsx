@@ -336,11 +336,13 @@ const toolbarInputClass =
 export function DataTableToolbar<TData extends RowData>({
   table,
   searchPlaceholder = "Search...",
+  searchMaxLength,
   filters = [],
   className,
 }: {
   table: ReactTable<FilterableDataTableFeatures, TData>;
   searchPlaceholder?: string;
+  searchMaxLength?: number;
   filters?: DataTableFilterConfig[];
   className?: string;
 }) {
@@ -359,6 +361,7 @@ export function DataTableToolbar<TData extends RowData>({
             const next = e.target.value;
             table.setGlobalFilter(next === "" ? undefined : next);
           }}
+          maxLength={searchMaxLength}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
           className={cn(toolbarInputClass, "w-full max-w-xs pl-8 pr-3")}
