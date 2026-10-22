@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 
@@ -30,11 +30,6 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
 
   /* ─── Mobile off-canvas sidebar ─── */
   const [mobileOpen, setMobileOpen] = useState(false);
-  const mobileOpenRef = useRef(false);
-
-  useEffect(() => {
-    mobileOpenRef.current = mobileOpen;
-  }, [mobileOpen]);
 
   /* Adopt the persisted collapse state after mount. Deferred by a tick so we
      never call setState synchronously inside the effect (and so StrictMode's
@@ -69,15 +64,6 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
   const closeMobile = useCallback(() => setMobileOpen(false), []);
   const toggleMobile = useCallback(() => setMobileOpen((prev) => !prev), []);
 
-  /* Escape closes the mobile sidebar */
-  const handleEscape = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape" && mobileOpenRef.current) setMobileOpen(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [handleEscape]);
 
   return (
     <div className="flex h-screen overflow-hidden">
