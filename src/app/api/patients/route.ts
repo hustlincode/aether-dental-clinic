@@ -28,12 +28,26 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const all = searchParams.get("all") === "true" || searchParams.get("all") === "1";
-    const page = parsePositiveInt(searchParams.get("page"), 1);
+    const page = parsePositiveInt(searchParams.get("page"), 1, 1_000_000);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 10, 50);
     const search = searchParams.get("search")?.trim() || searchParams.get("q")?.trim() || "";
     const status = searchParams.get("status"); // ACTIVE | INACTIVE | empty = all
     const hasAppointmentsRaw = searchParams.get("hasAppointments");
+    const sort = searchParams.get("sort") || "patient";
+    const order = searchParams.get("order") || "asc";
+    if (search.length > 200 || (status && !["ACTIVE", "INACTIVE"].includes(status)) ||
+        (hasAppointmentsRaw && !["1", "0", "true", "false"].includes(hasAppointmentsRaw)) ||
+        !["patient", "phone", "appointments", "status", "createdAt"].includes(sort) ||
+        !["asc", "desc"].includes(order)) {
+      return fail("Invalid patient list filters or sorting.", 400);
+    }
+    const direction = order as Prisma.SortOrder;
+    const orderBy: Prisma.PatientOrderByWithRelationInput[] = sort === "patient"
+      ? [{ firstName: direction }, { lastName: direction }]
+      : sort === "appointments"
+        ? [{ appointments: { _count: direction } }]
+        : [{ [sort]: direction }];
+    orderBy.push({ id: "asc" });
 
     const where: Prisma.PatientWhereInput = {};
 
@@ -60,11 +74,9 @@ export async function GET(req: Request) {
     const [patients, total] = await Promise.all([
       prisma.patient.findMany({
         where,
-        orderBy: { createdAt: "desc" },
-        // all=true returns every row so the client can run TanStack search,
-        // filters, sorting, and pagination locally.
-        skip: all ? undefined : (page - 1) * pageSize,
-        take: all ? undefined : pageSize,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
         select: {
           id: true,
           firstName: true,
@@ -86,7 +98,8 @@ export async function GET(req: Request) {
       prisma.patient.count({ where }),
     ]);
 
-    return ok({ patients, total, page, pageSize, all });
+    return ok({ patients, total, page, pageSize, all: false,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } });
   } catch (err) {
     console.error("GET /api/patients failed:", err);
     return fail("Unable to load patients.", 500);
@@ -115,25 +128,28 @@ export async function POST(req: Request) {
   }
 
   try {
-    const patient = await prisma.patient.create({
-      data: {
-        firstName: body.firstName.trim(),
-        lastName: body.lastName.trim(),
-        email: body.email ? body.email.toLowerCase().trim() : null,
-        phone: body.phone.trim(),
-        notes: body.notes?.trim() || null,
-        status: body.status ?? "ACTIVE",
-      },
-    });
+    const patient = await prisma.$transaction(async (tx) => {
+      const patient = await tx.patient.create({
+        data: {
+          firstName: body.firstName.trim(),
+          lastName: body.lastName.trim(),
+          email: body.email ? body.email.toLowerCase().trim() : null,
+          phone: body.phone.trim(),
+          notes: body.notes?.trim() || null,
+          status: body.status ?? "ACTIVE",
+        },
+      });
 
-    await prisma.activity.create({
-      data: {
-        action: "Patient created",
-        entity: "Patient",
-        entityId: patient.id,
-        description: `${user.name} created patient ${body.firstName.trim()} ${body.lastName.trim()}`,
-        userId: user.id,
-      },
+      await tx.activity.create({
+        data: {
+          action: "Patient created",
+          entity: "Patient",
+          entityId: patient.id,
+          description: `${user.name} created patient ${body.firstName.trim()} ${body.lastName.trim()}`,
+          userId: user.id,
+        },
+      });
+      return patient;
     });
 
     // In-app notification (never allowed to fail the patient creation).
@@ -147,9 +163,6 @@ export async function POST(req: Request) {
 
     return ok(patient, 201);
   } catch (err: unknown) {
-    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
-      return fail("A patient with this email already exists.", 409);
-    }
     console.error("POST /api/patients failed:", err);
     return fail("Unable to create patient.", 500);
   }

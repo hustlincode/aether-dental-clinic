@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { requireWriteAuth } from "@/lib/api";
+import { AppointmentError, appointmentTransaction } from "@/lib/appointment-transaction";
+import { appointmentEnd, isValidDateKey, isValidTime } from "@/lib/appointment-rules";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { sendAppointmentEmail } from "@/lib/email";
 import { notifyAppointmentRescheduled } from "@/lib/notifications";
@@ -19,21 +19,21 @@ import { notifyAppointmentRescheduled } from "@/lib/notifications";
 const updateSchema = z.object({
   appointmentDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format.")
+    .refine(isValidDateKey, "Date must be a real date in YYYY-MM-DD format.")
     .optional(),
   startTime: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, "Time must be in HH:mm format.")
+    .refine(isValidTime, "Time must be a valid HH:mm time.")
     .optional(),
-  serviceId: z.string().min(1, "Service is required.").optional(),
-  dentistId: z.string().min(1, "Dentist is required.").optional(),
-  notes: z.string().nullable().optional(),
+  serviceId: z.string().min(1, "Service is required.").max(100).optional(),
+  dentistId: z.string().min(1, "Dentist is required.").max(100).optional(),
+  notes: z.string().max(4000).nullable().optional(),
   patient: z
     .object({
-      firstName: z.string().trim().min(1, "First name is required.").optional(),
-      lastName: z.string().trim().min(1, "Last name is required.").optional(),
-      email: z.string().trim().email("Please provide a valid email address.").optional(),
-      phone: z.string().trim().min(7, "Please provide a valid phone number.").optional(),
+      firstName: z.string().trim().min(1, "First name is required.").max(100).optional(),
+      lastName: z.string().trim().min(1, "Last name is required.").max(100).optional(),
+      email: z.string().trim().email("Please provide a valid email address.").max(254).optional(),
+      phone: z.string().trim().min(7, "Please provide a valid phone number.").max(30).optional(),
     })
     .optional(),
 });
@@ -49,10 +49,6 @@ function fmtDate(d: Date): string {
   // appointmentDate is stored as @db.Date (midnight UTC); format in UTC so the
   // email date always matches the booked date regardless of server timezone.
   return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-}
-
-function fmtDateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -80,159 +76,57 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const existing = await prisma.appointment.findUnique({
-      where: { id },
-      include: { patient: true, dentist: true, service: true },
-    });
-    if (!existing) {
-      return NextResponse.json({ success: false, message: "Appointment not found." }, { status: 404 });
-    }
-
-    // Role scoping
-    if (user.role === "DENTIST") {
-      const assigned = await prisma.dentist.findFirst({ where: { email: user.email } });
-      if (!assigned || assigned.id !== existing.dentistId) {
-        return NextResponse.json(
-          { success: false, message: "You do not have permission to edit this appointment." },
-          { status: 403 }
-        );
-      }
-      // Dentists must not reassign the dentist or edit patient identity.
-      if (body.dentistId || body.patient) {
-        return NextResponse.json(
-          { success: false, message: "You do not have permission to change the dentist or patient details." },
-          { status: 403 }
-        );
-      }
-    }
-
-    const hasPatientChanges = Boolean(body.patient && Object.keys(body.patient).length > 0);
-
-    // Resolve effective values after the update
-    const appointmentDate = body.appointmentDate
-      ? new Date(`${body.appointmentDate}T00:00:00.000Z`)
-      : existing.appointmentDate;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Only block when the caller is actively moving the appointment to a past
-    // date. Note/patient-only edits on an existing (maybe already past) visit
-    // must keep working.
-    if (body.appointmentDate && appointmentDate < today) {
-      return NextResponse.json(
-        { success: false, message: "Appointments cannot be scheduled in the past." },
-        { status: 400 }
-      );
-    }
-
-    const [service, dentist] = await Promise.all([
-      body.serviceId
-        ? prisma.service.findUnique({ where: { id: body.serviceId } })
-        : Promise.resolve(existing.service),
-      body.dentistId
-        ? prisma.dentist.findUnique({ where: { id: body.dentistId } })
-        : Promise.resolve(existing.dentist),
-    ]);
-    // Only enforce ACTIVE when the caller is actually switching service/dentist;
-    // a note-only edit on an appointment whose service was later deactivated
-    // must still work.
-    if (body.serviceId && body.serviceId !== existing.serviceId && (!service || service.status !== "ACTIVE")) {
-      return NextResponse.json({ success: false, message: "This service is not available." }, { status: 400 });
-    }
-    if (body.dentistId && body.dentistId !== existing.dentistId && (!dentist || dentist.status !== "ACTIVE")) {
-      return NextResponse.json({ success: false, message: "This dentist is not available." }, { status: 400 });
-    }
-    if (!service) {
-      return NextResponse.json({ success: false, message: "The linked service no longer exists." }, { status: 400 });
-    }
-    if (!dentist) {
-      return NextResponse.json({ success: false, message: "The linked dentist no longer exists." }, { status: 400 });
-    }
-
-    const startTime = body.startTime || existing.startTime;
-    const [sh, sm] = startTime.split(":").map(Number);
-    const startMin = sh * 60 + sm;
-    const endMin = startMin + service.durationMin;
-    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-
-    // Only these changes can affect double-booking; a notes-only update on a
-    // past appointment is therefore allowed without an availability re-check.
-    const scheduleChanged =
-      (body.appointmentDate !== undefined && body.appointmentDate !== fmtDateKey(existing.appointmentDate)) ||
-      (body.startTime !== undefined && body.startTime !== existing.startTime) ||
-      (body.serviceId !== undefined && body.serviceId !== existing.serviceId) ||
-      (body.dentistId !== undefined && body.dentistId !== existing.dentistId);
-
-    if (scheduleChanged) {
-      const available = await isSlotAvailable(dentist.id, startTime, endTime, appointmentDate, id);
-      if (!available) {
-        return NextResponse.json(
-          { success: false, message: "That time is no longer available. Please select another slot." },
-          { status: 409 }
-        );
-      }
-    }
-
-    // Prevent two patients from sharing the same email/phone if identity changed
-    const newEmail = body.patient?.email ? body.patient.email.toLowerCase() : undefined;
-    if (body.patient?.phone || newEmail) {
-      const dup = await prisma.patient.findFirst({
-        where: {
-          id: { not: existing.patientId },
-          OR: [
-            ...(newEmail ? [{ email: newEmail }] : []),
-            ...(body.patient?.phone ? [{ phone: body.patient.phone }] : []),
-          ],
-        },
+    const result = await appointmentTransaction(async (tx) => {
+      const existing = await tx.appointment.findUnique({
+        where: { id }, include: { patient: true, dentist: true, service: true },
       });
-      if (dup) {
-        return NextResponse.json(
-          { success: false, message: "That email or phone number already belongs to another patient." },
-          { status: 409 }
-        );
+      if (!existing) throw new AppointmentError("Appointment not found.", 404);
+      if (user.role === "DENTIST") {
+        const assigned = await tx.dentist.findFirst({ where: { email: user.email } });
+        if (!assigned || assigned.id !== existing.dentistId || body.dentistId || body.patient) {
+          throw new AppointmentError("You do not have permission to edit this appointment.", 403);
+        }
       }
-    }
-
-    // Apply the update atomically with the activity log
-    const updated = await prisma.$transaction(async (tx) => {
-      if (hasPatientChanges) {
+      const appointmentDate = body.appointmentDate ? new Date(`${body.appointmentDate}T00:00:00.000Z`) : existing.appointmentDate;
+      const startTime = body.startTime ?? existing.startTime;
+      const serviceId = body.serviceId ?? existing.serviceId;
+      const dentistId = body.dentistId ?? existing.dentistId;
+      const scheduleChanged = appointmentDate.getTime() !== existing.appointmentDate.getTime() ||
+        startTime !== existing.startTime || serviceId !== existing.serviceId || dentistId !== existing.dentistId;
+      let endTime = existing.endTime;
+      if (scheduleChanged) {
+        if (["CANCELLED", "NO_SHOW", "COMPLETED"].includes(existing.status)) {
+          throw new AppointmentError("Closed appointments cannot be rescheduled. Create a new booking.");
+        }
+        const service = await tx.service.findUnique({ where: { id: serviceId } });
+        if (!service || service.status !== "ACTIVE") throw new AppointmentError("This service is not available.", 400);
+        const computedEnd = appointmentEnd(startTime, service.durationMin);
+        if (!computedEnd || !await isSlotAvailable(dentistId, startTime, computedEnd, appointmentDate, id, tx)) {
+          throw new AppointmentError("That time is no longer available. Please select another slot.");
+        }
+        endTime = computedEnd;
+      }
+      if (body.patient && Object.keys(body.patient).length > 0) {
         await tx.patient.update({
           where: { id: existing.patientId },
-          data: {
-            ...(body.patient!.firstName ? { firstName: body.patient!.firstName } : {}),
-            ...(body.patient!.lastName ? { lastName: body.patient!.lastName } : {}),
-            ...(newEmail ? { email: newEmail } : {}),
-            ...(body.patient!.phone ? { phone: body.patient!.phone } : {}),
-          },
+          data: { ...body.patient, ...(body.patient.email ? { email: body.patient.email.toLowerCase() } : {}) },
         });
       }
-
-      const appt = await tx.appointment.update({
+      const updated = await tx.appointment.update({
         where: { id },
         data: {
-          ...(body.appointmentDate ? { appointmentDate } : {}),
-          ...(body.startTime ? { startTime } : {}),
-          // endTime must follow the schedule: recompute whenever any component changes
-          ...(scheduleChanged ? { endTime } : {}),
-          ...(body.serviceId ? { serviceId: service.id } : {}),
-          ...(body.dentistId ? { dentistId: dentist.id } : {}),
+          ...(scheduleChanged ? { appointmentDate, startTime, endTime, dentistId, serviceId } : {}),
           ...(body.notes !== undefined ? { notes: body.notes?.trim() || null } : {}),
         },
         include: { patient: true, dentist: true, service: true },
       });
-
-      await tx.activity.create({
-        data: {
-          action: "Appointment updated",
-          entity: "Appointment",
-          entityId: appt.id,
-          description: `${user.name} updated appointment ${appt.referenceNumber}`,
-          userId: user.id,
-        },
-      });
-
-      return appt;
+      await tx.activity.create({ data: {
+        action: "Appointment updated", entity: "Appointment", entityId: updated.id,
+        description: `${user.name} updated appointment ${updated.referenceNumber}`, userId: user.id,
+      } });
+      return { updated, existing, scheduleChanged };
     });
+    const { updated, existing, scheduleChanged } = result;
 
     // Patient-facing reschedule email (only when the schedule actually changed)
     let emailResult: { ok: boolean; status: string } | null = null;
@@ -246,6 +140,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         time: fmtTime(updated.startTime),
         previousDate: fmtDate(existing.appointmentDate),
         previousTime: fmtTime(existing.startTime),
+      }).catch((error) => {
+        console.error("Reschedule email failed:", error);
+        return { ok: false, status: "FAILED" };
       });
     }
 
@@ -263,11 +160,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, data: updated, email: emailResult });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return NextResponse.json(
-        { success: false, message: "That email or phone number already belongs to another patient." },
-        { status: 409 }
-      );
+    if (err instanceof AppointmentError) {
+      return NextResponse.json({ success: false, message: err.message }, { status: err.status });
     }
     console.error("PATCH /api/appointments/[id] failed:", err);
     return NextResponse.json({ success: false, message: "Unable to update the appointment." }, { status: 500 });

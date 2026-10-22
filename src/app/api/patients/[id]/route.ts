@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireWriteRole, ok, fail } from "@/lib/api";
 import { notifyPatientUpdated } from "@/lib/notifications";
+import { clinicDateKey, dateKeyToUtc } from "@/lib/clinic-time";
 
 // ─── Zod schema for updating a patient (partial, at least one field required) ─
 const updatePatientSchema = z
@@ -52,8 +53,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return fail("Patient not found.", 404);
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = dateKeyToUtc(clinicDateKey());
 
     const [history, grouped, nextAppointment] = await Promise.all([
       prisma.appointment.findMany({
@@ -149,19 +149,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.notes !== undefined) data.notes = body.notes.trim() || null;
     if (body.status !== undefined) data.status = body.status;
 
-    const updated = await prisma.patient.update({
-      where: { id },
-      data,
-    });
+    const updated = await prisma.$transaction(async (tx) => {
+      const updated = await tx.patient.update({
+        where: { id },
+        data,
+      });
 
-    await prisma.activity.create({
-      data: {
-        action: "Patient updated",
-        entity: "Patient",
-        entityId: updated.id,
-        description: `${user.name} updated patient ${updated.firstName} ${updated.lastName}`,
-        userId: user.id,
-      },
+      await tx.activity.create({
+        data: {
+          action: "Patient updated",
+          entity: "Patient",
+          entityId: updated.id,
+          description: `${user.name} updated patient ${updated.firstName} ${updated.lastName}`,
+          userId: user.id,
+        },
+      });
+      return updated;
     });
 
     // Only notify staff when a *meaningful* field changes (contact info or
@@ -180,9 +183,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return ok(updated);
   } catch (err: unknown) {
-    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
-      return fail("A patient with this email already exists.", 409);
-    }
     console.error("PATCH /api/patients/[id] failed:", err);
     return fail("Unable to update patient.", 500);
   }

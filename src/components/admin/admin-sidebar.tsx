@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { AdminNavItem } from "@/components/admin/admin-shell";
 
 /* ─── Nav icon map ─── */
@@ -66,7 +68,14 @@ export function AdminSidebar({
   );
 
   /* ─── Shared sidebar content ─── */
-  const sidebarContent = (
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => { if (desktop.matches) onCloseMobile(); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, [onCloseMobile]);
+
+  const sidebarContent = (collapsed: boolean) => (
     <div className="flex h-full flex-col bg-sidebar-bg text-sidebar-text">
       {/* Brand + collapse toggle.
           Desktop-only button (hidden on mobile: the off-canvas drawer is closed
@@ -124,6 +133,8 @@ export function AdminSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-label={item.label}
+                  aria-current={active ? "page" : undefined}
                   onClick={onCloseMobile}
                   title={collapsed ? item.label : undefined}
                   className={`group relative flex items-center gap-3 rounded-control transition-colors ${
@@ -186,24 +197,23 @@ export function AdminSidebar({
 
   return (
     <>
-      {/* Mobile overlay backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-overlay md:hidden animate-fade-in"
-          onClick={onCloseMobile}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar — mobile: fixed off-canvas drawer; desktop: relative flex child
-          that collapses via the in-sidebar toggle (md:w-16 / md:w-64) */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-sidebar-border transition-all duration-(--dur-slow) md:relative md:inset-auto ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } ${collapsed ? "md:w-16" : "md:w-64"}`}
-      >
-        {sidebarContent}
+      <aside className={`relative hidden h-screen shrink-0 flex-col border-r border-sidebar-border md:flex ${collapsed ? "w-16" : "w-64"}`}>
+        {sidebarContent(collapsed)}
       </aside>
+      <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onCloseMobile(); }}>
+        <SheetContent
+          side="left"
+          className="w-64 gap-0 border-sidebar-border p-0"
+          aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            document.querySelector<HTMLButtonElement>('[aria-label="Toggle navigation menu"]')?.focus();
+          }}
+        >
+          <SheetTitle className="sr-only">Clinic navigation</SheetTitle>
+          {sidebarContent(false)}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

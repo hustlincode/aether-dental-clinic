@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAvailableSlots } from "@/lib/scheduling";
+import { isValidDateKey } from "@/lib/appointment-rules";
 
 // GET /api/availability/slots?dentistId=&serviceId=&date=YYYY-MM-DD[&excludeAppointmentId=]
 // Returns the available time slots for a dentist + service on a date.
@@ -18,10 +19,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, message: "dentistId, serviceId, and date are required." }, { status: 400 });
     }
 
-    const date = new Date(`${dateParam}T00:00:00.000Z`);
-    if (isNaN(date.getTime())) {
+    if (!isValidDateKey(dateParam)) {
       return NextResponse.json({ success: false, message: "Invalid date." }, { status: 400 });
     }
+    const date = new Date(`${dateParam}T00:00:00.000Z`);
 
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || service.status !== "ACTIVE") {

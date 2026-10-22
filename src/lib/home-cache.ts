@@ -18,5 +18,10 @@ import { revalidatePath } from "next/cache";
  * and back, which is the intended behaviour for a marketing page.
  */
 export function revalidateHomepage(): void {
-  revalidatePath("/");
+  try {
+    revalidatePath("/");
+  } catch (error) {
+    // A cache failure must not report a committed database mutation as failed.
+    console.error("Homepage revalidation failed:", error);
+  }
 }

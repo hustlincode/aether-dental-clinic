@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -48,6 +50,7 @@ next-env.d.ts
 # THEME.md is the token reference the ESLint guardrails point contributors to
 # ("See THEME.md section Accent roles"), so it ships with the code.
 !THEME.md
+!docs/production-hardening.md
 
 # agent configs
 /.agents/

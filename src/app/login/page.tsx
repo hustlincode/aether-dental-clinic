@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
+import { isDemoEnabled } from "@/lib/auth-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  // The passwordless demo provider is registered unless DEMO_MODE="false"
-  // (see src/auth.ts). Keep the button and the provider gated by the same flag.
-  const demoEnabled = process.env.DEMO_MODE !== "false";
-
-  return <LoginForm demoEnabled={demoEnabled} />;
+  return <LoginForm demoEnabled={isDemoEnabled()} />;
 }

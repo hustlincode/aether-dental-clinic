@@ -1,6 +1,6 @@
 # Aether Dental — Clinic Booking & Management System
 
-A modern, full-stack **dental clinic booking & management system** built as a portfolio project. Patients can book appointments online with instant confirmation, while clinic staff manage appointments, patients, and operations through a role-based admin dashboard.
+A modern, full-stack **dental clinic booking & management system** built as a portfolio project. Patients can request appointments online, while clinic staff confirm bookings and manage patients and operations through a role-based admin dashboard.
 
 ## Tech Stack
 
@@ -19,8 +19,8 @@ It opens a **passwordless, read-only** session: every page and report is
 browsable, but every mutating API route — including notification read state —
 rejects demo sessions, so the seeded clinic data stays intact.
 
-- Controlled by `DEMO_MODE` (default: enabled; set `DEMO_MODE="false"` to remove
-  the button and the provider entirely).
+- Disabled by default. Development requires `DEMO_MODE="true"`; production
+  always disables the button, provider, and existing demo sessions.
 - The demo session is backed by the dedicated `demo@aetherdental.ph` account
   created by the seed (override with `DEMO_EMAIL`). On older databases without
   that account it falls back to the seeded admin, still read-only.
@@ -36,8 +36,8 @@ password is shipped in this repository.
 - Multi-step flow: **Service → Dentist → Date → Time → Details → Review → Confirm**
 - Calendar only shows dates with available slots
 - Dynamic slot generation honoring clinic hours, dentist schedule, lunch breaks, blocked dates, and existing appointments
-- **Server-side double-booking prevention** (+ transactional re-check)
-- Instant email confirmation (decoupled from booking — failures logged, never roll back)
+- **Server-side double-booking prevention** (full scheduling checks in retryable serializable transactions)
+- Request-received email followed by staff confirmation (delivery failures never roll back a booking)
 - Success screen with appointment reference number
 
 ### Staff / Admin
@@ -60,7 +60,7 @@ password is shipped in this repository.
 ## Getting Started
 
 ### 1. Prerequisites
-- Node.js 18+
+- Node.js 22+ (CI uses Node.js 22)
 - A Supabase project (free tier)
 
 ### 2. Set up environment variables
@@ -83,8 +83,8 @@ SMTP_PASS=""
 SMTP_FROM="Aether Dental <no-reply@aetherdental.local>"
 EMAIL_PREVIEW_MODE="true"
 
-# Public read-only demo on /login. Set to "false" before storing real data.
-DEMO_MODE="true"
+# Development-only read-only demo; production always rejects demo access.
+DEMO_MODE="false"
 
 # Optional: dedicated demo account (created by the seed).
 # DEMO_EMAIL="demo@aetherdental.ph"
@@ -104,13 +104,16 @@ NEXT_PUBLIC_APP_NAME="Aether Dental"
 npm install
 ```
 
-### 4. Push the schema and seed
+### 4. Initialize a new development database and seed
 ```bash
-npx prisma db push
+npx prisma migrate deploy
 npx prisma db seed
 ```
 The seed prints the generated staff passwords once. Store them — no default
 staff password exists in this repository.
+
+For an existing database, follow [the baseline and deployment instructions](docs/production-hardening.md)
+before running migrations. Do not seed a database containing real patient data.
 
 ### 5. Run the dev server
 ```bash
@@ -120,7 +123,7 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000):
 - Book an appointment at `/book`
 - Staff login at `/login` → admin dashboard at `/admin`
-- Visitors can click **Explore the demo dashboard** on `/login` for read-only access
+- Development visitors can enable `DEMO_MODE="true"` for read-only dashboard access
 
 ## Going Live (Security Checklist)
 - [ ] Set `DEMO_MODE="false"` if the database will hold real patient data.
@@ -136,9 +139,19 @@ Open [http://localhost:3000](http://localhost:3000):
 - `npm run build` — production build
 - `npm run start` — start production server
 - `npm run lint` — ESLint
+- `npm run typecheck` — TypeScript
+- `npm test` — unit and API regressions
+- `npm run test:integration` — live PostgreSQL races and rollback checks (requires an isolated `TEST_DATABASE_URL`)
+- `npm run test:e2e` — Chromium regressions against a production build
 - `npm run security:rotate-passwords` — rotate all staff passwords (pre-launch)
 - `npx prisma db seed` — (re)seed demo data (prints generated staff passwords)
 - `npx prisma db push` — sync schema to database
+
+Integration tests accept only a loopback PostgreSQL database whose name ends in
+`_test`, distinct from both configured application database URLs. Schema setup
+refuses destructive changes; tests require an empty clinic. Browser tests create
+their own temporary staff account in the isolated database and never reuse an
+existing app server. See [deployment and verification notes](docs/production-hardening.md).
 
 ## Caching
 The public homepage (`/`) is an Incremental Static Regeneration route

@@ -107,7 +107,8 @@ model Patient {
 
   @@index([lastName, firstName])
   @@index([status])
-  @@unique([email])
+  // Public requests stay separate until staff verify patient identity.
+  @@index([email])
   @@map("patients")
 }
 
