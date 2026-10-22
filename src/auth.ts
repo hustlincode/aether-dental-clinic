@@ -18,8 +18,8 @@ const credentialsSchema = z.object({
  * Every session it creates is flagged `isDemo`, and the API layer rejects all
  * mutating requests from demo sessions (see `requireWriteAuth` in lib/api.ts).
  *
- * Only an explicit development DEMO_MODE="true" enables the provider.
- * Production always rejects demo access, including existing demo sessions.
+ * Explicit DEMO_MODE="true" enables the provider, including in production.
+ * Disabling it also rejects existing demo sessions.
  */
 const DEFAULT_DEMO_EMAIL = "demo@aetherdental.ph";
 const demoEmail = (process.env.DEMO_EMAIL || DEFAULT_DEMO_EMAIL).toLowerCase();
