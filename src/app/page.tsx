@@ -87,7 +87,7 @@ const BOOKING_STEPS = [
   { title: "Choose a service", copy: "Pick a treatment from clear, fixed prices." },
   { title: "Select your dentist", copy: "Choose who you\u2019d like to see." },
   { title: "Pick a date & time", copy: "Real available slots, updated live." },
-  { title: "Get instant confirmation", copy: "Confirmation lands in your email right away." },
+  { title: "Send your request", copy: "Clinic staff will review and confirm your appointment." },
 ];
 
 const BENEFITS: { icon: LucideIcon; title: string; copy: string }[] = [
@@ -108,8 +108,8 @@ const BENEFITS: { icon: LucideIcon; title: string; copy: string }[] = [
   },
   {
     icon: MailCheck,
-    title: "Instant email confirmation",
-    copy: "The moment you book, a confirmation is sent straight to your inbox.",
+    title: "Appointment updates",
+    copy: "Receive a request receipt by email, followed by confirmation from clinic staff.",
   },
   {
     icon: HeartHandshake,
@@ -133,7 +133,7 @@ const CARE_PHILOSOPHIES = [
 const TESTIMONIALS = [
   {
     quote:
-      "Booked online after clinic hours and got my confirmation right away. The cleaning was quick and gentle — no waiting around at all.",
+      "Booked online after clinic hours and the clinic confirmed my request. The cleaning was quick and gentle — no waiting around at all.",
     name: "Anna R.",
     service: "Dental Cleaning",
   },
@@ -164,7 +164,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How do I book or cancel an appointment?",
-    a: "Booking takes about two minutes: choose a service, pick a dentist, then select a real available date and time. You\u2019ll receive an email confirmation instantly. Need to move or cancel? Contact the clinic by phone or email and we\u2019ll sort it out before your scheduled visit.",
+    a: "Booking takes about two minutes: choose a service, pick a dentist, then select a real available date and time. Your request stays pending until clinic staff confirm it. Need to move or cancel? Contact the clinic by phone or email and we\u2019ll sort it out before your scheduled visit.",
   },
   {
     q: "Do you accept HMO or other insurance?",
@@ -184,7 +184,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does online booking work?",
-    a: "You choose a service and dentist, then pick an available date and time from the calendar. Your appointment is confirmed instantly by email — you never have to call to book.",
+    a: "You choose a service and dentist, then pick an available date and time from the calendar. Clinic staff review your request and send confirmation by email.",
   },
 ];
 
@@ -353,7 +353,7 @@ export default async function HomePage() {
                 Your best smile starts with one easy booking.
               </h1>
               <p className="mt-4 max-w-xl text-lg leading-[1.65] text-text-secondary">
-                Choose your service, pick a dentist and a time that works, and get an instant confirmation. No phone
+                Choose your service, pick a dentist and a time that works, and send your appointment request. No phone
                 calls. No waiting.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -559,7 +559,7 @@ export default async function HomePage() {
             <h2 id="cta-heading" className="home-display home-display-lg text-text">
               Book your visit in under 2 minutes
             </h2>
-            <p className="mt-3 text-text-secondary">Confirmation sent instantly · No phone required</p>
+            <p className="mt-3 text-text-secondary">Confirmed by clinic staff · Request online</p>
             <Link
               href="/book"
               className="gradient-gold mt-8 inline-block rounded-control px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
@@ -862,7 +862,7 @@ function BookingPreview({
           Continue booking
         </Link>
       </div>
-      <p className="mt-4 text-center text-xs text-text-muted">Confirmation sent instantly · No phone required</p>
+      <p className="mt-4 text-center text-xs text-text-muted">Confirmed by clinic staff · Request online</p>
     </div>
   );
 }
