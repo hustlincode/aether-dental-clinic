@@ -121,7 +121,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                 // `min-h-11` is the 44px default contract (--control-height-md,
                 // WCAG 2.5.5); `px-3 py-2 text-sm` alone renders 38px.
                 className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
-                placeholder="you@clinic.com"
+                placeholder="example@clinic.com"
               />
             </div>
             <div>
