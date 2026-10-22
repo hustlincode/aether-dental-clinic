@@ -47,7 +47,7 @@ export function clinicHour(instant: Date = new Date()): number {
     new Intl.DateTimeFormat("en-US", {
       timeZone: CLINIC_TZ,
       hour: "2-digit",
-      hour12: false,
+      hourCycle: "h23",
     }).format(instant),
   );
 }
