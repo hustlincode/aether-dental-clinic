@@ -35,6 +35,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
       const res = await signIn("credentials", { redirect: false, email, password });
       if (res?.error) {
         setError("Invalid email or password.");
+        document.getElementById("login-email")?.focus();
         toast.error("Invalid credentials. Please try again.");
       } else {
         goToDashboard();
@@ -98,13 +99,16 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
           <p className="mt-1 text-sm text-text-muted">Access your clinic dashboard.</p>
 
           {error && (
-            <div className="mt-4 rounded-control border border-error/20 bg-error-bg px-3 py-2 text-sm text-error">{error}</div>
+            <div id="login-error" role="alert" className="mt-4 rounded-control border border-error/20 bg-error-bg px-3 py-2 text-sm text-error">{error}</div>
           )}
 
           <div className="mt-5 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-text">Email</label>
+              <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-text">Email</label>
               <input
+                id="login-email"
+                aria-describedby={error ? "login-error" : undefined}
+                aria-invalid={!!error}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -121,8 +125,11 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-text">Password</label>
+              <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-text">Password</label>
               <input
+                id="login-password"
+                aria-describedby={error ? "login-error" : undefined}
+                aria-invalid={!!error}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
