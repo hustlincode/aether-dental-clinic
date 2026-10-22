@@ -152,17 +152,20 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      if (value === searchFilter) return;
       setParams((p) => (p.search === value ? p : { ...p, search: value, page: 1 }));
       beginLoad();
     }, SEARCH_DEBOUNCE_MS);
   }
 
   function handleStatusChange(value: string) {
+    if (value === statusFilter) return;
     setParams((p) => ({ ...p, status: value, page: 1 }));
     beginLoad();
   }
 
   function handleDatePresetChange(value: "all" | "today") {
+    if (value === datePreset) return;
     setDatePreset(value);
     setParams((p) => ({ ...p, page: 1 }));
     beginLoad();
@@ -174,7 +177,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
   }
 
   function goToPage(p: number) {
-    if (p < 1 || (pagination && p > pagination.totalPages)) return;
+    if (p === page || p < 1 || (pagination && p > pagination.totalPages)) return;
     setParams((cur) => (cur.page === p ? cur : { ...cur, page: p }));
     beginLoad();
   }
@@ -338,6 +341,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             type="search"
+            aria-label="Search appointments"
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search patient name, email, or phone..."
@@ -522,15 +526,15 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
 
 function StatusActions({ status, role, onChange }: { status: string; role: string; onChange: (s: string) => void }) {
   const next: Record<string, string[]> = {
-    PENDING: ["CONFIRMED", "CANCELLED"],
-    CONFIRMED: ["CHECKED_IN", "CANCELLED"],
-    CHECKED_IN: ["COMPLETED", "NO_SHOW"],
+    PENDING: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+    CONFIRMED: ["CHECKED_IN", "CANCELLED", "NO_SHOW"],
+    CHECKED_IN: ["COMPLETED", "CANCELLED", "NO_SHOW"],
     COMPLETED: [],
     CANCELLED: [],
     NO_SHOW: [],
   };
 
-  const actions = (next[status] || []).slice(0, role === "DENTIST" ? 1 : 2);
+  const actions = (next[status] || []).filter((action) => role !== "DENTIST" || action !== "CANCELLED");
 
   if (actions.length === 0) return <span className="text-xs text-text-muted">—</span>;
 
