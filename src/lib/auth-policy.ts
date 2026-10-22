@@ -2,7 +2,7 @@ import type { JWT } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
 
 export function isDemoEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.NODE_ENV !== "production" && env.DEMO_MODE === "true";
+  return env.DEMO_MODE === "true";
 }
 
 export function isDemoEmail(email: string | null | undefined): boolean {
