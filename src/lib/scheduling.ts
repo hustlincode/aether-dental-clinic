@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
-import type { Service } from "@prisma/client";
+import type { Prisma, Service } from "@prisma/client";
+import { isFutureSlot, isValidTime } from "@/lib/appointment-rules";
+type ScheduleClient = Pick<Prisma.TransactionClient, "appointment" | "dentist" | "clinicSetting" | "blockedDate">;
 
 export interface Slot {
   start: string; // "HH:mm" 24h
@@ -27,20 +29,11 @@ function toMinutesOrNull(v: string | null): number | null {
   return v != null ? toMinutes(v) : null;
 }
 
-function isDateTodayUtc(date: Date): boolean {
-  const today = new Date();
-  return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  );
-}
-
 /**
  * Returns the appointments for a dentist on a given date keyed by their occupied interval (in minutes).
  */
-async function getOccupiedSlots(dentistId: string, date: Date, excludeId?: string) {
-  const appointments = await prisma.appointment.findMany({
+async function getOccupiedSlots(dentistId: string, date: Date, excludeId?: string, client: ScheduleClient = prisma) {
+  const appointments = await client.appointment.findMany({
     where: {
       dentistId,
       appointmentDate: date,
@@ -72,19 +65,19 @@ interface AvailabilityContext {
   }[];
 }
 
-async function getContext(dentistId: string, date: Date): Promise<AvailabilityContext | null> {
+async function getContext(dentistId: string, date: Date, client: ScheduleClient): Promise<AvailabilityContext | null> {
   const [dentist, clinic] = await Promise.all([
-    prisma.dentist.findUnique({
+    client.dentist.findUnique({
       where: { id: dentistId },
       include: { availability: true },
     }),
-    prisma.clinicSetting.findUnique({ where: { id: "singleton" } }),
+    client.clinicSetting.findUnique({ where: { id: "singleton" } }),
   ]);
 
   if (!dentist || dentist.status !== "ACTIVE") return null;
   if (!clinic) return null;
 
-  const dayKey = DAY_KEYS[date.getDay()];
+  const dayKey = DAY_KEYS[date.getUTCDay()];
   const dayOfWeek = FULL_DAY[dayKey];
 
   const dayAvail = dentist.availability.find((a) => a.dayOfWeek === dayOfWeek);
@@ -101,13 +94,9 @@ async function getContext(dentistId: string, date: Date): Promise<AvailabilityCo
   };
 }
 
-/**
- * Formats a Date as a local-timezone "YYYY-MM-DD" key. Used for date keys in
- * availability results so they match the calendar dates a user in any timezone
- * actually sees (toISOString() would shift the day in UTC+ timezones).
- */
+/** Dates stored by @db.Date are UTC-midnight calendar values. */
 function fmtDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return d.toISOString().slice(0, 10);
 }
 
 interface SlotWindow {
@@ -117,6 +106,8 @@ interface SlotWindow {
   dayClose: number;
   breakStart: number | null;
   breakEnd: number | null;
+  clinicBreakStart: number | null;
+  clinicBreakEnd: number | null;
   occupied: { start: number; end: number }[];
   duration: number;
   date: Date;
@@ -127,34 +118,22 @@ interface SlotWindow {
  * Windows are already minute-values; occupied is minute intervals.
  */
 function generateSlots(opts: SlotWindow): Slot[] {
-  const { clinicOpen, clinicClose, dayOpen, dayClose, breakStart, breakEnd, occupied, duration, date } = opts;
-  const open = Math.max(clinicOpen, dayOpen);
-  const close = Math.min(clinicClose, dayClose);
-
+  const { clinicOpen, clinicClose, dayOpen, dayClose, occupied, duration, date } = opts;
+  if (!Number.isInteger(duration) || duration <= 0 || duration >= 1440) return [];
+  const open = Math.max(clinicOpen, dayOpen, 0);
+  const close = Math.min(clinicClose, dayClose, 1439);
+  const breaks = [
+    { start: opts.breakStart, end: opts.breakEnd },
+    { start: opts.clinicBreakStart, end: opts.clinicBreakEnd },
+  ];
   const slots: Slot[] = [];
-  let t = open;
-  while (t + duration <= close) {
-    // Skip break window
-    if (breakStart && breakEnd && t < breakEnd && t + duration > breakStart) {
-      t = Math.max(t + 1, breakEnd);
-      continue;
-    }
-    // Skip if overlaps any occupied appointment
-    const overlaps = occupied.some((o) => t < o.end && t + duration > o.start);
-    if (!overlaps && !isInPastToday(date, t, duration)) {
-      slots.push({ start: toHHMM(t), end: toHHMM(t + duration) });
-    }
-    t += 1; // 1-minute granularity to catch all durations; dedupe below
+  for (let t = Math.ceil(open / 30) * 30; t + duration <= close; t += 30) {
+    if (breaks.some((b) => b.start !== null && b.end !== null && t < b.end && t + duration > b.start)) continue;
+    if (occupied.some((o) => t < o.end && t + duration > o.start)) continue;
+    const start = toHHMM(t);
+    if (isFutureSlot(date, start)) slots.push({ start, end: toHHMM(t + duration) });
   }
-
-  // Deduplicate overlapping slot starts (in case of 1-min iteration producing duplicate starts)
-  const unique = new Map<string, Slot>();
-  for (const s of slots) {
-    if (!unique.has(s.start)) unique.set(s.start, s);
-  }
-  return Array.from(unique.values())
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .filter((s) => s.start.endsWith(":00") || s.start.endsWith(":30"));
+  return slots;
 }
 
 /**
@@ -165,42 +144,38 @@ export async function getAvailableSlots(
   dentistId: string,
   service: Pick<Service, "id" | "durationMin">,
   date: Date,
-  excludeId?: string
+  excludeId?: string,
+  client: ScheduleClient = prisma
 ): Promise<Slot[] | null> {
-  const ctx = await getContext(dentistId, date);
+  const ctx = await getContext(dentistId, date, client);
   if (!ctx) return null;
 
-  const dayKey = DAY_KEYS[date.getDay()];
+  const dayKey = DAY_KEYS[date.getUTCDay()];
   const dayOfWeek = FULL_DAY[dayKey];
   const dayAvail = ctx.dentistAvailability.find((a) => a.dayOfWeek === dayOfWeek);
   if (!dayAvail || !dayAvail.isWorking) return null;
 
   // Blocked dates check
-  const blocked = await prisma.blockedDate.findFirst({
+  const blocked = await client.blockedDate.findFirst({
     where: { date, OR: [{ dentistId }, { dentistId: null }] },
   });
   if (blocked) return null;
 
-  const occupied = await getOccupiedSlots(dentistId, date, excludeId);
+  const occupied = await getOccupiedSlots(dentistId, date, excludeId, client);
 
   return generateSlots({
     clinicOpen: toMinutes(ctx.clinic.openingTime),
     clinicClose: toMinutes(ctx.clinic.closingTime),
     dayOpen: toMinutes(dayAvail.startTime),
     dayClose: toMinutes(dayAvail.endTime),
-    breakStart: dayAvail.breakStart != null ? toMinutes(dayAvail.breakStart) : toMinutesOrNull(ctx.clinic.lunchBreakStart),
-    breakEnd: dayAvail.breakEnd != null ? toMinutes(dayAvail.breakEnd) : toMinutesOrNull(ctx.clinic.lunchBreakEnd),
+    breakStart: toMinutesOrNull(dayAvail.breakStart),
+    breakEnd: toMinutesOrNull(dayAvail.breakEnd),
+    clinicBreakStart: toMinutesOrNull(ctx.clinic.lunchBreakStart),
+    clinicBreakEnd: toMinutesOrNull(ctx.clinic.lunchBreakEnd),
     occupied,
     duration: service.durationMin,
     date,
   });
-}
-
-function isInPastToday(date: Date, startMin: number, duration: number): boolean {
-  if (!isDateTodayUtc(date)) return false;
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return startMin + duration <= nowMin;
 }
 
 /**
@@ -212,24 +187,13 @@ export async function isSlotAvailable(
   startTime: string,
   endTime: string,
   appointmentDate: Date,
-  excludeId?: string
+  excludeId?: string,
+  client: ScheduleClient = prisma
 ): Promise<boolean> {
-  const conflicting = await prisma.appointment.findFirst({
-    where: {
-      dentistId,
-      appointmentDate,
-      id: excludeId ? { not: excludeId } : undefined,
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
-      // Times are stored as zero-padded "HH:mm", so string comparison is chronological.
-      OR: [
-        { startTime: { lte: startTime }, endTime: { gt: startTime } },
-        { startTime: { lt: endTime }, endTime: { gte: endTime } },
-        { startTime: { gte: startTime }, endTime: { lte: endTime } },
-      ],
-    },
-  });
-
-  return !conflicting;
+  if (!isValidTime(startTime) || !isValidTime(endTime) || endTime <= startTime) return false;
+  const durationMin = toMinutes(endTime) - toMinutes(startTime);
+  const slots = await getAvailableSlots(dentistId, { id: "", durationMin }, appointmentDate, excludeId, client);
+  return slots?.some((slot) => slot.start === startTime && slot.end === endTime) ?? false;
 }
 
 /**
@@ -249,8 +213,8 @@ export async function getAvailableDates(
   const available: string[] = [];
 
   const endDate = new Date(startDate);
-  endDate.setHours(23, 59, 59, 999);
-  endDate.setDate(startDate.getDate() + daysAhead - 1);
+  endDate.setUTCHours(23, 59, 59, 999);
+  endDate.setUTCDate(startDate.getUTCDate() + daysAhead - 1);
 
   const dentist = await prisma.dentist.findUnique({
     where: { id: dentistId },
@@ -287,11 +251,11 @@ export async function getAvailableDates(
 
   for (let i = 0; i < daysAhead; i++) {
     const d = new Date(startDate);
-    d.setDate(startDate.getDate() + i);
+    d.setUTCDate(startDate.getUTCDate() + i);
     const key = fmtDateKey(d);
     if (blockedSet.has(key)) continue;
 
-    const dayOfWeek = FULL_DAY[DAY_KEYS[d.getDay()]];
+    const dayOfWeek = FULL_DAY[DAY_KEYS[d.getUTCDay()]];
     const dayAvail = dentist.availability.find((a) => a.dayOfWeek === dayOfWeek);
     if (!dayAvail || !dayAvail.isWorking) continue;
 
@@ -300,8 +264,10 @@ export async function getAvailableDates(
       clinicClose: toMinutes(clinic.closingTime),
       dayOpen: toMinutes(dayAvail.startTime),
       dayClose: toMinutes(dayAvail.endTime),
-      breakStart: dayAvail.breakStart != null ? toMinutes(dayAvail.breakStart) : toMinutesOrNull(clinic.lunchBreakStart),
-      breakEnd: dayAvail.breakEnd != null ? toMinutes(dayAvail.breakEnd) : toMinutesOrNull(clinic.lunchBreakEnd),
+      breakStart: toMinutesOrNull(dayAvail.breakStart),
+      breakEnd: toMinutesOrNull(dayAvail.breakEnd),
+      clinicBreakStart: toMinutesOrNull(clinic.lunchBreakStart),
+      clinicBreakEnd: toMinutesOrNull(clinic.lunchBreakEnd),
       occupied: byDay.get(key) ?? [],
       duration: service.durationMin,
       date: d,
