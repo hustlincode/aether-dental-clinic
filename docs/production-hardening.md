@@ -25,14 +25,18 @@ installation with `npx prisma generate`.
 
 ## Production configuration
 
-Passwordless demo access is always disabled when `NODE_ENV=production`, even if
-`DEMO_MODE=true`. In development it requires explicit `DEMO_MODE=true`. Set
-`DEMO_MODE=false` in production as well. Existing demo sessions are rejected.
+Passwordless demo access requires explicit `DEMO_MODE=true`, including in
+production. For the portfolio showcase, add it to Vercel's Production environment
+variables and redeploy to display "Explore the demo dashboard". Demo sessions
+remain read-only. Use only seeded showcase data: visitors can read dashboard
+records. Set `DEMO_MODE=false` before storing real patient data; existing demo
+sessions are then rejected.
 Staff sessions refresh account activity and permissions on every session read.
 
 Use a dedicated PostgreSQL runtime account, a strong `NEXTAUTH_SECRET`, TLS, and
 configured SMTP with `EMAIL_PREVIEW_MODE=false`. Verify the deployed login page
-has no demo button and direct demo-provider sign-in cannot create a session.
+matches the chosen demo setting. When disabled, the demo button must be absent
+and direct demo-provider sign-in must not create a session.
 Never point test commands at the application database.
 
 Booking writes use serializable transactions with bounded retries across app
@@ -62,8 +66,8 @@ templates and bounds public recipient inputs, but this does not eliminate the
 need to resolve the mail-library advisories.
 
 The deployed environment, real SMTP delivery, and manual screen-reader behavior
-were not verified. Production demo blocking was exercised in the production
-build and browser tests; existing JWT demotion and deactivation were also verified
+were not verified. Demo blocking with `DEMO_MODE=false` was exercised in the
+production build and browser tests; existing JWT demotion and deactivation were also verified
 against the running production server. Verify the same behavior after deployment. Local Prisma
 client regeneration encountered a Windows engine DLL lock; a clean CI/install
 must regenerate the client before deployment.
