@@ -44,6 +44,7 @@ interface BookingResult {
   date: string;
   time: string;
   status: string;
+  email?: { ok: boolean; status: string };
 }
 
 type Step = "service" | "dentist" | "date" | "time" | "info" | "review" | "success";
@@ -77,6 +78,12 @@ export default function BookPage() {
 
   const [step, setStep] = useState<Step>("service");
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [initialError, setInitialError] = useState("");
+  const [initialRetry, setInitialRetry] = useState(0);
+  const [datesError, setDatesError] = useState("");
+  const [datesRetry, setDatesRetry] = useState(0);
+  const [slotsError, setSlotsError] = useState("");
+  const [slotsRetry, setSlotsRetry] = useState(0);
 
   // selections
   const [services, setServices] = useState<Service[]>([]);
@@ -118,21 +125,30 @@ export default function BookPage() {
   });
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoadingInitial(true);
+      setInitialError("");
       try {
         const [svcRes, dentRes] = await Promise.all([
-          fetch("/api/services").then((r) => r.json()),
-          fetch("/api/dentists").then((r) => r.json()),
+          fetch("/api/services"), fetch("/api/dentists"),
         ]);
-        setServices(svcRes.data || []);
-        setDentists(dentRes.data || []);
+        const [svcBody, dentBody] = await Promise.all([svcRes.json(), dentRes.json()]);
+        if (!svcRes.ok || !dentRes.ok) throw new Error("Unable to load booking options. Please try again.");
+        if (!cancelled) {
+          setServices(svcBody.data || []);
+          setDentists(dentBody.data || []);
+        }
       } catch {
-        toast.error("Unable to load booking options. Please try again.");
+        if (!cancelled) setInitialError("Unable to load booking options. Please try again.");
       } finally {
-        setLoadingInitial(false);
+        if (!cancelled) setLoadingInitial(false);
       }
-    })();
-  }, []);
+    }, 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [initialRetry]);
+
+  useEffect(() => { document.getElementById("booking-heading")?.focus(); }, [step]);
 
   const selectedDentist = useMemo(
     () => (dentist ? dentists.find((d) => d.id === dentist.id) || dentist : null),
@@ -146,27 +162,29 @@ export default function BookPage() {
     // Defer the state resets (established pattern for react-hooks/set-state-in-effect)
     const timer = setTimeout(() => {
       setLoadingDates(true);
+      setDatesError("");
       setAvailableDates([]);
       setDate(null);
       setSlots([]);
       setTime(null);
+      fetch(`/api/availability/dates?dentistId=${dentist.id}&serviceId=${service.id}&daysAhead=45`)
+        .then(async (r) => {
+          const res = await r.json();
+          if (!r.ok) throw new Error(res.message || "Unable to load available dates.");
+          if (!cancelled) setAvailableDates(res.data || []);
+        })
+        .catch(() => {
+          if (!cancelled) setDatesError("Unable to load available dates. Please try again.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingDates(false);
+        });
     }, 0);
-    fetch(`/api/availability/dates?dentistId=${dentist.id}&serviceId=${service.id}&daysAhead=45`)
-      .then(async (r) => {
-        const res = await r.json();
-        if (!cancelled) setAvailableDates(res.data || []);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Unable to load available dates.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingDates(false);
-      });
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [dentist, service]);
+  }, [dentist, service, datesRetry]);
 
   // Fetch slots when date changes
   useEffect(() => {
@@ -174,25 +192,27 @@ export default function BookPage() {
     let cancelled = false;
     const timer = setTimeout(() => {
       setLoadingSlots(true);
+      setSlotsError("");
       setSlots([]);
       setTime(null);
+      fetch(`/api/availability/slots?dentistId=${dentist.id}&serviceId=${service.id}&date=${date}`)
+        .then(async (r) => {
+          const res = await r.json();
+          if (!r.ok) throw new Error(res.message || "Unable to load time slots.");
+          if (!cancelled) setSlots(res.data || []);
+        })
+        .catch(() => {
+          if (!cancelled) setSlotsError("Unable to load time slots. Please try again.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingSlots(false);
+        });
     }, 0);
-    fetch(`/api/availability/slots?dentistId=${dentist.id}&serviceId=${service.id}&date=${date}`)
-      .then(async (r) => {
-        const res = await r.json();
-        if (!cancelled) setSlots(res.data || []);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Unable to load time slots.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingSlots(false);
-      });
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [dentist, service, date]);
+  }, [dentist, service, date, slotsRetry]);
 
   // Calendar helpers
   const calDays = useMemo(() => {
@@ -237,7 +257,9 @@ export default function BookPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Please provide a valid email.";
     if (phone.replace(/\D/g, "").length < 7) e.phone = "Please provide a valid phone number.";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    const firstInvalid = Object.keys(e)[0];
+    if (firstInvalid) requestAnimationFrame(() => document.getElementById(`booking-${firstInvalid}`)?.focus());
+    return !firstInvalid;
   };
 
   const goReview = () => {
@@ -279,7 +301,7 @@ export default function BookPage() {
         toast.error(body.message || "Unable to book the appointment.");
         return;
       }
-      setResult(body.data.subject);
+      setResult({ ...body.data.subject, email: body.data.email });
       setStep("success");
     } catch {
       toast.error("Unable to book the appointment. Please try again.");
@@ -301,6 +323,10 @@ export default function BookPage() {
     setPhone("");
     setNotes("");
     setResult(null);
+    setConsentAccepted(false);
+    setConsentSignature("");
+    setConsentAt(null);
+    setErrors({});
   };
 
   // ------------------------- RENDER -------------------------
@@ -326,9 +352,9 @@ export default function BookPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-text">Book an Appointment</h1>
+        <h1 id="booking-heading" tabIndex={-1} className="text-2xl font-bold text-text">Book an Appointment</h1>
         <p className="mt-1 text-sm text-text-muted">
-          {step === "success" ? "Your appointment is confirmed." : "Complete the steps below to schedule your visit."}
+          {step === "success" ? "Your appointment request is pending clinic confirmation." : "Complete the steps below to schedule your visit."}
         </p>
 
         {step !== "success" && <StepIndicator step={step} />}
@@ -336,10 +362,14 @@ export default function BookPage() {
         <div className="mt-6">
           {loadingInitial ? (
             <LoadingBlock />
+          ) : initialError ? (
+            <BookingError message={initialError} onRetry={() => setInitialRetry((n) => n + 1)} />
           ) : step === "service" ? (
             <SelectService services={services} onSelect={(s) => { setService(s); setStep("dentist"); }} />
           ) : step === "dentist" ? (
             <SelectDentist dentists={dentists} service={service} onSelect={(d) => { setDentist(d); setStep("date"); }} onBack={() => setStep("service")} />
+          ) : step === "date" && datesError ? (
+            <BookingError message={datesError} onRetry={() => setDatesRetry((n) => n + 1)} />
           ) : step === "date" ? (
             <SelectDate
               monthLabel={monthLabel}
@@ -350,6 +380,8 @@ export default function BookPage() {
               loading={loadingDates}
               onBack={() => setStep("dentist")}
             />
+          ) : step === "time" && slotsError ? (
+            <BookingError message={slotsError} onRetry={() => setSlotsRetry((n) => n + 1)} />
           ) : step === "time" ? (
             <SelectTime slots={slots} loading={loadingSlots} selected={time?.start} onSelect={(s) => { setTime(s); setStep("info"); }} onBack={() => { setStep("date"); }} />
           ) : step === "info" ? (
@@ -682,14 +714,15 @@ function PatientInfo({
       <p className="mb-3 mt-4 text-sm font-medium text-text-secondary">Your information</p>
       <div className="space-y-4 rounded-card border border-border bg-surface p-5 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="First name" value={values.firstName} onChange={(v) => onChange("firstName", v)} error={errors.firstName} placeholder="John" />
-          <Field label="Last name" value={values.lastName} onChange={(v) => onChange("lastName", v)} error={errors.lastName} placeholder="Doe" />
+          <Field id="booking-firstName" label="First name" value={values.firstName} onChange={(v) => onChange("firstName", v)} error={errors.firstName} placeholder="John" />
+          <Field id="booking-lastName" label="Last name" value={values.lastName} onChange={(v) => onChange("lastName", v)} error={errors.lastName} placeholder="Doe" />
         </div>
-        <Field label="Email" type="email" value={values.email} onChange={(v) => onChange("email", v)} error={errors.email} placeholder="you@example.com" />
-        <Field label="Phone number" value={values.phone} onChange={(v) => onChange("phone", v)} error={errors.phone} placeholder="0917 123 4567" />
+        <Field id="booking-email" label="Email" type="email" value={values.email} onChange={(v) => onChange("email", v)} error={errors.email} placeholder="you@example.com" />
+        <Field id="booking-phone" label="Phone number" value={values.phone} onChange={(v) => onChange("phone", v)} error={errors.phone} placeholder="0917 123 4567" />
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Notes (optional)</label>
+          <label htmlFor="booking-notes" className="mb-1 block text-sm font-medium text-text-secondary">Notes (optional)</label>
           <textarea
+            id="booking-notes"
             value={values.notes}
             onChange={(e) => onChange("notes", e.target.value)}
             rows={3}
@@ -765,8 +798,9 @@ function PatientInfo({
 }
 
 function Field({
-  label, value, onChange, error, placeholder, type = "text",
+  id, label, value, onChange, error, placeholder, type = "text",
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -776,8 +810,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-text-secondary">{label}</label>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-text-secondary">{label}</label>
       <input
+        id={id}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
+        autoComplete={id === "booking-firstName" ? "given-name" : id === "booking-lastName" ? "family-name" : id === "booking-email" ? "email" : "tel"}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -788,7 +826,7 @@ function Field({
             : "border-border focus:border-accent"
         } focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40`}
       />
-      {error && <p className="mt-1 text-xs text-error">{error}</p>}
+      {error && <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-error">{error}</p>}
     </div>
   );
 }
@@ -852,9 +890,11 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-pill bg-success-bg text-3xl text-success">
         ✓
       </div>
-      <h2 className="mt-4 text-xl font-bold text-text">Appointment Booked!</h2>
+      <h2 className="mt-4 text-xl font-bold text-text">Appointment Request Received</h2>
       <p className="mt-1 text-sm text-text-muted">
-        A confirmation email has been sent to <span className="font-medium text-text">{result.patientEmail || "your email"}</span>.
+        {result.email?.ok && result.email.status === "SENT"
+          ? "We emailed your request details to the address you provided. Your appointment is pending clinic confirmation."
+          : "Your request is saved, but an email could not be sent. Keep your reference number and contact the clinic for confirmation."}
       </p>
 
       <div className="mt-6 rounded-card border border-border-accent bg-accent-soft p-4 text-left">
@@ -904,6 +944,7 @@ function PrivacyConsentModal({
   const handleAccept = () => {
     if (!checked || !signatureMatches) {
       setAttempted(true);
+      if (checked) document.getElementById("privacy-signature")?.focus();
       return;
     }
     onAccept(signature.trim());
@@ -1001,11 +1042,14 @@ function PrivacyConsentModal({
             </label>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">
+              <label htmlFor="privacy-signature" className="mb-1 block text-xs font-medium text-text-secondary">
                 Electronic signature — type your full name
               </label>
               <input
                 type="text"
+                id="privacy-signature"
+                aria-invalid={attempted && checked && !signatureMatches}
+                aria-describedby={attempted && checked && !signatureMatches ? "privacy-signature-error" : undefined}
                 value={signature}
                 onChange={(e) => setSignature(e.target.value)}
                 placeholder={fullName || "e.g. John Doe"}
@@ -1020,7 +1064,7 @@ function PrivacyConsentModal({
               <p className="text-xs text-error">Please read and check the consent box to continue.</p>
             )}
             {attempted && checked && !signatureMatches && (
-              <p className="text-xs text-error">
+              <p id="privacy-signature-error" role="alert" className="text-xs text-error">
                 {fullName
                   ? `Your signature must match your full name (${fullName}).`
                   : "Please enter your full name in the form above first."}
@@ -1069,6 +1113,15 @@ function EmptyState({ title, message, icon }: { title: string; message: string; 
       <div className="text-4xl">{icon}</div>
       <h3 className="mt-3 text-lg font-semibold text-text">{title}</h3>
       <p className="mt-1 max-w-xs text-sm text-text-muted">{message}</p>
+    </div>
+  );
+}
+
+function BookingError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="rounded-card border border-error/20 bg-error-bg p-5 text-sm text-text">
+      <p>{message}</p>
+      <Button type="button" variant="outline" onClick={onRetry} className="mt-3">Try again</Button>
     </div>
   );
 }
