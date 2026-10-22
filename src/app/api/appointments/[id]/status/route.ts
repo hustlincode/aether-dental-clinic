@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppointmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { AppointmentError, appointmentTransaction } from "@/lib/appointment-transaction";
+import { canTransition } from "@/lib/appointment-rules";
+import { isSlotAvailable } from "@/lib/scheduling";
 import { requireWriteAuth } from "@/lib/api";
 import { sendAppointmentEmail } from "@/lib/email";
 import {
@@ -13,7 +15,7 @@ import {
 
 const statusSchema = z.object({
   status: z.nativeEnum(AppointmentStatus),
-  notes: z.string().optional(),
+  notes: z.string().max(4000).optional(),
 });
 
 // PATCH /api/appointments/[id]/status
@@ -27,45 +29,39 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = statusSchema.parse(await req.json());
     const { status, notes } = body;
 
-    const existing = await prisma.appointment.findUnique({
-      where: { id },
-      include: { patient: true, dentist: true, service: true },
-    });
-    if (!existing) {
-      return NextResponse.json({ success: false, message: "Appointment not found." }, { status: 404 });
-    }
-
-    // Role scoping
-    if (user.role === "DENTIST") {
-      const assigned = await prisma.dentist.findFirst({ where: { email: user.email } });
-      if (!assigned || assigned.id !== existing.dentistId) {
-        return NextResponse.json({ success: false, message: "You do not have permission to update this appointment." }, { status: 403 });
+    const { updated, changed } = await appointmentTransaction(async (tx) => {
+      const existing = await tx.appointment.findUnique({
+        where: { id }, include: { patient: true, dentist: true, service: true },
+      });
+      if (!existing) throw new AppointmentError("Appointment not found.", 404);
+      if (user.role === "DENTIST") {
+        const assigned = await tx.dentist.findFirst({ where: { email: user.email } });
+        if (!assigned || assigned.id !== existing.dentistId || !["CHECKED_IN", "COMPLETED", "NO_SHOW", "CONFIRMED"].includes(status)) {
+          throw new AppointmentError("You do not have permission to perform this action.", 403);
+        }
       }
-      // Dentists can only set clinical statuses
-      if (["CHECKED_IN", "COMPLETED", "NO_SHOW", "CONFIRMED"].includes(status) === false) {
-        return NextResponse.json({ success: false, message: "You do not have permission to perform this action." }, { status: 403 });
+      if (!canTransition(existing.status, status)) throw new AppointmentError("This appointment status transition is not allowed.");
+      // Retries repeat no side effects; notes-only edits use the appointment PATCH endpoint.
+      if (existing.status === status) return { updated: existing, changed: false };
+      if (status === "CONFIRMED") {
+        if (existing.service.status !== "ACTIVE" || !await isSlotAvailable(existing.dentistId, existing.startTime, existing.endTime, existing.appointmentDate, id, tx)) {
+          throw new AppointmentError("This appointment no longer fits the available schedule.");
+        }
       }
-    }
-
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: {
-        status,
-        ...(notes !== undefined ? { notes } : {}),
-      },
-      include: { patient: true, dentist: true, service: true },
-    });
-
-    // Log activity
-    await prisma.activity.create({
-      data: {
+      const updated = await tx.appointment.update({
+        where: { id }, data: { status, ...(notes !== undefined ? { notes } : {}) },
+        include: { patient: true, dentist: true, service: true },
+      });
+      await tx.activity.create({ data: {
         action: `Appointment ${status.toLowerCase().replace("_", " ")}`,
-        entity: "Appointment",
-        entityId: updated.id,
+        entity: "Appointment", entityId: updated.id,
         description: `${user.name} marked appointment ${updated.referenceNumber} as ${status.replace("_", " ")}`,
         userId: user.id,
-      },
+      } });
+      return { updated, changed: true };
     });
+    if (!changed) return NextResponse.json({ success: true, data: updated, email: null });
+    const existing = updated;
 
     // In-app notifications (role-aware; never allowed to fail the status update).
     try {
@@ -87,6 +83,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         dentistName: existing.dentist.name,
         date: fmtDate(existing.appointmentDate),
         time: fmtTime(existing.startTime),
+      }).catch((error) => {
+        console.error("Appointment status email failed:", error);
+        return { ok: false, status: "FAILED" };
       });
     }
     if (status === "CONFIRMED" && existing.patient?.email) {
@@ -97,11 +96,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         dentistName: existing.dentist.name,
         date: fmtDate(existing.appointmentDate),
         time: fmtTime(existing.startTime),
+      }).catch((error) => {
+        console.error("Appointment status email failed:", error);
+        return { ok: false, status: "FAILED" };
       });
     }
 
     return NextResponse.json({ success: true, data: updated, email: emailResult });
   } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json({ success: false, message: "Invalid request body." }, { status: 400 });
+    }
+    if (err instanceof AppointmentError) {
+      return NextResponse.json({ success: false, message: err.message }, { status: err.status });
+    }
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, message: "Invalid status value." }, { status: 422 });
     }
