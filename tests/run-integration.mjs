@@ -20,6 +20,7 @@ const env = { ...process.env, DATABASE_URL: target, DIRECT_URL: target, TEST_DAT
 for (const args of [
   ["node_modules/prisma/build/index.js", "db", "push", "--skip-generate"],
   ["--import", "tsx", "--test", "tests/integration/booking.test.ts"],
+  ["--import", "tsx", "--test", "tests/integration/configuration.test.ts"],
 ]) {
   const result = spawnSync(process.execPath, args, { env, stdio: "inherit" });
   if (result.error) throw result.error;
