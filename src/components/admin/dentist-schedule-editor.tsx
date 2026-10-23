@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ErrorState } from "@/components/admin/error-state";
 import { SectionCard } from "@/components/admin/section-card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -80,9 +81,6 @@ function toMinutes(hhmm: string): number {
 }
 
 // ─── Shared input style ──────────────────────────────────────────────────────
-
-const timeInputClass =
-  "h-auto w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 dark:bg-surface-alt aria-invalid:border-error";
 
 // ─── Weekly Schedule Editor ──────────────────────────────────────────────────
 
@@ -268,10 +266,11 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
                 {/* Day row */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="lg"
                       onClick={() => updateRow(index, { isWorking: !row.isWorking })}
-                      className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-2.5 text-sm font-medium transition hover:border-border-accent"
                       aria-pressed={row.isWorking}
                       aria-label={`${DAY_LABELS[row.dayOfWeek]} ${row.isWorking ? "working" : "not working"}`}
                     >
@@ -283,7 +282,7 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
                       <span className={row.isWorking ? "text-success" : "text-text-muted"}>
                         {row.isWorking ? "Working" : "Off"}
                       </span>
-                    </button>
+                    </Button>
                     <span className="font-medium text-text">{DAY_LABELS[row.dayOfWeek]}</span>
                   </div>
                 </div>
@@ -293,41 +292,41 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <label className="block">
                       <span className="mb-1 block text-xs font-medium text-text-secondary">Start</span>
-                      <input
+                      <Input
                         type="time"
                         value={row.startTime}
                         onChange={(e) => updateRow(index, { startTime: e.target.value })}
-                        className={timeInputClass}
+                        className="bg-surface-alt"
                         aria-label={`${DAY_LABELS[row.dayOfWeek]} start time`}
                       />
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-xs font-medium text-text-secondary">End</span>
-                      <input
+                      <Input
                         type="time"
                         value={row.endTime}
                         onChange={(e) => updateRow(index, { endTime: e.target.value })}
-                        className={timeInputClass}
+                        className="bg-surface-alt"
                         aria-label={`${DAY_LABELS[row.dayOfWeek]} end time`}
                       />
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-xs font-medium text-text-secondary">Break start</span>
-                      <input
+                      <Input
                         type="time"
                         value={row.breakStart}
                         onChange={(e) => updateRow(index, { breakStart: e.target.value })}
-                        className={timeInputClass}
+                        className="bg-surface-alt"
                         aria-label={`${DAY_LABELS[row.dayOfWeek]} break start`}
                       />
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-xs font-medium text-text-secondary">Break end</span>
-                      <input
+                      <Input
                         type="time"
                         value={row.breakEnd}
                         onChange={(e) => updateRow(index, { breakEnd: e.target.value })}
-                        className={timeInputClass}
+                        className="bg-surface-alt"
                         aria-label={`${DAY_LABELS[row.dayOfWeek]} break end`}
                       />
                     </label>

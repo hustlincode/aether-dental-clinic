@@ -9,6 +9,7 @@ import type { NotificationItem } from "./notification-bell";
 import { SectionCard } from "./section-card";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
+import { Button } from "@/components/ui/button";
 
 const PAGE_SIZE = 20;
 
@@ -138,43 +139,51 @@ export function NotificationsHistory() {
       {/* Toolbar */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1 rounded-control border border-border bg-surface p-1">
-          <button
+          <Button
+            type="button"
+            size="default"
+            variant={filter === "all" ? "secondary" : "ghost"}
             onClick={() => changeFilter("all")}
             aria-pressed={filter === "all"}
-            className={`inline-flex h-10 items-center rounded-chip px-3 text-sm font-medium transition-colors ${filter === "all" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
           >
             All
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            size="default"
+            variant={filter === "unread" ? "secondary" : "ghost"}
             onClick={() => changeFilter("unread")}
             aria-pressed={filter === "unread"}
-            className={`inline-flex h-10 items-center gap-1.5 rounded-chip px-3 text-sm font-medium transition-colors ${filter === "unread" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
           >
             Unread
             {unreadCount > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold text-white">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold text-destructive-foreground">
                 {unreadCount}
               </span>
             )}
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="default"
             onClick={refresh}
-            className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="default"
             onClick={markAllRead}
             disabled={unreadCount === 0}
-            className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCheck className="h-4 w-4" />
             Mark all as read
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -269,7 +278,7 @@ export function NotificationsHistory() {
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
                           className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
-                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                            item === page ? "bg-primary text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
                           }`}
                         >
                           {item}
@@ -287,7 +296,7 @@ export function NotificationsHistory() {
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
                           className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
-                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                            item === page ? "bg-primary text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
                           }`}
                         >
                           {item}

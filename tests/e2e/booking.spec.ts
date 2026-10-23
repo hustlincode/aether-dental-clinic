@@ -62,3 +62,18 @@ test("login inputs have accessible names and demo is hidden when disabled", asyn
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /demo/i })).toHaveCount(0);
 });
+
+test("mobile patient pages retain navigation and show every booking step", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bookingOptions(page);
+  await page.goto("/book");
+  await expect(page.getByRole("link", { name: "Privacy Policy", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Staff login", exact: true })).toBeVisible();
+  const progress = page.locator('[aria-label="Booking progress"]');
+  for (const label of ["Service", "Dentist", "Date", "Time", "Details", "Review"]) {
+    await expect(progress.getByText(label, { exact: false })).toBeVisible();
+  }
+  await page.goto("/privacy-policy");
+  await expect(page.getByRole("link", { name: "Book an appointment", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Staff login", exact: true })).toBeVisible();
+});

@@ -35,16 +35,16 @@ export function SectionCard({
       {hasHeader && (
         <header
           className={cn(
-            "flex flex-col gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between",
+            "flex flex-col gap-2 border-b border-border px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between",
             headerClassName,
           )}
         >
           <div className="min-w-0">
             {title && (
-              <h2 className="text-sm font-semibold text-text">{title}</h2>
+              <h2 className="text-label text-text">{title}</h2>
             )}
             {description && (
-              <p className="mt-0.5 text-xs text-text-muted">{description}</p>
+              <p className="mt-0.5 text-caption text-text-muted">{description}</p>
             )}
           </div>
           {actions && (
@@ -54,9 +54,9 @@ export function SectionCard({
           )}
         </header>
       )}
-      <div className={cn(padded && "p-5", bodyClassName)}>{children}</div>
+      <div className={cn(padded && "p-4", bodyClassName)}>{children}</div>
       {footer && (
-        <footer className="border-t border-border px-5 py-3">{footer}</footer>
+        <footer className="border-t border-border px-4 py-3">{footer}</footer>
       )}
     </section>
   );

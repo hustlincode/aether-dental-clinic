@@ -2,21 +2,21 @@
   <title id="title">Aether Dental</title>
   <desc id="desc">Book your dental appointment online — Aether Dental, Taguig, Metro Manila</desc>
   <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#D4AF37"/>
-      <stop offset="100%" stop-color="#E6C76B"/>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E4E4E7"/>
+      <stop offset="100%" stop-color="#D4D4D8"/>
     </linearGradient>
     <radialGradient id="glow1" cx="0" cy="0" r="1">
-      <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#A1A1AA" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#A1A1AA" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="glow2" cx="0" cy="0" r="1">
-      <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#71717A" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#71717A" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="#0E0F10"/>
+  <rect width="1200" height="630" fill="#1B1B1F"/>
 
   <circle cx="140" cy="60" r="360" fill="url(#glow1)"/>
   <circle cx="1120" cy="620" r="420" fill="url(#glow2)"/>
@@ -27,9 +27,9 @@
     <circle cx="600" cy="300" r="340"/>
   </g>
 
-  <text x="600" y="300" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="104" font-weight="bold" fill="url(#gold)">Aether Dental</text>
+  <text x="600" y="300" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="104" font-weight="700" letter-spacing="-3" fill="url(#ink)">Aether Dental</text>
 
-  <rect x="520" y="336" width="160" height="5" rx="2.5" fill="url(#gold)"/>
+  <rect x="520" y="336" width="160" height="5" rx="2.5" fill="#71717A"/>
 
   <text x="600" y="405" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="#D1D5DB">Book your dental appointment online</text>
 

@@ -301,8 +301,9 @@ const PAIRS = [
   ["--accent-ink-hover", "--background", 4.5, "gold hover text on page background"],
   ["--accent-ink-hover", "--surface", 4.5, "gold hover text on card"],
   ["--accent-ink-hover", "--surface-alt", 4.5, "gold hover text on alt surface"],
-  ["--primary-foreground", "--accent", 4.5, "label on gold button"],
-  ["--primary-foreground", "--accent-hover", 4.5, "label on gold button (hover)"],
+  ["--primary-foreground", "--accent", 4.5, "label on primary button"],
+  ["--primary-foreground", "--accent-hover", 4.5, "label on primary button (hover)"],
+  ["--destructive-foreground", "--destructive", 4.5, "label on destructive button"],
   ["--sidebar-text", "--sidebar-bg", 4.5, "sidebar nav text on sidebar bg"],
   ["--sidebar-text", "--sidebar-surface", 4.5, "sidebar nav text on sidebar surface"],
   ["--sidebar-text-muted", "--sidebar-bg", 4.5, "sidebar nav label on sidebar bg"],
@@ -337,6 +338,11 @@ const PAIRS = [
   ["--chart-3", "--chart-surface", 3, "chart series 3 stroke"],
   ["--chart-4", "--chart-surface", 3, "chart series 4 stroke"],
   ["--chart-5", "--chart-surface", 3, "chart series 5 stroke"],
+  ["--chart-status-pending", "--chart-surface", 3, "pending status chart slice"],
+  ["--info", "--chart-surface", 3, "confirmed/checked-in status chart slice"],
+  ["--success", "--chart-surface", 3, "completed status chart slice"],
+  ["--error", "--chart-surface", 3, "cancelled status chart slice"],
+  ["--chart-status-neutral", "--chart-surface", 3, "no-show status chart slice"],
   ["--chart-axis", "--chart-surface", 4.5, "chart axis ticks (text)"],
 ];
 

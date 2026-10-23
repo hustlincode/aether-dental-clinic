@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Logo } from "@/components/brand/logo";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -333,27 +335,25 @@ export default function BookPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-surface border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
-            <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
-            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/privacy-policy" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
-              Privacy Policy
-            </Link>
-            <Link href="/login" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
-              Staff login
-            </Link>
-            <ThemeToggle />
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:py-4">
+          <Logo href="/" priority markClassName="h-8 w-8" wordmarkClassName="text-base sm:text-lg" />
+          <div className="flex w-full items-center gap-1 sm:w-auto sm:gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/privacy-policy">Privacy Policy</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">Staff login</Link>
+            </Button>
+            <ThemeToggle className="ml-auto sm:ml-0" />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 id="booking-heading" tabIndex={-1} className="text-2xl font-bold text-text">Book an Appointment</h1>
-        <p className="mt-1 text-sm text-text-muted">
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+        <p className="font-mono text-eyebrow uppercase text-text-muted">Online booking</p>
+        <h1 id="booking-heading" tabIndex={-1} className="mt-2 text-title-lg font-semibold text-text">Book an Appointment</h1>
+        <p className="mt-2 text-body-sm text-text-muted">
           {step === "success" ? "Your appointment request is pending clinic confirmation." : "Complete the steps below to schedule your visit."}
         </p>
 
@@ -465,16 +465,16 @@ function StepIndicator({ step }: { step: Step }) {
   const current = order.indexOf(step);
 
   return (
-    <div className="mt-6 flex items-center gap-1 overflow-x-auto">
+    <div className="mt-6 grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-1" aria-label="Booking progress">
       {labels.map((l, i) => {
         const done = i < current;
         const active = i === current;
         return (
-          <div key={l.key} className="flex items-center gap-1">
+          <div key={l.key} className="min-w-0 sm:flex sm:items-center sm:gap-1" aria-current={active ? "step" : undefined}>
             <div
-              className={`flex items-center gap-2 rounded-pill px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-(--dur-slow) ${
+              className={`flex items-center justify-center gap-2 rounded-control px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors duration-(--dur-fast) sm:justify-start ${
                 active
-                  ? "bg-accent-fill text-[#0E0F10]"
+                  ? "bg-primary text-primary-foreground"
                   : done
                     ? "bg-accent-soft text-accent"
                     : "bg-surface text-text-muted border border-border"
@@ -483,7 +483,7 @@ function StepIndicator({ step }: { step: Step }) {
               <span>{done ? "✓" : i + 1}</span>
               {l.label}
             </div>
-            {i < labels.length - 1 && <div className="h-px w-4 bg-border" />}
+            {i < labels.length - 1 && <div className="hidden h-px w-3 bg-border sm:block" />}
           </div>
         );
       })}
@@ -520,14 +520,14 @@ function SelectService({ services, onSelect }: { services: Service[]; onSelect: 
           key={s.id}
           onClick={() => onSelect(s)}
           style={{ animationDelay: `${i * 60}ms` }}
-          className="animate-slide-up flex w-full items-center justify-between rounded-card border border-border bg-surface p-4 text-left shadow-sm transition-all duration-(--dur-fast) hover:border-border-accent hover:shadow-lg"
+          className="animate-slide-up flex w-full items-center justify-between rounded-card border border-border bg-surface p-4 text-left shadow-xs transition-[border-color,box-shadow,transform] duration-(--dur-fast) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md"
         >
           <div>
             <div className="font-semibold text-text">{s.name}</div>
             {s.description && <div className="mt-0.5 text-sm text-text-secondary">{s.description}</div>}
             <div className="mt-1 text-xs text-text-muted">Duration: {s.durationMin} min</div>
           </div>
-          <div className="ml-4 text-right">
+          <div className="ml-4 shrink-0 whitespace-nowrap text-right">
             <div className="font-bold text-accent">{peso(s.price)}</div>
             <div className="mt-1 text-xs font-medium text-text-muted">Select →</div>
           </div>
@@ -556,7 +556,7 @@ function SelectDentist({ dentists, service, onSelect, onBack }: { dentists: Dent
             <button
               key={d.id}
               onClick={() => onSelect(d)}
-              className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-sm transition-all duration-(--dur-fast) hover:border-border-accent hover:shadow-lg"
+              className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-xs transition-[border-color,box-shadow,transform] duration-(--dur-fast) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill bg-accent-soft text-lg font-bold text-accent">
                 {d.name.replace(/^Dr\.?\s*/, "").charAt(0)}
@@ -639,7 +639,7 @@ function SelectDate({
                   onClick={() => selectDate(d)}
                   className={`aspect-square rounded-control text-sm font-medium transition-all duration-(--dur-fast) ${
                     avail
-                      ? "bg-accent-fill text-[#0E0F10] hover:bg-accent-fill-hover"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "text-text-muted"
                   }`}
                 >
@@ -676,7 +676,7 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
               onClick={() => onSelect(s)}
               className={`inline-flex min-h-11 items-center justify-center rounded-control border text-sm font-medium transition-all duration-(--dur-fast) ${
                 selected === s.start
-                  ? "border-accent bg-accent-fill text-[#0E0F10]"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-surface text-text-secondary hover:border-border-accent hover:text-accent"
               }`}
             >
@@ -721,12 +721,12 @@ function PatientInfo({
         <Field id="booking-phone" label="Phone number" value={values.phone} onChange={(v) => onChange("phone", v)} error={errors.phone} placeholder="0917 123 4567" />
         <div>
           <label htmlFor="booking-notes" className="mb-1 block text-sm font-medium text-text-secondary">Notes (optional)</label>
-          <textarea
+          <Textarea
             id="booking-notes"
             value={values.notes}
             onChange={(e) => onChange("notes", e.target.value)}
             rows={3}
-            className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+            className="bg-surface-alt"
             placeholder="Any concerns or preferences..."
           />
         </div>
@@ -735,7 +735,7 @@ function PatientInfo({
       {consentAccepted ? (
         <div className="mt-4 rounded-card border border-border-accent bg-success-bg p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-success text-sm text-white">✓</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill border border-success/25 text-sm text-success" aria-hidden>✓</div>
             <div className="text-sm">
               <div className="font-semibold text-text">Data privacy consent recorded</div>
               <p className="mt-1 text-text-secondary">
@@ -772,7 +772,7 @@ function PatientInfo({
               )}
               <button
                 onClick={onOpenConsent}
-                className="mt-2 inline-flex min-h-10 items-center rounded-control border border-accent bg-accent-soft px-3 text-xs font-semibold text-accent transition-colors duration-(--dur-fast) hover:bg-accent-fill hover:text-[#0E0F10]"
+                className="mt-2 inline-flex min-h-10 items-center rounded-control border border-border-strong bg-surface-alt px-3 text-xs font-semibold text-text transition-colors duration-(--dur-fast) hover:bg-primary hover:text-primary-foreground"
               >
                 Review privacy policy &amp; give consent
               </button>
@@ -781,13 +781,14 @@ function PatientInfo({
         </div>
       )}
 
-      <button
+      <Button
         onClick={onContinue}
         disabled={!consentAccepted}
-        className="gradient-gold mt-4 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        size="lg"
+        className="mt-4 w-full"
       >
         Continue to review
-      </button>
+      </Button>
       {!consentAccepted && (
         <p className="mt-2 text-center text-xs text-text-muted">
           Please review and accept the privacy policy to continue.
@@ -811,7 +812,7 @@ function Field({
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-text-secondary">{label}</label>
-      <input
+      <Input
         id={id}
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-error` : undefined}
@@ -820,11 +821,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full min-h-11 rounded-control border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) ${
-          error
-            ? "border-error focus:border-error"
-            : "border-border focus:border-accent"
-        } focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40`}
+        className="bg-surface-alt"
       />
       {error && <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-error">{error}</p>}
     </div>
@@ -859,13 +856,15 @@ function Review({
           <Row label="Duration" value={`${service.durationMin} minutes`} />
           <Row label="Price" value={peso(service.price)} />
         </dl>
-        <button
+        <Button
           onClick={submit}
           disabled={submitting}
-          className="gradient-gold mt-5 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90 disabled:opacity-60"
+          aria-busy={submitting}
+          size="lg"
+          className="mt-5 w-full"
         >
           {submitting ? "Booking..." : "Confirm booking"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -911,9 +910,9 @@ function SuccessScreen({ result, onReset }: { result: BookingResult; onReset: ()
         <Row label="Status" value="Pending confirmation" />
       </dl>
 
-      <button onClick={onReset} className="gradient-gold mt-6 w-full rounded-control py-3 font-semibold text-[#0E0F10] shadow-sm transition-all duration-(--dur-fast) hover:opacity-90">
+      <Button onClick={onReset} size="lg" className="mt-6 w-full">
         Book another appointment
-      </button>
+      </Button>
       <Link href="/" className="mt-3 block text-sm font-medium text-accent transition-colors duration-(--dur-fast) hover:text-accent-hover">
         Return home
       </Link>
@@ -954,7 +953,7 @@ function PrivacyConsentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-card border border-border-accent bg-surface p-0 shadow-xl sm:max-w-lg"
+        className="flex max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg flex-col gap-0 overflow-hidden border-border-strong p-0 sm:max-w-lg"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <DialogTitle className="text-base font-bold text-text">
@@ -1033,7 +1032,7 @@ function PrivacyConsentModal({
                 type="checkbox"
                 checked={checked}
                 onChange={(e) => setChecked(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#E4B90F]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
               />
               <span>
                 I have read and understood the privacy policy and give my consent to the collection and processing of
@@ -1045,7 +1044,7 @@ function PrivacyConsentModal({
               <label htmlFor="privacy-signature" className="mb-1 block text-xs font-medium text-text-secondary">
                 Electronic signature — type your full name
               </label>
-              <input
+              <Input
                 type="text"
                 id="privacy-signature"
                 aria-invalid={attempted && checked && !signatureMatches}
@@ -1053,7 +1052,7 @@ function PrivacyConsentModal({
                 value={signature}
                 onChange={(e) => setSignature(e.target.value)}
                 placeholder={fullName || "e.g. John Doe"}
-                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-colors duration-(--dur-fast) focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+                className="bg-surface-alt"
               />
               <p className="mt-1 text-xs text-text-muted">
                 Your typed full name acts as your electronic signature and will be recorded with the date and time of consent.

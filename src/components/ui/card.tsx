@@ -6,10 +6,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        // `gap-(--card-gap)` is the density token (1.5rem == the `gap-6` this
-        // shipped before P3); `shadow-sm` resolves to the --shadow-sm token and
-        // `rounded-card` to 0.75rem via @theme inline.
-        "flex flex-col gap-(--card-gap) rounded-card border bg-card py-6 text-card-foreground shadow-sm",
+        "flex flex-col gap-(--card-gap) rounded-card border border-border bg-card py-5 text-card-foreground shadow-xs",
         className
       )}
       {...props}
@@ -22,7 +19,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-5",
         className
       )}
       {...props}
@@ -67,7 +64,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-6", className)}
+      className={cn("px-5", className)}
       {...props}
     />
   )
@@ -77,7 +74,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+      className={cn("flex items-center px-5 [.border-t]:pt-5", className)}
       {...props}
     />
   )

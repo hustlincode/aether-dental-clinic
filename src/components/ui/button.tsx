@@ -6,7 +6,7 @@ import { Slot } from "radix-ui"
 /** Destructive styling. `danger` is the readable alias; `destructive` is kept
  *  so existing call sites and any future shadcn `add` keep working. */
 const destructiveStyles =
-  "bg-destructive text-destructive-foreground hover:bg-destructive/90 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+  "bg-destructive text-destructive-foreground hover:bg-destructive/90 dark:focus-visible:ring-destructive/40"
 
 /* Focus idiom (P3.4). The *accessible* indicator is the global
    `:focus-visible { outline: 2px solid var(--focus-ring) }` in globals.css — a
@@ -49,13 +49,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-accent-fill text-primary-foreground hover:bg-accent-fill-hover active:bg-accent-fill",
+        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:translate-y-px active:bg-primary/85",
         destructive: destructiveStyles,
         danger: destructiveStyles,
-        outline: "border border-border bg-surface hover:bg-accent-surface hover:text-accent",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent-surface hover:text-accent",
-        link: "text-accent underline-offset-4 hover:text-accent-hover hover:underline",
+        outline: "border border-border-strong bg-surface shadow-xs hover:bg-accent-surface hover:text-foreground active:translate-y-px",
+        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 active:translate-y-px",
+        ghost: "hover:bg-accent-surface hover:text-foreground active:bg-accent-surface/80",
+        link: "text-foreground underline-offset-4 hover:text-accent-hover hover:underline",
       },
       size: {
         xs: "h-7 gap-1.5 px-2.5 text-caption leading-none after:-inset-y-0.5 has-[>svg]:px-2 [&_svg:not([class*='size-'])]:size-3.5",

@@ -52,7 +52,7 @@ export function Logo({
       <span className={cn("flex flex-col leading-tight", variant === "stacked" && "items-center")}>
         <span className={cn("text-lg font-semibold", wordmarkClassName)}>
           <span>Aether </span>
-          <span className="text-accent">Dental</span>
+          <span className="text-text-secondary">Dental</span>
         </span>
         {showTagline && (
           <span className={cn("mt-0.5 text-xs text-text-muted", taglineClassName)}>

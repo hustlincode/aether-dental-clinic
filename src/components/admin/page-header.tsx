@@ -31,16 +31,13 @@ export function PageHeader({
         {eyebrow && (
           // Mono micro-label, same idiom as StatCard's label and the homepage
           // `.home-eyebrow`. `text-eyebrow` carries size/tracking/weight.
-          <p className="font-mono text-eyebrow uppercase text-accent">
+          <p className="mb-1 font-mono text-eyebrow uppercase text-text-muted">
             {eyebrow}
           </p>
         )}
-        {/* Left on `text-2xl font-bold tracking-tight`: `text-title-lg` is the
-            same 1.5rem size but a different weight/leading, which would shift
-            every admin page header's vertical rhythm. Not required by P3. */}
-        <h1 className="text-2xl font-bold tracking-tight text-text">{title}</h1>
+        <h1 className="text-title-lg text-text">{title}</h1>
         {description && (
-          <p className="mt-1 max-w-2xl text-sm text-text-secondary">{description}</p>
+          <p className="mt-1 max-w-2xl text-body-sm text-text-secondary">{description}</p>
         )}
       </div>
       {actions && (

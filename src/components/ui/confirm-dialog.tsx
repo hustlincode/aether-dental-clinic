@@ -45,7 +45,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className={
               destructive
-                ? "bg-error text-white hover:bg-error/90 focus-visible:ring-error/40"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-error/40"
                 : undefined
             }
           >

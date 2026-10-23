@@ -7,6 +7,7 @@ import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./dat
 import { StatusBadge } from "./status-badge";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import type { StatTone } from "@/components/admin/stat-card";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -163,16 +164,18 @@ export function PatientDetails({
       <SheetContent side="right" showCloseButton={false} className="w-full max-w-md gap-0 border-l border-border-strong bg-surface p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <SheetTitle className="text-lg font-bold text-text">Patient Details</SheetTitle>
+          <SheetTitle className="text-title-sm text-text">Patient Details</SheetTitle>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 onClick={onClose}
-                className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text"
                 aria-label="Close patient details"
               >
                 <X size={18} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>Close</TooltipContent>
           </Tooltip>
@@ -203,19 +206,22 @@ export function PatientDetails({
               </div>
               <h3 className="mt-4 text-base font-semibold text-text">Unable to load patient</h3>
               <p className="mt-1 max-w-sm text-sm text-text-muted">{error}</p>
-              <button
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
                 onClick={retry}
-                className="mt-4 inline-flex h-11 items-center gap-2 rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+                className="mt-4"
               >
                 <RefreshCw className="h-4 w-4" />
                 Try Again
-              </button>
+              </Button>
             </div>
           ) : data && patient && stats ? (
             <>
               {/* Patient header */}
               <div className="flex items-center gap-3">
-                <div className="gradient-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-sm font-bold text-primary-foreground">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill bg-primary text-sm font-bold text-primary-foreground">
                   {initials(patient.firstName, patient.lastName)}
                 </div>
                 <div className="min-w-0">

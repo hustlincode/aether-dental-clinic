@@ -227,7 +227,7 @@ export function PatientsManager({ role }: { role: string }) {
             className="flex items-center gap-3 text-left"
             title="View patient details"
           >
-            <span className="gradient-gold flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-xs font-bold text-primary-foreground">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-primary text-xs font-bold text-primary-foreground">
               {initials(patient.firstName, patient.lastName)}
             </span>
             <span className="min-w-0">

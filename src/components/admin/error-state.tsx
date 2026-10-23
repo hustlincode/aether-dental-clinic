@@ -1,5 +1,6 @@
 import { AlertTriangle, RefreshCw, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
 
 export interface ErrorStateProps {
   title?: string;
@@ -33,14 +34,16 @@ export function ErrorState({
       <h3 className="mt-3 text-sm font-semibold text-text">{title}</h3>
       {message && <p className="mt-1 max-w-sm text-sm text-text-secondary">{message}</p>}
       {onRetry && (
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="lg"
           onClick={onRetry}
-          className="mt-4 inline-flex h-11 items-center gap-2 rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+          className="mt-4"
         >
           <RefreshCw size={14} aria-hidden />
           {retryLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -143,16 +143,10 @@ export function AdminSidebar({
                     collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
                   } ${
                     active
-                      ? "bg-accent-soft font-semibold text-accent"
+                      ? "bg-primary font-semibold text-primary-foreground shadow-sm"
                       : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text"
                   }`}
                 >
-                  {active && !collapsed && (
-                    <span
-                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-pill bg-accent-fill"
-                      aria-hidden
-                    />
-                  )}
                   <Icon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
                   {!collapsed && <span className="truncate text-sm">{item.label}</span>}
                 </Link>
@@ -180,7 +174,7 @@ export function AdminSidebar({
         <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : ""}`}>
           {!collapsed && (
             <div className="flex min-w-0 items-center gap-2 max-md:hidden">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-accent-fill text-sm font-bold text-primary-foreground">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-primary text-sm font-bold text-primary-foreground">
                 {initial}
               </div>
               <div className="min-w-0">

@@ -6,6 +6,8 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -151,26 +153,28 @@ function ServiceModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
-        <div className="flex items-center justify-between mb-5">
-          <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
+      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] max-w-md gap-4 sm:max-w-md">
+        <div className="mb-2 flex items-center justify-between">
+          <DialogTitle className="text-title-sm text-text">{title}</DialogTitle>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary">
+            <label htmlFor="service-name" className="mb-1 block text-sm font-medium text-text-secondary">
               Service Name <span className="text-error">*</span>
             </label>
-            <input
+            <Input
+              id="service-name"
               ref={nameRef}
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+              aria-invalid={Boolean(errors.name)}
+              className="bg-surface-alt"
               placeholder="e.g. Dental Cleaning"
             />
             {errors.name && <p className="mt-1 text-xs text-error">{errors.name}</p>}
@@ -178,12 +182,13 @@ function ServiceModal({
 
           {/* Description */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary">Description</label>
-            <textarea
+            <label htmlFor="service-description" className="mb-1 block text-sm font-medium text-text-secondary">Description</label>
+            <Textarea
+              id="service-description"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
-              className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 resize-none"
+              className="min-h-20 resize-none bg-surface-alt"
               placeholder="Brief description of the service (optional)"
             />
           </div>
@@ -191,31 +196,35 @@ function ServiceModal({
           {/* Duration + Price row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-text-secondary">
+              <label htmlFor="service-duration" className="mb-1 block text-sm font-medium text-text-secondary">
                 Duration (min) <span className="text-error">*</span>
               </label>
-              <input
+              <Input
+                id="service-duration"
                 type="number"
                 min={1}
                 max={600}
                 value={form.durationMin}
                 onChange={(e) => setForm((f) => ({ ...f, durationMin: e.target.value }))}
-                className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+                aria-invalid={Boolean(errors.durationMin)}
+                className="bg-surface-alt"
                 placeholder="30"
               />
               {errors.durationMin && <p className="mt-1 text-xs text-error">{errors.durationMin}</p>}
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-text-secondary">
-                Price (â‚±) <span className="text-error">*</span>
+              <label htmlFor="service-price" className="mb-1 block text-sm font-medium text-text-secondary">
+                Price (₱) <span className="text-error">*</span>
               </label>
-              <input
+              <Input
+                id="service-price"
                 type="number"
                 min={0}
                 step="0.01"
                 value={form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                className="w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+                aria-invalid={Boolean(errors.price)}
+                className="bg-surface-alt"
                 placeholder="0.00"
               />
               {errors.price && <p className="mt-1 text-xs text-error">{errors.price}</p>}
@@ -226,10 +235,12 @@ function ServiceModal({
           <div>
             <label className="mb-1 block text-sm font-medium text-text-secondary">Status</label>
             <div className="flex items-center gap-3">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="lg"
                 onClick={() => setForm((f) => ({ ...f, status: f.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" }))}
-                className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-3 text-sm font-medium transition hover:border-border-accent"
+                aria-pressed={form.status === "ACTIVE"}
               >
                 {form.status === "ACTIVE" ? (
                   <ToggleRight size={20} className="text-success" />
@@ -239,12 +250,12 @@ function ServiceModal({
                 <span className={form.status === "ACTIVE" ? "text-success" : "text-text-muted"}>
                   {form.status === "ACTIVE" ? "Active" : "Inactive"}
                 </span>
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="ghost" size="default" onClick={onClose}>
               Cancel
             </Button>

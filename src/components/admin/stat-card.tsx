@@ -63,7 +63,7 @@ export function StatCard({
         href={href}
         aria-label={`View ${label}`}
         className={cn(
-          "card-surface card-surface-hover block p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+          "card-surface card-surface-hover block p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           className,
         )}
       >
@@ -72,5 +72,5 @@ export function StatCard({
     );
   }
 
-  return <div className={cn("card-surface card-surface-hover p-5", className)}>{inner}</div>;
+  return <div className={cn("card-surface card-surface-hover p-4", className)}>{inner}</div>;
 }

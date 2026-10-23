@@ -353,7 +353,7 @@ export function CalendarView() {
                     <span
                       className={cn(
                         "flex h-6 w-6 items-center justify-center rounded-pill text-xs font-semibold sm:h-7 sm:w-7",
-                        isToday ? "bg-accent-fill text-primary-foreground" : "text-text-secondary",
+                        isToday ? "bg-primary text-primary-foreground" : "text-text-secondary",
                       )}
                     >
                       {day}
@@ -394,7 +394,7 @@ export function CalendarView() {
                     {/* Dot indicator (mobile) */}
                     {items.length > 0 && (
                       <span className="mt-auto flex justify-center pb-0.5 sm:hidden" aria-hidden>
-                        <span className="h-1.5 w-1.5 rounded-pill bg-accent-fill" />
+                        <span className="h-1.5 w-1.5 rounded-pill bg-primary" />
                       </span>
                     )}
                   </button>

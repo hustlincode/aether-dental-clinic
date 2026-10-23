@@ -69,11 +69,10 @@ function applyServerErrors(form: UseFormReturn<PatientFormValues>, details: unkn
 
 // â”€â”€â”€ Shared field styling (keeps the previous visual design) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const inputClass =
-  "min-h-11 w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 aria-invalid:border-border aria-invalid:ring-0 dark:bg-surface-alt";
+const inputClass = "bg-surface-alt shadow-none aria-invalid:border-error";
 
 const textareaClass =
-  "field-sizing-fixed min-h-0 w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder:text-text-muted shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 aria-invalid:border-border aria-invalid:ring-0 resize-none dark:bg-surface-alt";
+  "field-sizing-fixed min-h-20 resize-none bg-surface-alt shadow-none aria-invalid:border-error";
 
 const labelClass = "block text-text-secondary data-[error=true]:text-text-secondary";
 
@@ -136,12 +135,12 @@ export function PatientFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
-        <div className="flex items-center justify-between mb-5">
-          <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
+      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] max-w-md gap-4 sm:max-w-md">
+        <div className="mb-2 flex items-center justify-between">
+          <DialogTitle className="text-title-sm text-text">{title}</DialogTitle>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <Form {...form}>
@@ -259,10 +258,12 @@ export function PatientFormModal({
                   <FormItem className="gap-1">
                     <FormLabel className={labelClass}>Status</FormLabel>
                     <FormControl>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="lg"
                         onClick={() => field.onChange(field.value === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                        className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface-alt px-3 text-sm font-medium transition hover:border-border-accent"
+                        aria-pressed={field.value === "ACTIVE"}
                       >
                         {field.value === "ACTIVE" ? (
                           <ToggleRight size={20} className="text-success" />
@@ -272,7 +273,7 @@ export function PatientFormModal({
                         <span className={field.value === "ACTIVE" ? "text-success" : "text-text-muted"}>
                           {field.value === "ACTIVE" ? "Active" : "Inactive"}
                         </span>
-                      </button>
+                      </Button>
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
@@ -281,7 +282,7 @@ export function PatientFormModal({
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
               <Button type="button" variant="ghost" size="default" onClick={onClose}>
                 Cancel
               </Button>

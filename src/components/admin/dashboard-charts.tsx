@@ -31,24 +31,22 @@ export interface StatusSlice {
 interface ChartPalette {
   /** Five series slots, in `--chart-1 … --chart-5` order. */
   series: string[];
+  /** Status colors stay semantic even when trend charts are monochrome. */
+  status: string[];
   /** Axis tick / label ink — a text token, so it owes 4.5:1, not 3:1. */
   axis: string;
   /** Gridlines. Decorative, therefore exempt from WCAG 1.4.11. */
   grid: string;
 }
 
-/** Status → series slot. One pair shares a slot by necessity: six statuses,
- *  five slots. CONFIRMED + CHECKED_IN are the "active" pair and share a slot
- *  exactly as they shared the gold accent before P4. Every other status maps
- *  to the hue it already wore, and the hues differ by lightness as well as
- *  hue in both themes. See `--chart-*` in globals.css. */
+/** Confirmed and checked-in appointments share the existing blue status slot. */
 const STATUS_COLOR_SLOT: Record<string, number> = {
-  PENDING: 0, // chart-1 — amber/gold: attention
-  CONFIRMED: 1, // chart-2 — blue
-  CHECKED_IN: 1, // chart-2 — shares with CONFIRMED (semantically adjacent)
-  COMPLETED: 2, // chart-3 — green
-  CANCELLED: 3, // chart-4 — red
-  NO_SHOW: 4, // chart-5 — grey
+  PENDING: 0,
+  CONFIRMED: 1,
+  CHECKED_IN: 1,
+  COMPLETED: 2,
+  CANCELLED: 3,
+  NO_SHOW: 4,
 };
 const DEFAULT_SLOT = 4;
 
@@ -67,10 +65,11 @@ function readChartPalette(): ChartPalette | null {
   const styles = getComputedStyle(document.documentElement);
   const read = (name: string) => styles.getPropertyValue(name).trim();
   const series = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"].map(read);
+  const status = ["--chart-status-pending", "--info", "--success", "--error", "--chart-status-neutral"].map(read);
   const axis = read("--chart-axis");
   const grid = read("--chart-grid");
-  if (series.some((color) => color === "") || axis === "" || grid === "") return null;
-  return { series, axis, grid };
+  if ([...series, ...status].some((color) => color === "") || axis === "" || grid === "") return null;
+  return { series, status, axis, grid };
 }
 
 // Module-level cache so the snapshot stays referentially stable between renders
@@ -157,7 +156,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
   const totalAppointments = status.reduce((sum, s) => sum + s.value, 0);
   const hasDailyData = daily.some((d) => d.count > 0);
   const hasStatusData = status.some((s) => s.value > 0);
-  const slotColor = (name: string) => palette?.series[STATUS_COLOR_SLOT[name] ?? DEFAULT_SLOT];
+  const slotColor = (name: string) => palette?.status[STATUS_COLOR_SLOT[name] ?? DEFAULT_SLOT];
   const chartReady = palette !== null;
 
   /* Custom sector shape → per-slice hover: enlarges the hovered slice and
@@ -201,10 +200,10 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
 
   return (
     <section aria-label="Analytics">
-      <h2 className="text-lg font-semibold text-text">Analytics</h2>
-      <div className="mt-3 grid items-stretch gap-6 lg:grid-cols-2">
+      <h2 className="text-title-sm text-text">Analytics</h2>
+      <div className="mt-3 grid items-stretch gap-4 lg:grid-cols-2">
         {/* Weekly appointments trend */}
-        <div className="card-surface p-5">
+        <div className="card-surface p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-secondary">Weekly Appointments</h3>
             <span className="text-xs text-text-muted">Last 7 days</span>
@@ -262,7 +261,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
         </div>
 
         {/* Appointment status breakdown */}
-        <div className="card-surface p-5">
+        <div className="card-surface p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-secondary">Status Breakdown</h3>
             <span className="text-xs text-text-muted">{totalAppointments} total</span>

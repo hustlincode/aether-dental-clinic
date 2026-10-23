@@ -5,6 +5,7 @@ import { CalendarPlus, CalendarX, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 
@@ -24,9 +25,6 @@ function formatDay(value: string): string {
     year: "numeric",
   });
 }
-
-const inputClass =
-  "h-auto w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40";
 
 export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
   const [dates, setDates] = useState<BlockedDate[]>([]);
@@ -152,14 +150,17 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
                     <p className="font-medium text-text">{formatDay(item.date)}</p>
                     {item.reason && <p className="mt-0.5 text-xs text-text-muted">{item.reason}</p>}
                   </div>
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="default"
                     onClick={() => setPendingRemove(item)}
-                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition hover:border-error/40 hover:bg-error-bg hover:text-error"
+                    className="shrink-0 text-error hover:bg-error-bg hover:text-error"
                     aria-label={`Remove blocked date for ${formatDay(item.date)}`}
                   >
                     <Trash2 size={14} />
                     Remove
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -176,23 +177,23 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
         <form onSubmit={handleAdd} className="space-y-4 p-5">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-text-secondary">Date</span>
-            <input
+            <Input
               type="date"
               value={date}
               min={today}
               onChange={(e) => setDate(e.target.value)}
-              className={inputClass}
+              className="bg-surface-alt"
             />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-text-secondary">Reason (optional)</span>
-            <input
+            <Input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
               placeholder="e.g. Training day"
-              className={inputClass}
+              className="bg-surface-alt"
             />
           </label>
           <Button

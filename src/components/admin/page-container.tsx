@@ -9,7 +9,7 @@ export interface PageContainerProps {
 /** Consistent vertical rhythm and max width for admin pages. */
 export function PageContainer({ children, className }: PageContainerProps) {
   return (
-    <div className={cn("mx-auto w-full max-w-[1440px] space-y-6", className)}>
+    <div className={cn("mx-auto w-full max-w-[1600px] space-y-5", className)}>
       {children}
     </div>
   );

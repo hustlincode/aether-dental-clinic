@@ -66,7 +66,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
 
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       <AdminSidebar
         navItems={navItems}
         user={user}
@@ -84,7 +84,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
             role="status"
             className="flex items-center justify-center gap-2 border-b border-border bg-background-alt px-4 py-2 text-center text-xs text-text-secondary"
           >
-            <span className="size-2 shrink-0 rounded-pill bg-accent-fill" aria-hidden />
+            <span className="size-2 shrink-0 rounded-pill bg-primary" aria-hidden />
             <span>
               <span className="font-semibold text-text">Demo mode.</span> You are exploring seeded data —
               clinic data is read-only.

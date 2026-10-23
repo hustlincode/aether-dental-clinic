@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Tailwind's automatic source detection scans every un-ignored file in the
    repo — including .md and .mjs — for class-shaped candidates. eslint-local-rules/
    is the one directory that MUST contain utility names: it documents the
@@ -42,57 +44,37 @@
 /* ─── 2. Light theme (default) ─── */
 :root {
   color-scheme: light;
-
-  /* surface */
-  --background: #f5f5f4;
-  --background-alt: #e7e5e4;
+  --background: #fafafa;
+  --background-alt: #f4f4f5;
   --surface: #ffffff;
-  --surface-alt: #fafaf9;
-
-  /* ink */
-  --text: #0e0f10;
-  --text-secondary: #44403c;
-  --text-muted: #5E666E;
-
-  /* The accent has four roles — fill / ink / line / surface. Never mix them. */
-  --accent: #D4AF37;             /* fill — needs dark ink on top */
-  --accent-hover: #E6C76B;       /* fill hover */
-  --accent-ink: #7A5C12;         /* text, borders, icons — readable in light */
-  --accent-ink-hover: #5A430C;
-  --accent-soft: rgba(212, 175, 55, 0.10);   /* chip wash */
-  --accent-surface: var(--accent-soft);      /* shadcn "subtle hover surface" */
-
-  /* lines */
-  --border: rgba(14, 15, 16, 0.10);
-  --border-strong: rgba(14, 15, 16, 0.18);
-  --border-accent: rgba(212, 175, 55, 0.40); /* decorative hairline only */
-  --accent-line: rgba(122, 92, 18, 0.75);    /* FUNCTIONAL accent border, >=3:1 */
-  --ring: rgba(122, 92, 18, 0.28);           /* decorative glow only */
-  --focus-ring: #8A6A12;                     /* the one accent allowed as a focus ring */
-
-  /* elevation — the full scale. Dark overrides the five steps in §3. */
+  --surface-alt: #fafafa;
+  --text: #27272a;
+  --text-secondary: #52525b;
+  --text-muted: #62626c;
+  --accent: #34343b;
+  --accent-hover: #45454f;
+  --accent-ink: #3f3f46;
+  --accent-ink-hover: #303038;
+  --accent-soft: rgba(24, 24, 27, 0.04);
+  --accent-surface: var(--accent-soft);
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --border-accent: #a1a1aa;
+  --accent-line: #71717a;
+  --ring: rgba(82, 82, 91, 0.18);
+  --focus-ring: #52525b;
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
   --shadow-xl: 0 24px 48px rgba(0,0,0,0.12);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 35%, transparent);
-
-  /* Legacy elevation name. `.card-surface` and `.home-card:active` read
-     `var(--shadow)`; it aliases `--shadow-sm` at an identical value so the
-     dark step is declared once instead of being restated per theme. */
   --shadow: var(--shadow-sm);
-
-  /* Derived canvas tokens (light) — no new palette colors */
   --overlay: rgba(14, 15, 16, 0.45);
-  --canvas-dot: rgba(14, 15, 16, 0.035);
-  --canvas-glow: rgba(212, 175, 55, 0.07);
-
-  /* Hero gradient — light */
-  --hero-start: #f5f5f4;
-  --hero-end: #e7e5e4;
-
-  /* Semantic status — light (darkened so chip ink passes AA on its own chip) */
+  --canvas-dot: transparent;
+  --canvas-glow: transparent;
+  --hero-start: #fafafa;
+  --hero-end: #f4f4f5;
   --success: #15803d;
   --success-bg: #dcfce7;
   --warning: #92400e;
@@ -101,89 +83,72 @@
   --error-bg: #fee2e2;
   --info: #1d4ed8;
   --info-bg: #dbeafe;
-  --neutral: #4b5563;
-  --neutral-bg: #f3f4f6;
-
-  /* Chart palette (P4, §3.4) — data visualisation ONLY.
-     `--chart-1` is the darker gold from the verified "Premium black + gold"
-     profile because a series stroke must clear 3:1 on a white card; brand
-     surfaces stay `#D4AF37`. Never use a `--chart-*` token for UI chrome. */
-  --chart-1: #A16207;            /* 4.92:1 on --surface — brand series */
-  --chart-2: #1d4ed8;           /* 6.70:1 */
-  --chart-3: #15803d;           /* 5.02:1 */
-  --chart-4: #b91c1c;           /* 6.47:1 */
-  --chart-5: #5E666E;           /* 5.83:1 */
-  --chart-grid: #e7e5e4;        /* decorative, exempt from 1.4.11 */
-  --chart-axis: var(--text-muted);   /* axis ticks are text -> 4.5:1 required */
-  --chart-surface: var(--surface);   /* the card the chart is painted on */
-
-  /* Sidebar (admin) — light */
-  --sidebar-bg: #fafaf9;
-  --sidebar-surface: #ffffff;
-  --sidebar-text: #0e0f10;
-  --sidebar-text-muted: var(--text-muted);  /* theme-independent: always tracks --text-muted */
-  --sidebar-hover: rgba(212, 175, 55, 0.10);   /* same gold wash in both themes */
-  --sidebar-border: rgba(14, 15, 16, 0.08);
-
-  /* shadcn/ui aliases — mapped to the ProSmile palette.
-     Declared ONCE here; every one of these resolves through a token that IS
-     theme-aware, so [data-theme="dark"] needs no copy of this block. */
+  --neutral: #52525b;
+  --neutral-bg: #f4f4f5;
+  --chart-1: #27272a;
+  --chart-2: #52525b;
+  --chart-3: #71717a;
+  --chart-4: #83838d;
+  --chart-5: #8e8e98;
+  --chart-status-pending: #A16207;
+  --chart-status-neutral: #5E666E;
+  --chart-grid: #e4e4e7;
+  --chart-axis: var(--text-muted);
+  --chart-surface: var(--surface);
+  --sidebar-bg: #f4f4f5;
+  --sidebar-surface: var(--surface);
+  --sidebar-text: var(--text);
+  --sidebar-text-muted: var(--text-muted);
+  --sidebar-hover: var(--accent-soft);
+  --sidebar-border: var(--border);
   --foreground: var(--text);
   --card: var(--surface);
   --card-foreground: var(--text);
   --popover: var(--surface);
   --popover-foreground: var(--text);
   --primary: var(--accent);
-  --primary-foreground: #0e0f10;
+  --primary-foreground: #f4f4f5;
   --secondary: var(--background-alt);
   --secondary-foreground: var(--text-secondary);
   --muted: var(--surface-alt);
   --muted-foreground: var(--text-muted);
   --accent-foreground: var(--text);
   --destructive: var(--error);
-  --destructive-foreground: #ffffff;
-  --input: var(--border);
+  --destructive-foreground: #f4f4f5;
+  --input: var(--border-strong);
 }
 
-/* ─── 3. Dark theme (default) ───
-   Only values that differ from :root. `--accent`, `--accent-hover`,
-   `--accent-surface`, every shadcn alias and the whole radius block are
-   identical in both themes and therefore deliberately absent here. */
+
+/* ─── 3. Dark theme ───
+   Keep this block to values that differ from the light defaults. The custom
+   `dark:` variant above uses this same attribute, so token and utility based
+   dark states always follow the explicit theme selection. */
 [data-theme="dark"] {
   color-scheme: dark;
-
-  --background: #0E0F10;
-  --background-alt: #141516;
-  --surface: #1F2326;
-  --surface-alt: #262a2e;
-  --text: #F8F9FA;
-  --text-secondary: #D1D5DB;
-  --text-muted: #9CA3AF;
-
-  --accent-ink: #E6C76B;
-  --accent-ink-hover: #F0DCA0;
-  --accent-soft: rgba(212, 175, 55, 0.12);
-
-  --border: rgba(248, 249, 250, 0.10);
-  --border-strong: rgba(248, 249, 250, 0.18);
-  --border-accent: rgba(212, 175, 55, 0.45);
-  --accent-line: rgba(212, 175, 55, 0.75);
-  --ring: rgba(230, 199, 107, 0.28);
-  --focus-ring: #E6C76B;
-
+  --background: #1b1b1f;
+  --background-alt: #25252b;
+  --surface: #232328;
+  --surface-alt: #2b2b32;
+  --text: #e4e4e7;
+  --text-secondary: #c4c4cc;
+  --text-muted: #a1a1aa;
+  --accent-ink: #d4d4d8;
+  --accent-ink-hover: #e4e4e7;
+  --accent-soft: rgba(228, 228, 231, 0.06);
+  --border: #393941;
+  --border-strong: #4b4b55;
+  --border-accent: #71717a;
+  --accent-line: #a1a1aa;
+  --ring: rgba(212, 212, 216, 0.18);
+  --focus-ring: #c4c4cc;
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.28);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.2);
   --shadow-xl: 0 24px 48px rgba(0,0,0,0.5);
-
-  --overlay: rgba(0, 0, 0, 0.6);
-  --canvas-dot: rgba(248, 249, 250, 0.045);
-  --canvas-glow: rgba(212, 175, 55, 0.09);
-
-  --hero-start: #0E0F10;
-  --hero-end: #1F2326;
-
+  --overlay: rgba(17, 17, 21, 0.6);
+  --hero-start: #1b1b1f;
+  --hero-end: #25252b;
   --success: #4ade80;
   --success-bg: rgba(74, 222, 128, 0.12);
   --warning: #fbbf24;
@@ -192,26 +157,22 @@
   --error-bg: rgba(248, 113, 113, 0.12);
   --info: #60a5fa;
   --info-bg: rgba(96, 165, 250, 0.12);
-  --neutral: #9ca3af;
-  --neutral-bg: rgba(156, 163, 175, 0.12);
-
-  /* Chart palette (P4) — dark. Same slot meanings as light; only the values
-     change. `--chart-1` returns to the brand gold here because the dark card
-     surface gives it 7.53:1. */
-  --chart-1: #D4AF37;            /* 7.53:1 on --surface */
-  --chart-2: #60a5fa;           /* 6.23:1 */
-  --chart-3: #4ade80;           /* 9.08:1 */
-  --chart-4: #f87171;           /* 5.72:1 */
-  --chart-5: #9CA3AF;           /* 6.23:1 */
-  --chart-grid: rgba(248, 249, 250, 0.08);
-  /* --chart-axis / --chart-surface are `var()` aliases of theme-aware tokens
-     and are deliberately NOT repeated here — one declaration, both themes. */
-
-  --sidebar-bg: #0E0F10;
-  --sidebar-surface: #1F2326;
-  --sidebar-text: #F8F9FA;
-  --sidebar-border: rgba(248, 249, 250, 0.08);
+  --neutral: #a1a1aa;
+  --neutral-bg: rgba(161, 161, 170, 0.12);
+  --chart-1: #e4e4e7;
+  --chart-2: #c4c4cc;
+  --chart-3: #a1a1aa;
+  --chart-4: #8e8e98;
+  --chart-5: #7c7c87;
+  --chart-status-pending: #D4AF37;
+  --chart-status-neutral: #9CA3AF;
+  --chart-grid: #393941;
+  --sidebar-bg: #202025;
+  --accent: #454550;
+  --accent-hover: #53535f;
+  --destructive-foreground: #27272a;
 }
+
 
 /* ─── 4. Theme-INDEPENDENT tokens ───
    Declared once, never repeated in [data-theme="dark"]. */
@@ -229,10 +190,9 @@
 
   /* Radius — semantic scale (Q8: semantic, so Tailwind's rounded-sm/md/lg/xl
      keep their built-in meaning and no one is silently clobbered).
-     Every value equals the utility it replaces: control 0.5rem == rounded-lg,
-     card 0.75rem == rounded-xl, chip 0.375rem == rounded-md. */
+     Controls use 8px, cards use 10px, and compact chips use 6px. */
   --radius-control: 0.5rem;   /* buttons, inputs, selects, inline chips */
-  --radius-card: 0.75rem;     /* cards, panels, modals, sheets */
+  --radius-card: 0.625rem;     /* cards, panels, modals, sheets */
   --radius-chip: 0.375rem;    /* badges, tags, small status pills */
   --radius-pill: 9999px;      /* avatars, full-round chips */
 
@@ -261,19 +221,19 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   /* Motion — duration */
-  --dur-micro: 140ms;    /* icon nudge, arrow shift */
+  --dur-micro: 150ms;    /* icon nudge, arrow shift */
   --dur-fast: 200ms;     /* hover colour, borders, theme cross-fade */
   --dur-card: 220ms;     /* card lift, rail */
-  --dur-slow: 320ms;     /* panel/modal enter */
-  --dur-reveal: 420ms;   /* scroll reveal */
-  --stagger: 55ms;       /* staggered children */
+  --dur-slow: 250ms;     /* panel/modal enter */
+  --dur-reveal: 250ms;   /* scroll reveal */
+  --stagger: 30ms;       /* staggered children */
   /* Radix overlay timings. P5 lifted the two values that were hard-coded on
      <SheetContent> as `data-[state=open]:duration-500` /
      `data-[state=closed]:duration-300` (tw-animate-css' Radix defaults) so the
      classes read as `duration-(--dur-overlay-in/-out)`. Enter and exit are
      separate tokens because they are deliberately asymmetric. */
-  --dur-overlay-in: 500ms;
-  --dur-overlay-out: 300ms;
+  --dur-overlay-in: 250ms;
+  --dur-overlay-out: 200ms;
 
   /* Density — control heights and the touch-target floor (WCAG 2.5.5/2.5.8).
      Deliberately no `--space-*` scale: Tailwind's spacing scale already is one.
@@ -343,11 +303,8 @@
   --color-text: var(--text);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
-  /* ── The accent split, expressed to Tailwind ────────────────────────────
-     `text-accent` / `border-accent` / `ring-accent` → readable gold INK
-     `bg-accent-fill` / `fill-accent-fill`          → brand gold FILL
-     `bg-accent-surface`                            → shadcn's subtle-hover wash
-     `bg-accent` is therefore NOT gold. Use -fill or -surface. ─────────── */
+  /* Compatibility roles: ink colors text and lines, fill colors primary
+     surfaces, and surface is the subtle wash used by shadcn primitives. */
   --color-accent: var(--accent-ink);
   --color-accent-hover: var(--accent-ink-hover);
   --color-accent-fill: var(--accent);
@@ -418,10 +375,10 @@
      so Tailwind's built-in `text-sm`/`text-xs` keep working untouched. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-fraunces);   /* undefined outside the homepage — safe */
+  --font-display: var(--font-geist-sans);
   --font-label: var(--font-geist-mono);
 
-  /* Display (Fraunces; homepage-scoped via --font-fraunces) */
+  /* Display scale (Geist Sans, shared by public-facing statements) */
   --text-display-xl: clamp(2.5rem, 1.25rem + 4.8vw, 4.5rem);
   --text-display-xl--line-height: 1.04;
   --text-display-xl--letter-spacing: -0.025em;
@@ -527,7 +484,6 @@
   --animate-slide-down: slide-down var(--dur-fast) var(--ease-out);
   --animate-scale-in: scale-in var(--dur-fast) var(--ease-out);
   /* Loops keep an absolute duration: --dur-* are one-shot timings. */
-  --animate-pulse-gold: pulse-gold 2s ease-in-out infinite;
 }
 
 /* ─── 6. Keyframes ─── */
@@ -551,10 +507,7 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.3); }
-  50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
-}
+
 
 /* Enter and exit must be declared together; these are the sanctioned overlay
    timings. tw-animate-css supplies the data-[state] plumbing. */
@@ -626,20 +579,8 @@ body {
 
 /* ─── Focus ring — readable accent, >=3:1 against every surface ─── */
 :focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* ─── Gold gradient utility ─── */
-.gradient-gold {
-  background: linear-gradient(135deg, #D4AF37 0%, #E6C76B 100%);
-}
-
-.gradient-gold-text {
-  background: linear-gradient(135deg, #D4AF37 0%, #E6C76B 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 /* Theme-aware hero gradient */
@@ -679,9 +620,9 @@ body {
 /* ─── Canonical card surface (single source for card chrome) ─── */
 .card-surface {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background-color: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-xs);
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -783,7 +724,7 @@ body {
 /* ═══════════════════════════════════════════════════════════════════════════
    Homepage — Phase 2: typography & card interactions (public homepage only)
    Additive + namespaced (.home-* / --home-*). Nothing here changes existing
-   tokens, .card-surface*, .gradient-gold*, or any admin-visible rule.
+   tokens, .card-surface*, primary treatments, or any admin-visible rule.
 
    P1/P2 update: the motion tokens and the display/stat/eyebrow sizes are now
    ALIASES of the global scale. Every resolved value is byte-identical to the
@@ -792,10 +733,10 @@ body {
 
 :root {
   /* Derived, palette-preserving homepage tokens */
-  --home-glow: rgba(212, 175, 55, 0.10);
-  --home-spot: rgba(212, 175, 55, 0.12);
-  --home-accent-ink: #7a5c12; /* darkened same-hue gold: readable on light surfaces */
-  --home-focus: #7a5c12;
+  --home-glow: rgba(24, 24, 27, 0.04);
+  --home-spot: rgba(24, 24, 27, 0.06);
+  --home-accent-ink: var(--accent-ink);
+  --home-focus: var(--focus-ring);
 
   /* Motion language — aliases of the global --ease-* / --dur-* scale */
   --home-ease-out: var(--ease-out);
@@ -811,15 +752,13 @@ body {
 }
 
 [data-theme="dark"] {
-  --home-glow: rgba(212, 175, 55, 0.16);
-  --home-spot: rgba(212, 175, 55, 0.18);
-  --home-accent-ink: #e6c76b;
-  --home-focus: #e6c76b;
+  --home-glow: rgba(250, 250, 250, 0.04);
+  --home-spot: rgba(250, 250, 250, 0.06);
 }
 
 /* ─── Typography ─── */
 .home-display {
-  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .home-display-xl { font-size: var(--text-display-xl); line-height: 1.04; letter-spacing: -0.025em; font-weight: 560; }
@@ -829,13 +768,7 @@ body {
 .home-stat { font-size: var(--text-stat); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
 
 .home-stat-value { color: var(--home-accent-ink); }
-[data-theme="dark"] .home-stat-value {
-  background-image: linear-gradient(135deg, #d4af37 0%, #e6c76b 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
+
 
 /* Testimonial quotes: a smaller, quieter serif step than display-md so the
    quote reads as supporting evidence, not a headline. */
@@ -857,7 +790,7 @@ body {
   color: var(--home-accent-ink);
 }
 
-/* Gold that stays readable as text in both themes */
+/* Theme-aware emphasis ink */
 .home-accent-ink { color: var(--home-accent-ink); }
 
 /* ─── Cards ─── */
@@ -904,8 +837,7 @@ body {
 /* Colour/border/shadow feedback works on every device (state is perceivable). */
 .home-card:hover {
   border-color: var(--border-accent);
-  box-shadow: var(--shadow-lg);
-  box-shadow: var(--shadow-lg), 0 18px 44px -24px color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: var(--shadow-md);
 }
 .home-card:hover .home-card__book { color: var(--home-accent-ink); }
 .home-card:hover .home-quote { color: var(--home-accent-ink); }

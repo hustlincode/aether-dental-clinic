@@ -36,7 +36,6 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MobileNav } from "@/components/home/mobile-nav";
 import { MobileBookBar } from "@/components/home/mobile-book-bar";
-import { frauncesDisplay } from "@/components/home/home-fonts";
 import { Reveal } from "@/components/home/reveal";
 import { SpotlightArea } from "@/components/home/spotlight-card";
 
@@ -295,7 +294,7 @@ export default async function HomePage() {
   const previewDate = format(nextWeekday(), "EEE, MMM d");
 
   return (
-    <div className={cn(frauncesDisplay.variable, "home-root min-h-screen bg-background")}>
+    <div className="home-root min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(dentistJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(faqJsonLd) }} />
 
@@ -320,7 +319,7 @@ export default async function HomePage() {
               <Link href="/login">Staff login</Link>
             </Button>
             <ThemeToggle />
-            {/* "Book Now" — 44px hit, 36px visual, flat gold fill */}
+            {/* Primary booking action stays visible without crowding mobile navigation. */}
             <Button asChild size="default" className="hidden sm:inline-flex">
               <Link href="/book">Book Now</Link>
             </Button>
@@ -345,7 +344,7 @@ export default async function HomePage() {
         <section className="home-canvas flex min-h-[calc(100dvh-4rem)] items-center">
           <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-8 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] animate-fade-in">
             <div>
-              <div className="home-eyebrow inline-flex items-center rounded-pill border border-border-accent bg-accent-soft px-3 py-1.5">
+              <div className="home-eyebrow inline-flex items-center rounded-pill border border-border bg-surface px-3 py-1.5 shadow-xs">
                 Trusted dental care · Online booking
               </div>
               <h1 className="home-display home-display-xl mt-4 text-text">
@@ -356,18 +355,12 @@ export default async function HomePage() {
                 calls. No waiting.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/book"
-                  className="gradient-gold rounded-control px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
-                >
-                  Book an appointment
-                </Link>
-                <Link
-                  href="/#services"
-                  className="inline-flex h-11 items-center rounded-control border border-border px-5 text-sm font-semibold text-text-secondary transition-all duration-(--dur-fast) hover:border-border-accent hover:bg-surface"
-                >
-                  View services
-                </Link>
+                <Button asChild size="lg">
+                  <Link href="/book">Book an appointment</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/#services">View services</Link>
+                </Button>
               </div>
               <div className="mt-10 grid max-w-md grid-cols-2 gap-6 sm:max-w-none sm:grid-cols-4">
                 {stats.map((s) => (
@@ -431,7 +424,7 @@ export default async function HomePage() {
             <Reveal stagger as="ol" className="home-steps mt-12 grid gap-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
               {BOOKING_STEPS.map((step, i) => (
                 <li key={step.title} className="card-surface home-step p-5">
-                  <span className="home-step__num gradient-gold flex h-9 w-9 items-center justify-center rounded-pill text-sm font-bold text-[#0E0F10]">
+                  <span className="home-step__num flex h-9 w-9 items-center justify-center rounded-pill bg-primary text-sm font-bold text-primary-foreground">
                     {i + 1}
                   </span>
                   <h3 className="mt-3 font-semibold text-text">{step.title}</h3>
@@ -552,19 +545,16 @@ export default async function HomePage() {
         </section>
 
         {/* ── CTA band ── */}
-        <section aria-labelledby="cta-heading" className="home-canvas relative overflow-hidden border-y border-border-accent">
+        <section aria-labelledby="cta-heading" className="home-canvas relative overflow-hidden border-y border-border">
           <div className="home-drift" aria-hidden />
           <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
             <h2 id="cta-heading" className="home-display home-display-lg text-text">
               Book your visit in under 2 minutes
             </h2>
             <p className="mt-3 text-text-secondary">Confirmed by clinic staff · Request online</p>
-            <Link
-              href="/book"
-              className="gradient-gold mt-8 inline-block rounded-control px-6 py-3 font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
-            >
-              Book an appointment
-            </Link>
+            <Button asChild size="lg" className="mt-8">
+              <Link href="/book">Book an appointment</Link>
+            </Button>
           </div>
         </section>
 
@@ -807,7 +797,7 @@ function BookingPreview({
               <span
                 className={cn(
                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-pill text-micro font-bold",
-                  state === "done" && "gradient-gold text-[#0E0F10]",
+                  state === "done" && "bg-primary text-primary-foreground",
                   state === "current" && "border-2 border-accent text-accent",
                   state === "todo" && "border border-border text-text-muted"
                 )}
@@ -854,12 +844,9 @@ function BookingPreview({
           <div className="text-eyebrow text-text-muted">Estimated cost</div>
           <div className="text-xl font-bold text-accent">{service ? formatPeso(service.price) : "—"}</div>
         </div>
-        <Link
-          href="/book"
-          className="gradient-gold rounded-control px-4 py-2.5 text-sm font-semibold text-[#0E0F10] shadow-md transition-opacity duration-(--dur-fast) hover:opacity-90"
-        >
-          Continue booking
-        </Link>
+        <Button asChild size="default">
+          <Link href="/book">Continue booking</Link>
+        </Button>
       </div>
       <p className="mt-4 text-center text-xs text-text-muted">Confirmed by clinic staff · Request online</p>
     </div>

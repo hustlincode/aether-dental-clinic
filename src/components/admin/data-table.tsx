@@ -28,7 +28,7 @@ import {
   Search,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -173,7 +173,7 @@ function DataTableBody<TData extends RowData>({
     // consumer, as in appointments-list) take over.
     <div className="[&>div]:overflow-visible">
       <Table className="w-full text-left text-sm">
-        <TableHeader className="[&_tr]:border-0 sticky top-0 z-10 border-b border-border bg-background-alt text-xs uppercase tracking-wide text-text-muted">
+        <TableHeader className="[&_tr]:border-0 sticky top-0 z-10 border-b border-border bg-background-alt text-xs font-medium text-text-muted">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => {
@@ -185,7 +185,7 @@ function DataTableBody<TData extends RowData>({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "h-auto px-4 py-3 font-semibold text-text-muted",
+                      "h-auto px-4 py-2.5 font-medium text-text-muted",
                       canSort && "cursor-pointer select-none",
                       // Critical for responsive tables: the same cell classes
                       // that hide body cells on small screens must hide the
@@ -231,14 +231,14 @@ function DataTableBody<TData extends RowData>({
                 key={row.id}
                 onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                 className={cn(
-                  "border-border hover:bg-accent-soft",
+                  "border-border transition-colors hover:bg-accent-surface data-[state=selected]:bg-accent-surface",
                   onRowClick && "cursor-pointer"
                 )}
               >
                 {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}
-                    className={cn("px-4 py-3", cell.column.columnDef.meta?.cellClassName)}
+                    className={cn("px-4 py-2.5", cell.column.columnDef.meta?.cellClassName)}
                   >
                     <table.FlexRender cell={cell} />
                   </TableCell>
@@ -351,9 +351,9 @@ export function DataTableToolbar<TData extends RowData>({
   const globalFilter = (table.state.globalFilter ?? "") as string;
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+    <div className={cn("flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center", className)}>
+      <div className="relative w-full sm:min-w-64 sm:flex-1">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
         <input
           type="search"
           value={globalFilter}
@@ -364,7 +364,7 @@ export function DataTableToolbar<TData extends RowData>({
           maxLength={searchMaxLength}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className={cn(toolbarInputClass, "w-full max-w-xs pl-8 pr-3")}
+          className={cn(toolbarInputClass, "w-full pl-8 pr-3 sm:max-w-sm")}
         />
       </div>
       {filters.map((filter) => {
@@ -379,7 +379,7 @@ export function DataTableToolbar<TData extends RowData>({
             <SelectTrigger
               aria-label={filter.label}
               size="sm"
-              className="rounded-control border-border bg-background-alt px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+              className="w-full rounded-control border-border bg-background-alt px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40 sm:w-auto sm:min-w-36"
             >
               <SelectValue placeholder={filter.allLabel ?? `All ${filter.label}`} />
             </SelectTrigger>
@@ -415,8 +415,8 @@ export function DataTablePagination<TData extends RowData>({
   const current = pageIndex + 1;
 
   return (
-    <div className={cn("flex items-center justify-between gap-3 px-1", className)}>
-      <p className="text-xs text-text-muted">
+    <div className={cn("flex flex-col items-center justify-between gap-3 px-1 sm:flex-row", className)}>
+      <p className="text-caption text-text-muted">
         Showing <span className="font-medium text-text">{from}</span>–
         <span className="font-medium text-text">{to}</span> of{" "}
         <span className="font-medium text-text">{rowCount}</span>

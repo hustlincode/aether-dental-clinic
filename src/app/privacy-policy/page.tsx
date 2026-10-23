@@ -1,5 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { prisma } from "@/lib/db";
 
@@ -172,29 +173,26 @@ export default async function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-surface border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
-            <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
-            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/book" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
-              Book an appointment
-            </Link>
-            <Link href="/login" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
-              Staff login
-            </Link>
-            <ThemeToggle />
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:py-4">
+          <Logo href="/" priority markClassName="h-8 w-8" wordmarkClassName="text-base sm:text-lg" />
+          <div className="flex w-full items-center gap-1 sm:w-auto sm:gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/book">Book an appointment</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">Staff login</Link>
+            </Button>
+            <ThemeToggle className="ml-auto sm:ml-0" />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <div className="rounded-card border border-border bg-surface p-6 shadow-sm">
-          <p className="text-xs font-semibold tracking-wide text-accent uppercase">Aether Dental Clinic</p>
-          <h1 className="mt-1 text-2xl font-bold text-text">Privacy Policy</h1>
-          <p className="mt-1 text-sm text-text-muted">
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+        <div className="rounded-card border border-border bg-surface p-6 shadow-sm sm:p-8">
+          <p className="font-mono text-eyebrow uppercase text-text-muted">Aether Dental Clinic</p>
+          <h1 className="mt-2 text-title-lg font-semibold text-text">Privacy Policy</h1>
+          <p className="mt-2 text-body-sm text-text-muted">
             Data Privacy Act of 2012 (Republic Act No. 10173) • Last updated: September 11, 2026
           </p>
 
@@ -237,31 +235,19 @@ export default async function PrivacyPolicyPage() {
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/book"
-              className="gradient-gold rounded-control px-5 py-2.5 text-center text-sm font-semibold text-[#0E0F10] shadow-sm transition-opacity duration-(--dur-fast) hover:opacity-90"
-            >
-              Book an appointment
-            </Link>
-            <Link
-              href="/"
-              className="rounded-control border border-border bg-background-alt px-5 py-2.5 text-center text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent"
-            >
-              Back to home
-            </Link>
+            <Button asChild size="lg">
+              <Link href="/book">Book an appointment</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/">Back to home</Link>
+            </Button>
           </div>
         </div>
       </main>
 
       <footer className="border-t border-border bg-surface">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-text-muted sm:flex-row">
-          <div className="flex items-center gap-2 font-bold">
-            <Image src="/logo.svg" alt="" width={24} height={24} className="h-6 w-6" />
-            <span>
-              <span className="text-text">Aether </span>
-              <span className="text-accent">Dental</span>
-            </span>
-          </div>
+          <Logo href="/" markClassName="h-6 w-6" wordmarkClassName="text-sm" />
           <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
         </div>
       </footer>

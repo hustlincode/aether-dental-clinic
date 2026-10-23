@@ -7,7 +7,7 @@ import { Avatar as AvatarPrimitive } from "radix-ui";
 /**
  * Radix Avatar wrapper (guidelines §18): profile image with an initials
  * fallback. The fallback inherits the caller's className so it can apply the
- * gradient-gold treatment used elsewhere in the app.
+ * primary surface treatment used elsewhere in the app.
  */
 function Avatar({
   className,

@@ -263,7 +263,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
       id: "service",
       header: "Service",
       enableSorting: false,
-      meta: { cellClassName: "hidden lg:table-cell" },
+      meta: { cellClassName: "hidden 2xl:table-cell" },
       cell: (info) => (
         <span className="text-text-secondary">{info.getValue()}</span>
       ),
@@ -272,7 +272,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
       id: "dentist",
       header: "Dentist",
       enableSorting: false,
-      meta: { cellClassName: "hidden lg:table-cell" },
+      meta: { cellClassName: "hidden 2xl:table-cell" },
       cell: (info) => (
         <span className="text-text-secondary">{info.getValue()}</span>
       ),
@@ -338,7 +338,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
           <input
             type="search"
             aria-label="Search appointments"
@@ -544,26 +544,15 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
         const isCancel = a === "CANCELLED";
         const isPrimary = i === 0 && !isCancel;
         return (
-          /* Hand-rolled, not <Button size="xs">: these three treatments each carry
-             an explicit ink, and tailwind-merge treats every custom `text-*` token
-             as one group — a size that declares a font-size (`text-caption`)
-             evicts the variant's `text-destructive-foreground` /
-             `text-primary-foreground`, and a `className` colour evicts the size.
-             Either way the chip loses its ink. Height and hit are what changed
-             here, so the `::after` contract is applied directly instead. */
-          <button
+          <Button
             key={a}
+            size="xs"
+            variant={isCancel ? "destructive" : isPrimary ? "default" : "outline"}
             onClick={() => onChange(a)}
-            className={`relative inline-flex h-7 items-center rounded-chip border px-2.5 text-xs font-semibold transition-all after:absolute after:left-0 after:right-0 after:-inset-y-0.5 after:content-[''] ${
-              isCancel
-                ? "border-destructive/30 bg-destructive text-white hover:bg-destructive/90"
-                : isPrimary
-                  ? "border-accent bg-accent-fill text-primary-foreground hover:bg-accent-fill-hover"
-                  : "border-border bg-accent-soft text-accent hover:bg-accent-fill hover:text-primary-foreground"
-            }`}
+            className={cn("text-xs", !isCancel && !isPrimary && "bg-accent-surface text-text-secondary hover:bg-primary hover:text-primary-foreground")}
           >
             {statusActionLabel(a)}
-          </button>
+          </Button>
         );
       })}
     </div>
@@ -876,7 +865,7 @@ function EditAppointmentDialog({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex h-11 items-center rounded-control border border-accent bg-accent-fill px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent-fill-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-control border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

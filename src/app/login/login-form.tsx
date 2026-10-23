@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export interface LoginFormProps {
@@ -71,11 +73,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
   const busy = loading || demoLoading;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-      {/* Gold gradient glow behind card */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="gradient-gold absolute left-1/2 top-1/2 h-150 w-150 -translate-x-1/2 -translate-y-1/2 opacity-5 blur-3xl" />
-      </div>
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-12">
 
       {/* Theme toggle */}
       <div className="absolute right-4 top-4">
@@ -94,9 +92,10 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="animate-scale-in rounded-card border border-border bg-surface p-6 shadow-lg">
-          <h1 className="text-lg font-bold text-text">Sign in</h1>
-          <p className="mt-1 text-sm text-text-muted">Access your clinic dashboard.</p>
+        <form onSubmit={handleSubmit} className="animate-scale-in rounded-card border border-border bg-surface p-6 shadow-md sm:p-7">
+          <p className="font-mono text-eyebrow uppercase text-text-muted">Staff portal</p>
+          <h1 className="mt-2 text-title font-semibold text-text">Welcome back</h1>
+          <p className="mt-1 text-body-sm text-text-muted">Sign in to manage appointments and clinic operations.</p>
 
           {error && (
             <div id="login-error" role="alert" className="mt-4 rounded-control border border-error/20 bg-error-bg px-3 py-2 text-sm text-error">{error}</div>
@@ -105,7 +104,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
           <div className="mt-5 space-y-4">
             <div>
               <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-text">Email</label>
-              <input
+              <Input
                 id="login-email"
                 aria-describedby={error ? "login-error" : undefined}
                 aria-invalid={!!error}
@@ -120,13 +119,13 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                 // ring pair is decorative.
                 // `min-h-11` is the 44px default contract (--control-height-md,
                 // WCAG 2.5.5); `px-3 py-2 text-sm` alone renders 38px.
-                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+                className="bg-surface-alt"
                 placeholder="example@clinic.com"
               />
             </div>
             <div>
               <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-text">Password</label>
-              <input
+              <Input
                 id="login-password"
                 aria-describedby={error ? "login-error" : undefined}
                 aria-invalid={!!error}
@@ -135,14 +134,15 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full min-h-11 rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text placeholder-text-muted transition-[color,box-shadow] focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
+                className="bg-surface-alt"
                 placeholder="••••••••"
               />
             </div>
-            <button
+            <Button
               type="submit"
               disabled={busy}
-              className="w-full gradient-gold rounded-control py-2.5 font-semibold text-[#0E0F10] shadow-sm transition-opacity duration-(--dur-fast) hover:opacity-90 disabled:opacity-60"
+              size="lg"
+              className="w-full"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -155,16 +155,18 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
               ) : (
                 "Sign in"
               )}
-            </button>
+            </Button>
           </div>
 
           {demoEnabled && (
             <div className="mt-5 border-t border-border pt-4">
-              <button
+              <Button
                 type="button"
                 onClick={handleDemo}
                 disabled={busy}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-control border border-border bg-background-alt py-2.5 text-sm font-semibold text-text transition-colors duration-(--dur-fast) hover:bg-surface-alt disabled:opacity-60"
+                variant="outline"
+                size="lg"
+                className="w-full"
               >
                 {demoLoading ? (
                   <>
@@ -180,7 +182,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                     Explore the demo dashboard
                   </>
                 )}
-              </button>
+              </Button>
               <p className="mt-2 text-center text-xs text-text-muted">
                 Read-only access to seeded demo data — no account needed.
               </p>

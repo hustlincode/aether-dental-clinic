@@ -215,7 +215,7 @@ export function DentistsManager({ role }: { role: string }) {
           >
             <Avatar className="h-9 w-9">
               <AvatarImage src={dentist.profileImage || undefined} alt={dentist.name} />
-              <AvatarFallback className="gradient-gold text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground">
                 {initials(dentist.name)}
               </AvatarFallback>
             </Avatar>

@@ -21,6 +21,7 @@ const pageTitleMap: Record<string, string> = {
   "/admin/patients": "Patients",
   "/admin/dentists": "Dentists",
   "/admin/services": "Services",
+  "/admin/configuration": "Configuration",
   "/admin/reports": "Reports",
   "/admin/notifications": "Notifications",
 };
@@ -34,7 +35,7 @@ export interface AdminHeaderProps {
 
 export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderProps) {
   const pathname = usePathname();
-  const title = pageTitleMap[pathname] ?? "Admin";
+  const title = pageTitleMap[pathname] ?? (pathname.startsWith("/admin/dentists/") ? "Dentist schedule" : "Admin");
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
   const roleLabel = user.isDemo ? "Demo viewer" : user.role?.toLowerCase() ?? "staff";
 
@@ -65,7 +66,7 @@ export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderPr
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="md:hidden" aria-label="Open user menu">
-              <div className="flex size-7 items-center justify-center rounded-pill bg-accent-fill text-caption font-bold text-primary-foreground">
+              <div className="flex size-7 items-center justify-center rounded-pill bg-primary text-caption font-bold text-primary-foreground">
                 {initial}
               </div>
             </Button>

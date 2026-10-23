@@ -133,7 +133,7 @@ export function NotificationBell() {
               <Bell className="size-4 text-text-secondary max-compact:size-5" strokeWidth={2} aria-hidden />
               {count > 0 && (
                 <span
-                  className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold leading-none text-white"
+                  className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold leading-none text-destructive-foreground"
                   aria-hidden
                 >
                   {count > 99 ? "99+" : count}
@@ -174,13 +174,15 @@ export function NotificationBell() {
           {error ? (
             <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
               <p className="text-sm text-error">{error}</p>
-              <button
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
                 onClick={() => setRetryKey((k) => k + 1)}
-                className="inline-flex h-10 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition hover:border-accent hover:bg-accent-soft hover:text-accent"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden />
                 Retry
-              </button>
+              </Button>
             </div>
           ) : !items ? (
             <div className="space-y-2 px-4 py-4" aria-busy="true">
@@ -221,7 +223,7 @@ export function NotificationBell() {
                             {typeLabel(n.type)}
                           </span>
                           {!n.isRead && (
-                            <span className="h-2 w-2 shrink-0 rounded-pill bg-accent-fill" aria-label="Unread" />
+                            <span className="h-2 w-2 shrink-0 rounded-pill bg-primary" aria-label="Unread" />
                           )}
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug text-text-secondary">{n.message}</span>
@@ -237,15 +239,18 @@ export function NotificationBell() {
 
         {/* Footer */}
         <div className="border-t border-border px-4 py-2.5">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="default"
             onClick={() => {
               setOpen(false);
               if (pathname !== "/admin/notifications") router.push("/admin/notifications");
             }}
-            className="inline-flex min-h-10 w-full items-center justify-center rounded-chip px-2 text-center text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
+            className="w-full"
           >
             View all notifications
-          </button>
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
