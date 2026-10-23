@@ -280,7 +280,6 @@ export default async function HomePage() {
     ...(clinic?.address ? { address: { "@type": "PostalAddress", streetAddress: clinic.address } } : {}),
     ...(clinic?.phone ? { telephone: clinic.phone } : {}),
     ...(clinic?.email ? { email: clinic.email } : {}),
-    ...(clinic ? { openingHours: `Mo-Fr ${clinic.openingTime}-${clinic.closingTime}` } : {}),
   };
 
   const faqJsonLd = {

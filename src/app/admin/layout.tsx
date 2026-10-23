@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/patients", label: "Patients", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Clinic" },
     { href: "/admin/dentists", label: "Dentists", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/services", label: "Services", roles: ["ADMIN"], group: "Clinic" },
+    { href: "/admin/configuration", label: "Configuration", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/reports", label: "Reports", roles: ["ADMIN"], group: "Insights" },
     { href: "/admin/notifications", label: "Notifications", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Insights" },
   ].filter((n) => n.roles.includes(role));

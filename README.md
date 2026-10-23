@@ -170,8 +170,8 @@ Two consequences to be aware of:
   which invalidates the cached page. The 5-minute window is only a safety net
   for changes made outside the app.
 
-`/login`, `/book` and `/privacy-policy` are unaffected: the first is dynamic
-but cheap, the other two are static.
+`/login` remains dynamic and `/book` static. `/privacy-policy` uses the same
+5-minute revalidation and is invalidated after clinic configuration saves.
 
 ## Database
 Models: `User`, `Patient`, `Dentist`, `Service`, `Appointment`, `Availability`, `BlockedDate`, `ClinicSetting`, `Activity`, `EmailLog`.
@@ -183,3 +183,31 @@ Patients, Dentists, Services CRUD UIs, calendar (day/week/month), reports & reve
 
 ## License
 Personal portfolio project.
+
+## Clinic configuration
+
+Administrators can use `/admin/configuration` to edit public address, phone and
+email; change clinic hours and the optional lunch interval; and add or remove
+single-date clinic closures. Demo administrators can view the page but cannot
+save. Clinic branding, dentist schedules and service prices/durations stay in
+their existing locations.
+
+Hours take effect immediately in Manila time. Schedule changes that would
+newly invalidate live appointments are rejected with affected references for
+staff follow-up; no appointments are moved or cancelled automatically. Contact
+and hours forms save separately, reject stale updates, and record changes in
+the activity log. Public contact changes invalidate the homepage and privacy
+page; the dedicated privacy email remains independent.
+
+Deploy migrations before enabling the module. The clinic-closure migration
+adds a partial unique index for clinic-wide dates. If duplicate dates already
+exist, it stops without deleting anything; review those records before retrying.
+Prisma `db push` does not create this partial index. Use the existing deployment
+procedure (`prisma migrate deploy`), including the baseline instructions for
+older databases in `docs/production-hardening.md`.
+
+`npm run test:integration` exercises the existing booking suite and configuration
+transactions sequentially against an explicitly isolated `TEST_DATABASE_URL`.
+Configuration browser regressions run with `npm run test:e2e` against that same
+disposable database and a production build. Neither command should target an
+application database.

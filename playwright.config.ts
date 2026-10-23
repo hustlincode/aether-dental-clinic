@@ -1,5 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
+// Pin the worker secret before Prisma can load a different value from .env.
+process.env.NEXTAUTH_SECRET ||= "isolated-browser-regression-secret";
+process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,

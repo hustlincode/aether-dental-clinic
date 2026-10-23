@@ -25,3 +25,13 @@ export function revalidateHomepage(): void {
     console.error("Homepage revalidation failed:", error);
   }
 }
+
+/** Clinic contact details also appear on the cached privacy page. */
+export function revalidateClinicPages(): void {
+  revalidateHomepage();
+  try {
+    revalidatePath("/privacy-policy");
+  } catch (error) {
+    console.error("Privacy page revalidation failed:", error);
+  }
+}

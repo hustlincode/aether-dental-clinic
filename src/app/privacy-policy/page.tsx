@@ -1,8 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { prisma } from "@/lib/db";
 
-// Server component - static public privacy policy (Data Privacy Act of 2012, RA 10173)
+export const revalidate = 300;
+
+// Policy text and dedicated privacy contact stay independent of public clinic details.
 export const metadata = {
   title: "Privacy Policy | Aether Dental Clinic",
   description:
@@ -161,7 +164,11 @@ const sections = [
   },
 ];
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const clinic = await prisma.clinicSetting.findUnique({
+    where: { id: "singleton" },
+    select: { address: true, phone: true, email: true },
+  });
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -202,8 +209,13 @@ export default function PrivacyPolicyPage() {
 
           <div className="mt-4 rounded-control border border-border-accent bg-accent-soft p-4 text-sm text-text-secondary">
             <div className="font-semibold text-text">Aether Dental Clinic</div>
-            <p className="mt-1">123 Aether Ave., Bonifacio Global City, Taguig, Metro Manila</p>
-            <p>+63 2 8123 4567 • hello@aetherdental.ph</p>
+            <p className="mt-1">{clinic?.address || "Clinic address available on request."}</p>
+            {clinic?.phone && (
+              <p><a href={`tel:${clinic.phone.replace(/[\s()-]/g, "")}`} className="underline-offset-2 hover:underline">{clinic.phone}</a></p>
+            )}
+            {clinic?.email && (
+              <p><a href={`mailto:${clinic.email}`} className="underline-offset-2 hover:underline">{clinic.email}</a></p>
+            )}
             <p className="mt-1">
               Data Protection Officer:{" "}
               <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
