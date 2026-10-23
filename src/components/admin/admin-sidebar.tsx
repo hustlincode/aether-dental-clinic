@@ -13,6 +13,7 @@ import {
   BriefcaseMedical,
   FileBarChart2,
   Bell,
+  Settings,
   PanelLeftClose,
   type LucideIcon,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const iconMap: Record<string, LucideIcon> = {
   Services: BriefcaseMedical,
   Reports: FileBarChart2,
   Notifications: Bell,
+  Configuration: Settings,
 };
 
 /* ─── Props ─── */
