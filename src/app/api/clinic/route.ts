@@ -4,7 +4,19 @@ import { prisma } from "@/lib/db";
 // GET /api/clinic - public clinic info for booking display
 export async function GET() {
   try {
-    const clinic = await prisma.clinicSetting.findUnique({ where: { id: "singleton" } });
+    const clinic = await prisma.clinicSetting.findUnique({
+      where: { id: "singleton" },
+      select: {
+        name: true,
+        address: true,
+        phone: true,
+        email: true,
+        openingTime: true,
+        closingTime: true,
+        lunchBreakStart: true,
+        lunchBreakEnd: true,
+      },
+    });
     if (!clinic) {
       return NextResponse.json({ success: false, message: "Clinic settings not configured." }, { status: 404 });
     }
