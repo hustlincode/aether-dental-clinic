@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,9 +78,12 @@ const formatLongDate = (iso: string) => {
 export default function BookPage() {
 
   const [step, setStep] = useState<Step>("service");
-  const [loadingInitial, setLoadingInitial] = useState(true);
-  const [initialError, setInitialError] = useState("");
-  const [initialRetry, setInitialRetry] = useState(0);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [servicesError, setServicesError] = useState("");
+  const [servicesRetry, setServicesRetry] = useState(0);
+  const [loadingDentists, setLoadingDentists] = useState(true);
+  const [dentistsError, setDentistsError] = useState("");
+  const [dentistsRetry, setDentistsRetry] = useState(0);
   const [datesError, setDatesError] = useState("");
   const [datesRetry, setDatesRetry] = useState(0);
   const [slotsError, setSlotsError] = useState("");
@@ -125,28 +129,40 @@ export default function BookPage() {
   });
 
   useEffect(() => {
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setLoadingInitial(true);
-      setInitialError("");
+    const controller = new AbortController();
+    async function loadServices() {
       try {
-        const [svcRes, dentRes] = await Promise.all([
-          fetch("/api/services"), fetch("/api/dentists"),
-        ]);
-        const [svcBody, dentBody] = await Promise.all([svcRes.json(), dentRes.json()]);
-        if (!svcRes.ok || !dentRes.ok) throw new Error("Unable to load booking options. Please try again.");
-        if (!cancelled) {
-          setServices(svcBody.data || []);
-          setDentists(dentBody.data || []);
-        }
+        const response = await fetch("/api/services", { signal: controller.signal });
+        const body = await response.json();
+        if (!response.ok) throw new Error("Unable to load services.");
+        if (!controller.signal.aborted) setServices(body.data || []);
       } catch {
-        if (!cancelled) setInitialError("Unable to load booking options. Please try again.");
+        if (!controller.signal.aborted) setServicesError("Unable to load services. Please try again.");
       } finally {
-        if (!cancelled) setLoadingInitial(false);
+        if (!controller.signal.aborted) setLoadingServices(false);
       }
-    }, 0);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [initialRetry]);
+    }
+    void loadServices();
+    return () => controller.abort();
+  }, [servicesRetry]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadDentists() {
+      try {
+        const response = await fetch("/api/dentists?view=booking", { signal: controller.signal });
+        const body = await response.json();
+        if (!response.ok) throw new Error("Unable to load dentists.");
+        if (!controller.signal.aborted) setDentists(body.data || []);
+      } catch {
+        if (!controller.signal.aborted) setDentistsError("Unable to load dentists. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingDentists(false);
+      }
+    }
+    void loadDentists();
+    return () => controller.abort();
+  }, [dentistsRetry]);
 
   useEffect(() => { document.getElementById("booking-heading")?.focus(); }, [step]);
 
@@ -158,60 +174,39 @@ export default function BookPage() {
   // Fetch available dates when dentist + service are chosen
   useEffect(() => {
     if (!dentist || !service) return;
-    let cancelled = false;
-    // Defer the state resets (established pattern for react-hooks/set-state-in-effect)
-    const timer = setTimeout(() => {
-      setLoadingDates(true);
-      setDatesError("");
-      setAvailableDates([]);
-      setDate(null);
-      setSlots([]);
-      setTime(null);
-      fetch(`/api/availability/dates?dentistId=${dentist.id}&serviceId=${service.id}&daysAhead=45`)
-        .then(async (r) => {
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.message || "Unable to load available dates.");
-          if (!cancelled) setAvailableDates(res.data || []);
-        })
-        .catch(() => {
-          if (!cancelled) setDatesError("Unable to load available dates. Please try again.");
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingDates(false);
-        });
-    }, 0);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    const controller = new AbortController();
+    fetch(`/api/availability/dates?dentistId=${dentist.id}&serviceId=${service.id}&daysAhead=45`, { signal: controller.signal })
+      .then(async (r) => {
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.message || "Unable to load available dates.");
+        if (!controller.signal.aborted) setAvailableDates(res.data || []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDatesError("Unable to load available dates. Please try again.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingDates(false);
+      });
+    return () => controller.abort();
   }, [dentist, service, datesRetry]);
 
   // Fetch slots when date changes
   useEffect(() => {
     if (!dentist || !service || !date) return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      setLoadingSlots(true);
-      setSlotsError("");
-      setSlots([]);
-      setTime(null);
-      fetch(`/api/availability/slots?dentistId=${dentist.id}&serviceId=${service.id}&date=${date}`)
-        .then(async (r) => {
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.message || "Unable to load time slots.");
-          if (!cancelled) setSlots(res.data || []);
-        })
-        .catch(() => {
-          if (!cancelled) setSlotsError("Unable to load time slots. Please try again.");
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingSlots(false);
-        });
-    }, 0);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    const controller = new AbortController();
+    fetch(`/api/availability/slots?dentistId=${dentist.id}&serviceId=${service.id}&date=${date}`, { signal: controller.signal })
+      .then(async (r) => {
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.message || "Unable to load time slots.");
+        if (!controller.signal.aborted) setSlots(res.data || []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSlotsError("Unable to load time slots. Please try again.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingSlots(false);
+      });
+    return () => controller.abort();
   }, [dentist, service, date, slotsRetry]);
 
   // Calendar helpers
@@ -235,9 +230,25 @@ export default function BookPage() {
     return availableDates.includes(iso);
   };
 
+  function resetTimeSelection() {
+    setLoadingSlots(true);
+    setSlotsError("");
+    setSlots([]);
+    setTime(null);
+  }
+
+  function resetDateSelection() {
+    setLoadingDates(true);
+    setDatesError("");
+    setAvailableDates([]);
+    setDate(null);
+    resetTimeSelection();
+  }
+
   const selectDate = (d: number) => {
     const iso = `${calCursor.y}-${String(calCursor.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     if (availableDates.includes(iso)) {
+      if (date !== iso) resetTimeSelection();
       setDate(iso);
       setStep("time");
     }
@@ -360,16 +371,26 @@ export default function BookPage() {
         {step !== "success" && <StepIndicator step={step} />}
 
         <div className="mt-6">
-          {loadingInitial ? (
-            <LoadingBlock />
-          ) : initialError ? (
-            <BookingError message={initialError} onRetry={() => setInitialRetry((n) => n + 1)} />
+          {step === "service" && loadingServices ? (
+            <LoadingBlock message="Loading services..." />
+          ) : step === "service" && servicesError ? (
+            <BookingError message={servicesError} onRetry={() => { setLoadingServices(true); setServicesError(""); setServicesRetry((n) => n + 1); }} />
           ) : step === "service" ? (
-            <SelectService services={services} onSelect={(s) => { setService(s); setStep("dentist"); }} />
+            <SelectService services={services} onSelect={(s) => { if (s.id !== service?.id) resetDateSelection(); setService(s); setStep("dentist"); }} />
+          ) : step === "dentist" && loadingDentists ? (
+            <div className="flex flex-col gap-4">
+              <BackLink onClick={() => setStep("service")} label="Change service" />
+              <LoadingBlock message="Loading dentists..." />
+            </div>
+          ) : step === "dentist" && dentistsError ? (
+            <div className="flex flex-col gap-4">
+              <BackLink onClick={() => setStep("service")} label="Change service" />
+              <BookingError message={dentistsError} onRetry={() => { setLoadingDentists(true); setDentistsError(""); setDentistsRetry((n) => n + 1); }} />
+            </div>
           ) : step === "dentist" ? (
-            <SelectDentist dentists={dentists} service={service} onSelect={(d) => { setDentist(d); setStep("date"); }} onBack={() => setStep("service")} />
+            <SelectDentist dentists={dentists} service={service} onSelect={(d) => { if (d.id !== dentist?.id) resetDateSelection(); setDentist(d); setStep("date"); }} onBack={() => setStep("service")} />
           ) : step === "date" && datesError ? (
-            <BookingError message={datesError} onRetry={() => setDatesRetry((n) => n + 1)} />
+            <BookingError message={datesError} onRetry={() => { resetDateSelection(); setDatesRetry((n) => n + 1); }} />
           ) : step === "date" ? (
             <SelectDate
               monthLabel={monthLabel}
@@ -381,7 +402,7 @@ export default function BookPage() {
               onBack={() => setStep("dentist")}
             />
           ) : step === "time" && slotsError ? (
-            <BookingError message={slotsError} onRetry={() => setSlotsRetry((n) => n + 1)} />
+            <BookingError message={slotsError} onRetry={() => { resetTimeSelection(); setSlotsRetry((n) => n + 1); }} />
           ) : step === "time" ? (
             <SelectTime slots={slots} loading={loadingSlots} selected={time?.start} onSelect={(s) => { setTime(s); setStep("info"); }} onBack={() => { setStep("date"); }} />
           ) : step === "info" ? (
@@ -495,11 +516,13 @@ function StepIndicator({ step }: { step: Step }) {
 // Loading state
 // ---------------------------------------------------------------------------
 
-function LoadingBlock() {
+function LoadingBlock({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-card border border-border bg-surface py-16">
-      <div className="h-8 w-8 animate-spin rounded-pill border-2 border-accent border-t-transparent" />
-      <p className="mt-4 text-sm text-text-muted">Loading booking options...</p>
+    <div role="status" className="flex flex-col items-center justify-center gap-4 rounded-card border border-border bg-surface p-8">
+      <div aria-hidden="true" className="grid w-full gap-3 sm:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20" />)}
+      </div>
+      <p className="text-sm text-text-muted">{message}</p>
     </div>
   );
 }
