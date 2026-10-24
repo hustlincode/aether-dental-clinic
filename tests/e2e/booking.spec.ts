@@ -3,8 +3,121 @@ import { test, expect, type Page } from "@playwright/test";
 async function bookingOptions(page: Page) {
   await page.clock.setFixedTime(new Date("2027-01-01T00:00:00Z"));
   await page.route("**/api/services", route => route.fulfill({ json: { success: true, data: [{ id: "service", name: "Test Cleaning", durationMin: 30, price: 500, status: "ACTIVE" }] } }));
-  await page.route("**/api/dentists", route => route.fulfill({ json: { success: true, data: [{ id: "dentist", name: "Dr Test", specialization: "General", status: "ACTIVE", profileImage: null }] } }));
+  await page.route("**/api/dentists?view=booking", route => route.fulfill({ json: { success: true, data: [{ id: "dentist", name: "Dr Test", specialization: "General", status: "ACTIVE", profileImage: null }] } }));
 }
+
+test("services remain usable while dentists load and only failed dentists retry", async ({ page }) => {
+  await bookingOptions(page);
+  let serviceCalls = 0;
+  let dentistCalls = 0;
+  let releaseDentists!: () => void;
+  const dentistGate = new Promise<void>(resolve => { releaseDentists = resolve; });
+  await page.route("**/api/services", route => {
+    serviceCalls++;
+    return route.fulfill({ json: { success: true, data: [{ id: "service", name: "Test Cleaning", durationMin: 30, price: 500, status: "ACTIVE" }] } });
+  });
+  await page.route("**/api/dentists?view=booking", async route => {
+    dentistCalls++;
+    if (dentistCalls === 1) {
+      await dentistGate;
+      await route.fulfill({ status: 503, json: { success: false } });
+    } else {
+      await route.fulfill({ json: { success: true, data: [{ id: "dentist", name: "Dr Test", specialization: "General", status: "ACTIVE" }] } });
+    }
+  });
+  await page.route("**/api/availability/dates?**", route => route.fulfill({ json: { success: true, data: ["2027-01-05"] } }));
+  await page.goto("/book");
+  await page.getByRole("button", { name: /Test Cleaning/ }).click();
+  await expect(page.getByRole("status")).toHaveText("Loading dentists...");
+  releaseDentists();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Unable to load dentists");
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  const datesRequest = page.waitForRequest(request => request.url().includes("/api/availability/dates?"));
+  await page.getByRole("button", { name: /Dr Test/ }).click();
+  expect(new URL((await datesRequest).url()).searchParams.get("serviceId")).toBe("service");
+  await expect(page.getByRole("button", { name: "5", exact: true })).toBeEnabled();
+  expect(serviceCalls).toBe(1);
+  expect(dentistCalls).toBe(2);
+});
+
+test("retrying failed services keeps the successful dentist request", async ({ page }) => {
+  await bookingOptions(page);
+  let serviceCalls = 0;
+  let dentistCalls = 0;
+  await page.route("**/api/services", route => {
+    serviceCalls++;
+    return serviceCalls === 1
+      ? route.fulfill({ status: 503, json: { success: false } })
+      : route.fulfill({ json: { success: true, data: [{ id: "service", name: "Test Cleaning", durationMin: 30, price: 500, status: "ACTIVE" }] } });
+  });
+  await page.route("**/api/dentists?view=booking", route => {
+    dentistCalls++;
+    return route.fulfill({ json: { success: true, data: [{ id: "dentist", name: "Dr Test", specialization: "General", status: "ACTIVE" }] } });
+  });
+  await page.goto("/book");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Unable to load services");
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await page.getByRole("button", { name: /Test Cleaning/ }).click();
+  await expect(page.getByRole("button", { name: /Dr Test/ })).toBeVisible();
+  expect(serviceCalls).toBe(2);
+  expect(dentistCalls).toBe(1);
+});
+
+test("changing dentists cancels superseded available dates", async ({ page }) => {
+  await bookingOptions(page);
+  await page.route("**/api/dentists?view=booking", route => route.fulfill({ json: { success: true, data: [
+    { id: "first", name: "Dr First", specialization: "General", status: "ACTIVE" },
+    { id: "second", name: "Dr Second", specialization: "General", status: "ACTIVE" },
+  ] } }));
+  let releaseFirst!: () => void;
+  const gate = new Promise<void>(resolve => { releaseFirst = resolve; });
+  await page.route("**/api/availability/dates?**", async route => {
+    const first = new URL(route.request().url()).searchParams.get("dentistId") === "first";
+    if (first) await gate;
+    await route.fulfill({ json: { success: true, data: [first ? "2027-01-05" : "2027-01-06"] } });
+  });
+  await page.goto("/book");
+  await page.getByRole("button", { name: /Test Cleaning/ }).click();
+  const firstRequest = page.waitForRequest(request => request.url().includes("/api/availability/dates?dentistId=first"));
+  await page.getByRole("button", { name: /Dr First/ }).click();
+  await firstRequest;
+  const aborted = page.waitForEvent("requestfailed", request => request.url().includes("/api/availability/dates?dentistId=first"));
+  await page.getByRole("button", { name: /Change dentist$/ }).click();
+  await page.getByRole("button", { name: /Dr Second/ }).click();
+  await expect(page.getByRole("button", { name: "6", exact: true })).toBeEnabled();
+  releaseFirst();
+  await aborted;
+  await expect(page.getByRole("button", { name: "6", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "5", exact: true })).toBeDisabled();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+});
+
+test("changing dates cancels superseded time slots", async ({ page }) => {
+  await bookingOptions(page);
+  await page.route("**/api/availability/dates?**", route => route.fulfill({ json: { success: true, data: ["2027-01-05", "2027-01-06"] } }));
+  let releaseFirst!: () => void;
+  const gate = new Promise<void>(resolve => { releaseFirst = resolve; });
+  await page.route("**/api/availability/slots?**", async route => {
+    const first = new URL(route.request().url()).searchParams.get("date") === "2027-01-05";
+    if (first) await gate;
+    await route.fulfill({ json: { success: true, data: [{ start: first ? "09:00" : "10:00", end: first ? "09:30" : "10:30" }] } });
+  });
+  await page.goto("/book");
+  await page.getByRole("button", { name: /Test Cleaning/ }).click();
+  await page.getByRole("button", { name: /Dr Test/ }).click();
+  const firstRequest = page.waitForRequest(request => new URL(request.url()).searchParams.get("date") === "2027-01-05");
+  await page.getByRole("button", { name: "5", exact: true }).click();
+  await firstRequest;
+  const aborted = page.waitForEvent("requestfailed", request => new URL(request.url()).searchParams.get("date") === "2027-01-05");
+  await page.getByRole("button", { name: /Change date$/ }).click();
+  await page.getByRole("button", { name: "6", exact: true }).click();
+  await expect(page.getByRole("button", { name: "10:00 AM", exact: true })).toBeVisible();
+  releaseFirst();
+  await aborted;
+  await expect(page.getByRole("button", { name: "10:00 AM", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "9:00 AM", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+});
 
 test("failed availability has a retry and successful retry restores date selection", async ({ page }) => {
   await bookingOptions(page);
