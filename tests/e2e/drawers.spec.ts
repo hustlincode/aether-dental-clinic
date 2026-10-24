@@ -151,7 +151,7 @@ test.describe("drawer accessibility and responsive layouts", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.route("**/api/appointments?**", route => {
       const date = new URL(route.request().url()).searchParams.get("from")!;
-      return route.fulfill({ json: { success: true, data: { items: [{ ...history[0], appointmentDate: `${date}T00:00:00Z`, referenceNumber: "APT-DRAWER", notes: patient.notes }] } } });
+      return route.fulfill({ json: { success: true, data: { items: [{ ...history[0], appointmentDate: `${date}T00:00:00Z`, referenceNumber: "APT-DRAWER", notes: patient.notes }], pagination: { page: 1, pageSize: 200, total: 1, totalPages: 1 } } } });
     });
     await page.goto("/admin/calendar");
     await page.getByRole("button", { name: /, 1 appointments$/ }).click();
