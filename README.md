@@ -143,6 +143,7 @@ Open [http://localhost:3000](http://localhost:3000):
 - `npm test` — unit and API regressions
 - `npm run test:integration` — live PostgreSQL races and rollback checks (requires an isolated `TEST_DATABASE_URL`)
 - `npm run test:e2e` — Chromium regressions against a production build
+- `npm run perf:loading` — read-only Playwright timings for a running local production server (default port 3102, 30 repeat samples). Override `PERF_BASE_URL`, `PERF_SAMPLES`, or `PERF_OUTPUT` when needed. Results contain timings and sizes, without response bodies or database credentials.
 - `npm run security:rotate-passwords` — rotate all staff passwords (pre-launch)
 - `npx prisma db seed` — (re)seed demo data (prints generated staff passwords)
 - `npx prisma db push` — sync schema to database
@@ -211,3 +212,31 @@ transactions sequentially against an explicitly isolated `TEST_DATABASE_URL`.
 Configuration browser regressions run with `npm run test:e2e` against that same
 disposable database and a production build. Neither command should target an
 application database.
+
+## Loading performance
+
+Booking services and dentists load independently. Availability reads run concurrently,
+and the dashboard streams metrics and analytics separately. Charts load near the
+viewport. The calendar uses a lean, paginated month view and reports incomplete
+loads instead of silently stopping at 500 appointments. Appointment responses still
+report actual email outcomes; independent post-commit notifications run concurrently.
+
+Measured on October 24, 2026 against local webpack production builds using the same
+configured PostgreSQL database, with 30 repeat samples per endpoint:
+
+| Request | Median before → after | p95 before → after |
+| --- | --- | --- |
+| Available dates | 864 → 542 ms | 937 → 619 ms |
+| Available slots | 789 → 470 ms | 816 → 504 ms |
+| Booking dentists | 258 → 199 ms | 299 → 210 ms |
+
+The booking dentist response decreased from 8,788 to 551 bytes. Repeat booking visits
+reached usable service selection in a median of 328 ms, previously 363 ms. These are
+local measurements, not production traffic or load-test results. Unchanged reference
+endpoints varied by around 15 ms between runs.
+
+`perf:loading` visits only public routes and makes GET requests. Run the server with
+the intended `DATABASE_URL`; the benchmark itself does not load database credentials.
+Protected browser regressions and all write-based tests use the isolated test database.
+In-app reminders remain dashboard-triggered best-effort work after the response;
+durable delivery and concurrent reminder deduplication require a separate follow-up.
