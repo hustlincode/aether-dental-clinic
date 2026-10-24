@@ -235,13 +235,11 @@ const toJsonLd = (value: unknown): string => JSON.stringify(value).replace(/</g,
 // ---------------------------------------------------------------------------
 
 export default async function HomePage() {
-  const [serviceRows, dentistRows, clinic, activeServicesCount, activeDentistsCount, appointmentsCount, patientsCount] =
+  const [serviceRows, dentistRows, clinic, appointmentsCount, patientsCount] =
     await Promise.all([
       prisma.service.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" } }),
       prisma.dentist.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" } }),
       prisma.clinicSetting.findUnique({ where: { id: "singleton" } }),
-      prisma.service.count({ where: { status: "ACTIVE" } }),
-      prisma.dentist.count({ where: { status: "ACTIVE" } }),
       prisma.appointment.count(),
       prisma.patient.count(),
     ]);
@@ -265,8 +263,8 @@ export default async function HomePage() {
   const heroDentist = dentists.find((d) => d.name === "Dr. Maria Santos") ?? dentists[0];
 
   const stats = [
-    { value: activeServicesCount, label: "Services" },
-    { value: activeDentistsCount, label: "Dentists" },
+    { value: serviceRows.length, label: "Services" },
+    { value: dentistRows.length, label: "Dentists" },
     { value: appointmentsCount, label: "Appointments served" },
     { value: patientsCount, label: "Patients" },
   ];
@@ -384,9 +382,9 @@ export default async function HomePage() {
         {/* ── Trust bar ── */}
         <section aria-label="Why patients trust Aether Dental" className="border-b border-border bg-surface/60">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
-            <TrustItem value={activeServicesCount} label="services" />
+            <TrustItem value={serviceRows.length} label="services" />
             <span className="text-text-muted" aria-hidden>·</span>
-            <TrustItem value={activeDentistsCount} label="dentists" />
+            <TrustItem value={dentistRows.length} label="dentists" />
             <span className="text-text-muted" aria-hidden>·</span>
             <TrustItem value={appointmentsCount} label="appointments served" />
             <span className="text-text-muted" aria-hidden>·</span>
