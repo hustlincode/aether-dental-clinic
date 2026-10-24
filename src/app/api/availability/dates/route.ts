@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, message: "dentistId and serviceId are required." }, { status: 400 });
     }
 
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    const service = await prisma.service.findUnique({ where: { id: serviceId }, select: { id: true, status: true, durationMin: true } });
     if (!service || service.status !== "ACTIVE") {
       return NextResponse.json({ success: false, message: "Service not found." }, { status: 404 });
     }
