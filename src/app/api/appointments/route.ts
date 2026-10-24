@@ -144,25 +144,22 @@ export async function POST(req: Request) {
     // New bookings are PENDING, so we send a "request received" email here.
     // The actual confirmation email is sent only when staff confirms the status.
     const { service, dentist } = appointment;
-    const emailResult = await sendAppointmentEmail("appointment_pending", email, {
-      patientName: `${firstName} ${lastName}`,
-      referenceNumber,
-      serviceName: service.name,
-      dentistName: dentist.name,
-      date: fmtDate(date),
-      time: fmtTime(startTime),
-    }).catch((error) => {
-      console.error("Appointment request email failed:", error);
-      return { ok: false, status: "FAILED" };
-    });
-
-    // In-app notifications are created only after the DB transaction succeeded
-    // and are never allowed to fail the booking.
-    try {
-      await notifyAppointmentCreated(appointment);
-    } catch (e) {
-      console.error("Failed to create appointment notification:", e);
-    }
+    const [emailResult] = await Promise.all([
+      sendAppointmentEmail("appointment_pending", email, {
+        patientName: `${firstName} ${lastName}`,
+        referenceNumber,
+        serviceName: service.name,
+        dentistName: dentist.name,
+        date: fmtDate(date),
+        time: fmtTime(startTime),
+      }).catch((error) => {
+        console.error("Appointment request email failed:", error);
+        return { ok: false, status: "FAILED" };
+      }),
+      notifyAppointmentCreated(appointment).catch((error) => {
+        console.error("Failed to create appointment notification:", error);
+      }),
+    ]);
 
     // The homepage shows the "appointments served" / "patients" counters, so a
     // new booking has to invalidate the cached homepage.
@@ -216,6 +213,7 @@ export async function GET(req: Request) {
     const dentistId = searchParams.get("dentistId");
     const search = searchParams.get("search")?.trim() || undefined;
     const sort = searchParams.get("sort"); // "date:asc" (default) | "date:desc"
+    const calendarView = searchParams.get("view") === "calendar";
 
     if (date && !isValidDateKey(date)) {
       return NextResponse.json({ success: false, message: "Invalid appointment date." }, { status: 400 });
@@ -229,14 +227,20 @@ export async function GET(req: Request) {
     if (to && !isValidDateKey(to)) {
       return NextResponse.json({ success: false, message: "Invalid 'to' date. Use YYYY-MM-DD format." }, { status: 400 });
     }
+    if (calendarView && (!from || !to || from > to ||
+      new Date(`${to}T00:00:00.000Z`).getTime() - new Date(`${from}T00:00:00.000Z`).getTime() > 30 * 86400000)) {
+      return NextResponse.json({ success: false, message: "Calendar requires an ordered from/to range of at most 31 days." }, { status: 400 });
+    }
 
     const hasDateRange = Boolean(from || to);
 
-    // Calendar mode: when from/to are present, allow larger pageSize and skip pagination
-    const page = hasDateRange ? 1 : parsePositiveInt(searchParams.get("page"), 1);
-    const pageSize = hasDateRange
-      ? parsePositiveInt(searchParams.get("pageSize"), 500, 500)
-      : parsePositiveInt(searchParams.get("pageSize"), 20, 100);
+    // Legacy date-range callers keep their response; calendar view uses bounded pages.
+    const page = hasDateRange && !calendarView ? 1 : parsePositiveInt(searchParams.get("page"), 1);
+    const pageSize = calendarView
+      ? parsePositiveInt(searchParams.get("pageSize"), 200, 200)
+      : hasDateRange
+        ? parsePositiveInt(searchParams.get("pageSize"), 500, 500)
+        : parsePositiveInt(searchParams.get("pageSize"), 20, 100);
 
     const where: Prisma.AppointmentWhereInput = {};
     if (date && !hasDateRange) where.appointmentDate = new Date(`${date}T00:00:00.000Z`);
@@ -274,16 +278,22 @@ export async function GET(req: Request) {
       sort === "date:desc"
         ? [{ appointmentDate: "desc" }, { startTime: "desc" }]
         : [{ appointmentDate: "asc" }, { startTime: "asc" }];
+    if (calendarView) orderBy.push({ id: "asc" });
 
+    const query: Prisma.AppointmentFindManyArgs = {
+      where,
+      ...(calendarView ? { select: {
+        id: true, referenceNumber: true, appointmentDate: true, startTime: true, endTime: true, status: true, notes: true,
+        patient: { select: { firstName: true, lastName: true, phone: true } },
+        dentist: { select: { name: true } },
+        service: { select: { name: true } },
+      } } : { include: { patient: true, dentist: true, service: true } }),
+      orderBy,
+      ...(hasDateRange && !calendarView ? {} : { skip: (page - 1) * pageSize }),
+      take: pageSize,
+    };
     const [appointments, total] = await Promise.all([
-      prisma.appointment.findMany({
-        where,
-        include: { patient: true, dentist: true, service: true },
-        orderBy,
-        // When fetching a date range for the calendar, skip pagination
-        ...(hasDateRange ? {} : { skip: (page - 1) * pageSize }),
-        take: pageSize,
-      }),
+      prisma.appointment.findMany(query),
       prisma.appointment.count({ where }),
     ]);
 
