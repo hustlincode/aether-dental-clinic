@@ -3,6 +3,16 @@ import type { Prisma, Service } from "@prisma/client";
 import { isFutureSlot, isValidTime } from "@/lib/appointment-rules";
 type ScheduleClient = Pick<Prisma.TransactionClient, "appointment" | "dentist" | "clinicSetting" | "blockedDate">;
 
+const dentistScheduleSelect = {
+  status: true,
+  availability: {
+    select: { dayOfWeek: true, startTime: true, endTime: true, breakStart: true, breakEnd: true, isWorking: true },
+  },
+} satisfies Prisma.DentistSelect;
+const clinicHoursSelect = {
+  openingTime: true, closingTime: true, lunchBreakStart: true, lunchBreakEnd: true,
+} satisfies Prisma.ClinicSettingSelect;
+
 export interface Slot {
   start: string; // "HH:mm" 24h
   end: string; // "HH:mm" 24h
@@ -69,9 +79,9 @@ async function getContext(dentistId: string, date: Date, client: ScheduleClient)
   const [dentist, clinic] = await Promise.all([
     client.dentist.findUnique({
       where: { id: dentistId },
-      include: { availability: true },
+      select: dentistScheduleSelect,
     }),
-    client.clinicSetting.findUnique({ where: { id: "singleton" } }),
+    client.clinicSetting.findUnique({ where: { id: "singleton" }, select: clinicHoursSelect }),
   ]);
 
   if (!dentist || dentist.status !== "ACTIVE") return null;
@@ -147,21 +157,20 @@ export async function getAvailableSlots(
   excludeId?: string,
   client: ScheduleClient = prisma
 ): Promise<Slot[] | null> {
-  const ctx = await getContext(dentistId, date, client);
-  if (!ctx) return null;
+  const [ctx, blocked, occupied] = await Promise.all([
+    getContext(dentistId, date, client),
+    client.blockedDate.findFirst({
+      where: { date, OR: [{ dentistId }, { dentistId: null }] },
+      select: { id: true },
+    }),
+    getOccupiedSlots(dentistId, date, excludeId, client),
+  ]);
+  if (!ctx || blocked) return null;
 
   const dayKey = DAY_KEYS[date.getUTCDay()];
   const dayOfWeek = FULL_DAY[dayKey];
   const dayAvail = ctx.dentistAvailability.find((a) => a.dayOfWeek === dayOfWeek);
   if (!dayAvail || !dayAvail.isWorking) return null;
-
-  // Blocked dates check
-  const blocked = await client.blockedDate.findFirst({
-    where: { date, OR: [{ dentistId }, { dentistId: null }] },
-  });
-  if (blocked) return null;
-
-  const occupied = await getOccupiedSlots(dentistId, date, excludeId, client);
 
   return generateSlots({
     clinicOpen: toMinutes(ctx.clinic.openingTime),
@@ -216,16 +225,9 @@ export async function getAvailableDates(
   endDate.setUTCHours(23, 59, 59, 999);
   endDate.setUTCDate(startDate.getUTCDate() + daysAhead - 1);
 
-  const dentist = await prisma.dentist.findUnique({
-    where: { id: dentistId },
-    include: { availability: true },
-  });
-  if (!dentist || dentist.status !== "ACTIVE") return available;
-
-  const clinic = await prisma.clinicSetting.findUnique({ where: { id: "singleton" } });
-  if (!clinic) return available;
-
-  const [blockedRows, apptRows] = await Promise.all([
+  const [dentist, clinic, blockedRows, apptRows] = await Promise.all([
+    prisma.dentist.findUnique({ where: { id: dentistId }, select: dentistScheduleSelect }),
+    prisma.clinicSetting.findUnique({ where: { id: "singleton" }, select: clinicHoursSelect }),
     prisma.blockedDate.findMany({
       where: { date: { gte: startDate, lte: endDate }, OR: [{ dentistId }, { dentistId: null }] },
       select: { date: true },
@@ -239,6 +241,7 @@ export async function getAvailableDates(
       select: { appointmentDate: true, startTime: true, endTime: true },
     }),
   ]);
+  if (!dentist || dentist.status !== "ACTIVE" || !clinic) return available;
 
   const blockedSet = new Set(blockedRows.map((b) => fmtDateKey(b.date)));
   const byDay = new Map<string, { start: number; end: number }[]>();

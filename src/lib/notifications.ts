@@ -1,5 +1,6 @@
 import { NotificationType, Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { addDaysToKey, clinicDateKey, dateKeyToUtc } from "@/lib/clinic-time";
 
 // -----------------------------------------------------------------------------
 // In-app notification service.
@@ -218,9 +219,9 @@ export async function notifyPatientUpdated(patient: PatientForNotification, chan
  * Idempotent: appointments that already have a reminder notification are skipped.
  */
 export async function processUpcomingAppointmentReminders() {
-  const now = new Date();
-  const tomorrowStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  const dayAfterStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 2));
+  const todayKey = clinicDateKey();
+  const tomorrowStart = dateKeyToUtc(addDaysToKey(todayKey, 1));
+  const dayAfterStart = dateKeyToUtc(addDaysToKey(todayKey, 2));
 
   const appointments = await prisma.appointment.findMany({
     where: {
@@ -228,23 +229,35 @@ export async function processUpcomingAppointmentReminders() {
       status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
       dentist: { status: "ACTIVE" },
     },
-    include: { patient: true, dentist: true, service: true },
+    select: {
+      id: true,
+      startTime: true,
+      patient: { select: { firstName: true, lastName: true } },
+      dentist: { select: { email: true } },
+    },
   });
   if (appointments.length === 0) return { checked: 0, created: 0 };
 
-  const existing = await prisma.notification.findMany({
-    where: { type: NotificationType.APPOINTMENT_REMINDER, entityId: { in: appointments.map((a) => a.id) } },
-    select: { entityId: true, userId: true },
-  });
+  const [existing, adminAndReception, dentistUsers] = await Promise.all([
+    prisma.notification.findMany({
+      where: { type: NotificationType.APPOINTMENT_REMINDER, entityId: { in: appointments.map((appt) => appt.id) } },
+      select: { entityId: true, userId: true },
+    }),
+    getUsersByRole(Role.ADMIN, Role.RECEPTIONIST),
+    prisma.user.findMany({
+      where: { email: { in: [...new Set(appointments.map((appt) => appt.dentist.email))] } },
+      select: { id: true, email: true },
+    }),
+  ]);
+  // shortcut: deduplication covers existing rows; add a unique delivery key before introducing concurrent workers.
   const seen = new Set(existing.map((n) => `${n.userId}:${n.entityId}`));
-
-  const adminAndReception = await getUsersByRole(Role.ADMIN, Role.RECEPTIONIST);
+  const dentistUserIds = new Map(dentistUsers.map((user) => [user.email, user.id]));
 
   const rows: Prisma.NotificationCreateManyInput[] = [];
   for (const appt of appointments) {
     const message = `${appt.patient.firstName} ${appt.patient.lastName} has an appointment tomorrow at ${fmtTime(appt.startTime)}.`;
     const targets = [...adminAndReception];
-    const dentistUserId = await getDentistUserId(appt.dentist.email);
+    const dentistUserId = dentistUserIds.get(appt.dentist.email);
     if (dentistUserId) targets.push(dentistUserId);
 
     for (const userId of new Set(targets)) {

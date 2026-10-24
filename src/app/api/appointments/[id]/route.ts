@@ -129,9 +129,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { updated, existing, scheduleChanged } = result;
 
     // Patient-facing reschedule email (only when the schedule actually changed)
-    let emailResult: { ok: boolean; status: string } | null = null;
-    if (scheduleChanged && updated.patient?.email) {
-      emailResult = await sendAppointmentEmail("appointment_reschedule", updated.patient.email, {
+    const [emailResult] = await Promise.all([
+      scheduleChanged && updated.patient?.email ? sendAppointmentEmail("appointment_reschedule", updated.patient.email, {
         patientName: `${updated.patient.firstName} ${updated.patient.lastName}`,
         referenceNumber: updated.referenceNumber,
         serviceName: updated.service.name,
@@ -143,20 +142,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }).catch((error) => {
         console.error("Reschedule email failed:", error);
         return { ok: false, status: "FAILED" };
-      });
-    }
-
-    // In-app notifications (never allowed to fail the update)
-    if (scheduleChanged) {
-      try {
-        await notifyAppointmentRescheduled(updated, {
-          date: existing.appointmentDate,
-          time: existing.startTime,
-        });
-      } catch (e) {
-        console.error("Failed to create reschedule notification:", e);
-      }
-    }
+      }) : null,
+      scheduleChanged ? notifyAppointmentRescheduled(updated, {
+        date: existing.appointmentDate,
+        time: existing.startTime,
+      }).catch((error) => {
+        console.error("Failed to create reschedule notification:", error);
+      }) : null,
+    ]);
 
     return NextResponse.json({ success: true, data: updated, email: emailResult });
   } catch (err) {

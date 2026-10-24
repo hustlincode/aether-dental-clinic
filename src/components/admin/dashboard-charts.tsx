@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { Inbox } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Area,
   AreaChart,
@@ -307,7 +308,7 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
                   <span className="text-xs text-text-muted">Total</span>
                 </div>
               </div>
-              <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1">
+              <ul className="mt-4 grid min-h-26 grid-cols-2 gap-x-4 gap-y-1">
                 {status.map((entry, i) => (
                   <li key={entry.name}>
                     <button
@@ -332,9 +333,12 @@ export function DashboardCharts({ daily, status }: { daily: DailyPoint[]; status
               </ul>
             </>
           ) : (
-            <div className="mt-4 h-64">
-              <EmptyState message="No appointment statuses recorded yet." />
-            </div>
+            <>
+              <div className="mt-4 h-64">
+                {chartReady ? <EmptyState message="No appointment statuses recorded yet." /> : <Skeleton className="size-full" />}
+              </div>
+              <div className="mt-4 h-26" aria-hidden="true" />
+            </>
           )}
         </div>
       </div>
