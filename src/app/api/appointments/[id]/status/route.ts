@@ -61,46 +61,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return { updated, changed: true };
     });
     if (!changed) return NextResponse.json({ success: true, data: updated, email: null });
-    const existing = updated;
-
     // In-app notifications (role-aware; never allowed to fail the status update).
-    try {
+    const notification = (async () => {
       if (status === "CONFIRMED") await notifyAppointmentConfirmed(updated);
       else if (status === "CANCELLED") await notifyAppointmentCancelled(updated);
       else if (status === "CHECKED_IN") await notifyPatientCheckedIn(updated);
       else if (status === "COMPLETED") await notifyAppointmentCompleted(updated);
-    } catch (e) {
-      console.error("Failed to create appointment notification:", e);
-    }
+    })().catch((error) => {
+      console.error("Failed to create appointment notification:", error);
+    });
 
     // Send cancellation / confirmation emails
-    let emailResult: { ok: boolean; status: string } | null = null;
-    if (status === "CANCELLED" && existing.patient?.email) {
-      emailResult = await sendAppointmentEmail("appointment_cancellation", existing.patient.email, {
-        patientName: `${existing.patient.firstName} ${existing.patient.lastName}`,
-        referenceNumber: existing.referenceNumber,
-        serviceName: existing.service.name,
-        dentistName: existing.dentist.name,
-        date: fmtDate(existing.appointmentDate),
-        time: fmtTime(existing.startTime),
+    const emailEvent = status === "CANCELLED" ? "appointment_cancellation" : status === "CONFIRMED" ? "appointment_confirmation" : null;
+    const [emailResult] = await Promise.all([
+      emailEvent && updated.patient?.email ? sendAppointmentEmail(emailEvent, updated.patient.email, {
+        patientName: `${updated.patient.firstName} ${updated.patient.lastName}`,
+        referenceNumber: updated.referenceNumber,
+        serviceName: updated.service.name,
+        dentistName: updated.dentist.name,
+        date: fmtDate(updated.appointmentDate),
+        time: fmtTime(updated.startTime),
       }).catch((error) => {
         console.error("Appointment status email failed:", error);
         return { ok: false, status: "FAILED" };
-      });
-    }
-    if (status === "CONFIRMED" && existing.patient?.email) {
-      emailResult = await sendAppointmentEmail("appointment_confirmation", existing.patient.email, {
-        patientName: `${existing.patient.firstName} ${existing.patient.lastName}`,
-        referenceNumber: existing.referenceNumber,
-        serviceName: existing.service.name,
-        dentistName: existing.dentist.name,
-        date: fmtDate(existing.appointmentDate),
-        time: fmtTime(existing.startTime),
-      }).catch((error) => {
-        console.error("Appointment status email failed:", error);
-        return { ok: false, status: "FAILED" };
-      });
-    }
+      }) : null,
+      notification,
+    ]);
 
     return NextResponse.json({ success: true, data: updated, email: emailResult });
   } catch (err) {
