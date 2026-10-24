@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { Sheet, SheetBody, SheetClose, SheetContent, SheetHeader, SheetTitle, Sh
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /* ─── Status → theme-token styling (no hardcoded palette) ─── */
 const STATUS_META: Record<string, { chip: string; border: string }> = {
@@ -82,11 +83,20 @@ export function CalendarView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [events, setEvents] = useState<ApptRecord[]>([]);
+  const [totalEvents, setTotalEvents] = useState<number | null>(null);
   const [selectedAppt, setSelectedAppt] = useState<ApptRecord | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const activeRequest = useRef<AbortController | null>(null);
+  const viewRevision = useRef(0);
+  const sheetRevision = useRef(0);
+
+  const cancelLoad = useCallback(() => {
+    activeRequest.current?.abort();
+    viewRevision.current++;
+  }, []);
 
   /* ─── Visible range = the whole current month ─── */
   const range = useMemo(() => {
@@ -98,18 +108,43 @@ export function CalendarView() {
 
   /* ─── Load events for the visible date range ─── */
   const loadEvents = useCallback(async (from: string, to: string) => {
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    const revision = viewRevision.current;
+    const isCurrent = () => !controller.signal.aborted && activeRequest.current === controller && viewRevision.current === revision;
     setLoading(true);
     setError("");
+    setEvents([]);
+    setTotalEvents(null);
+    const loaded = new Map<string, ApptRecord>();
     try {
-      const qs = new URLSearchParams({ from, to, pageSize: "500" });
-      const res = await fetch(`/api/appointments?${qs.toString()}`, { cache: "no-store" });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.message);
-      setEvents(body.data?.items ?? []);
+      let page = 1;
+      let totalPages = 1;
+      let total = 0;
+      do {
+        const qs = new URLSearchParams({ view: "calendar", from, to, page: String(page), pageSize: "200" });
+        const res = await fetch(`/api/appointments?${qs.toString()}`, { cache: "no-store", signal: controller.signal });
+        const body = await res.json();
+        if (!isCurrent()) return;
+        if (!res.ok) throw new Error(body.message || "Unable to load calendar events.");
+        const pagination = body.data?.pagination;
+        if (!Array.isArray(body.data?.items) || !Number.isInteger(pagination?.total) || pagination.total < 0 || !Number.isInteger(pagination.totalPages) || pagination.totalPages < 0) {
+          throw new Error("Unable to load calendar events.");
+        }
+        total = pagination.total;
+        totalPages = pagination.totalPages;
+        for (const appointment of body.data.items as ApptRecord[]) loaded.set(appointment.id, appointment);
+        setEvents([...loaded.values()]);
+        setTotalEvents(total);
+        if (body.data.items.length === 0 && page < totalPages) throw new Error("Appointments changed while loading. Please retry.");
+        page++;
+      } while (page <= totalPages);
+      if (loaded.size !== total) throw new Error("Appointments changed while loading. Please retry.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load calendar events.");
+      if (isCurrent()) setError(e instanceof Error ? e.message : "Unable to load calendar events.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, []);
 
@@ -117,8 +152,11 @@ export function CalendarView() {
     const timer = setTimeout(() => {
       loadEvents(range.from, range.to);
     }, 0);
-    return () => clearTimeout(timer);
-  }, [range, loadEvents]);
+    return () => {
+      clearTimeout(timer);
+      cancelLoad();
+    };
+  }, [range, loadEvents, cancelLoad]);
 
   /* ─── Group events by local date key ─── */
   const byDate = useMemo(() => {
@@ -130,7 +168,7 @@ export function CalendarView() {
       map.set(key, list);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      list.sort((a, b) => a.startTime.localeCompare(b.startTime) || a.id.localeCompare(b.id));
     }
     return map;
   }, [events]);
@@ -149,15 +187,27 @@ export function CalendarView() {
     [cursor],
   );
 
-  const shiftMonth = (delta: number) =>
-    setCursor((c) => {
-      const n = new Date(c.y, c.m + delta, 1);
-      return { y: n.getFullYear(), m: n.getMonth() };
-    });
+  function changeMonth(y: number, m: number) {
+    cancelLoad();
+    sheetRevision.current++;
+    setEvents([]);
+    setTotalEvents(null);
+    setLoading(true);
+    setError("");
+    setSelectedDate("");
+    setSheetOpen(false);
+    setSelectedAppt(null);
+    setCursor({ y, m });
+  }
+
+  const shiftMonth = (delta: number) => {
+    const next = new Date(cursor.y, cursor.m + delta, 1);
+    changeMonth(next.getFullYear(), next.getMonth());
+  };
 
   const goToday = () => {
     const d = new Date();
-    setCursor({ y: d.getFullYear(), m: d.getMonth() });
+    if (cursor.y !== d.getFullYear() || cursor.m !== d.getMonth()) changeMonth(d.getFullYear(), d.getMonth());
     setSelectedDate(todayKey);
   };
 
@@ -171,6 +221,8 @@ export function CalendarView() {
   async function changeStatus(nextStatus: string, notes?: string) {
     if (!selectedAppt) return;
 
+    const revision = viewRevision.current;
+    const openedSheet = sheetRevision.current;
     setActionLoading(true);
     try {
       const res = await fetch(`/api/appointments/${selectedAppt.id}/status`, {
@@ -186,10 +238,13 @@ export function CalendarView() {
         toast.error("Status updated, but the notification email could not be sent. Check SMTP settings.");
       }
 
-      // Refetch the current month to reflect the updated status color
-      await loadEvents(range.from, range.to);
-      setSheetOpen(false);
-      setSelectedAppt(null);
+      // A completed update must not restart loading a month the user left.
+      if (viewRevision.current === revision) void loadEvents(range.from, range.to);
+      if (viewRevision.current === revision && sheetRevision.current === openedSheet) {
+        sheetRevision.current++;
+        setSheetOpen(false);
+        setSelectedAppt(null);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Unable to update the appointment.");
     } finally {
@@ -250,17 +305,19 @@ export function CalendarView() {
       {/* ─── Calendar ─── */}
       <div className="card-surface relative p-4">
         {error && (
-          <div className="mb-4 rounded-control border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">
-            <div className="flex items-center justify-between">
-              <span>{error}</span>
-              <button
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Calendar incomplete</AlertTitle>
+            <AlertDescription>
+              <p>{error}</p>
+              <Button
                 onClick={() => loadEvents(range.from, range.to)}
-                className="ml-4 inline-flex h-10 items-center rounded-control border border-border bg-surface px-3 text-xs font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent"
+                variant="outline"
+                size="sm"
               >
                 Retry
-              </button>
-            </div>
-          </div>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Toolbar */}
@@ -303,6 +360,12 @@ export function CalendarView() {
           </Button>
         </div>
 
+        <p role="status" aria-atomic="true" className="mt-3 text-sm text-text-muted">
+          {loading
+            ? totalEvents === null ? "Loading calendar appointments..." : `Loaded ${events.length} of ${totalEvents} appointments. Loading more...`
+            : error ? `${events.length} appointments loaded. Calendar is incomplete.` : `${events.length} appointments loaded.`}
+        </p>
+
         {/* Weekday header */}
         <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-text-muted">
           {WEEKDAYS.map((d) => (
@@ -322,7 +385,7 @@ export function CalendarView() {
           aria-busy={loading}
         >
           {loading && events.length === 0
-            ? Array.from({ length: 35 }).map((_, i) => (
+            ? Array.from({ length: grid.total }).map((_, i) => (
                 <Skeleton key={i} className="min-h-14 rounded-control sm:min-h-24" />
               ))
             : Array.from({ length: grid.total }).map((_, i) => {
@@ -368,6 +431,7 @@ export function CalendarView() {
                               key={a.id}
                               onClick={(e) => {
                                 e.stopPropagation();
+                                sheetRevision.current++;
                                 openSheet(a);
                               }}
                               className={cn(
@@ -416,7 +480,7 @@ export function CalendarView() {
               <li key={a.id}>
                 <button
                   type="button"
-                  onClick={() => openSheet(a)}
+                  onClick={() => { sheetRevision.current++; openSheet(a); }}
                   className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left transition-colors hover:bg-accent-soft"
                 >
                   <span className="w-16 shrink-0 text-sm font-semibold text-text">{fmtTime(a.startTime)}</span>
@@ -437,7 +501,7 @@ export function CalendarView() {
       )}
 
       {/* ─── Event Detail Sheet ─── */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <Sheet open={sheetOpen} onOpenChange={(open) => { setSheetOpen(open); if (!open) sheetRevision.current++; }}>
         <SheetContent side="right" className="w-full bg-surface sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Appointment Details</SheetTitle>
