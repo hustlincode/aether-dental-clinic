@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ErrorState } from "@/components/admin/error-state";
 import { SectionCard } from "@/components/admin/section-card";
 import { Button } from "@/components/ui/button";
+import { TimeField } from "@/components/admin/time-field";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -80,9 +81,6 @@ function toMinutes(hhmm: string): number {
 }
 
 // ─── Shared input style ──────────────────────────────────────────────────────
-
-const timeInputClass =
-  "h-auto w-full rounded-control border border-border bg-surface-alt px-3 py-2 text-sm text-text shadow-none transition focus:border-accent focus-visible:border-accent-line focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40 dark:bg-surface-alt aria-invalid:border-error";
 
 // ─── Weekly Schedule Editor ──────────────────────────────────────────────────
 
@@ -237,6 +235,7 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
           </p>
           <Button
             onClick={handleSave}
+            variant="primary"
             size="default"
             disabled={saving || loading}
           >
@@ -290,47 +289,37 @@ export function DentistScheduleEditor({ dentistId }: { dentistId: string }) {
 
                 {/* Time fields when working */}
                 {row.isWorking && (
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-text-secondary">Start</span>
-                      <input
-                        type="time"
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <TimeField
+                        label="Start"
+                        disabled={saving}
+                        required
                         value={row.startTime}
-                        onChange={(e) => updateRow(index, { startTime: e.target.value })}
-                        className={timeInputClass}
-                        aria-label={`${DAY_LABELS[row.dayOfWeek]} start time`}
+                        onChange={(value) => updateRow(index, { startTime: value })}
+                        ariaLabel={`${DAY_LABELS[row.dayOfWeek]} start time`}
                       />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-text-secondary">End</span>
-                      <input
-                        type="time"
+                      <TimeField
+                        label="End"
+                        disabled={saving}
+                        required
                         value={row.endTime}
-                        onChange={(e) => updateRow(index, { endTime: e.target.value })}
-                        className={timeInputClass}
-                        aria-label={`${DAY_LABELS[row.dayOfWeek]} end time`}
+                        onChange={(value) => updateRow(index, { endTime: value })}
+                        ariaLabel={`${DAY_LABELS[row.dayOfWeek]} end time`}
                       />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-text-secondary">Break start</span>
-                      <input
-                        type="time"
+                      <TimeField
+                        label="Break start"
+                        disabled={saving}
                         value={row.breakStart}
-                        onChange={(e) => updateRow(index, { breakStart: e.target.value })}
-                        className={timeInputClass}
-                        aria-label={`${DAY_LABELS[row.dayOfWeek]} break start`}
+                        onChange={(value) => updateRow(index, { breakStart: value })}
+                        ariaLabel={`${DAY_LABELS[row.dayOfWeek]} break start`}
                       />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-text-secondary">Break end</span>
-                      <input
-                        type="time"
+                      <TimeField
+                        label="Break end"
+                        disabled={saving}
                         value={row.breakEnd}
-                        onChange={(e) => updateRow(index, { breakEnd: e.target.value })}
-                        className={timeInputClass}
-                        aria-label={`${DAY_LABELS[row.dayOfWeek]} break end`}
+                        onChange={(value) => updateRow(index, { breakEnd: value })}
+                        ariaLabel={`${DAY_LABELS[row.dayOfWeek]} break end`}
                       />
-                    </label>
                   </div>
                 )}
 

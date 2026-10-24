@@ -7,9 +7,8 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { CancelAppointmentDialog } from "@/components/admin/cancel-appointment-dialog";
 import { statusActionLabel } from "@/lib/status-labels";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetBody, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -439,7 +438,7 @@ export function CalendarView() {
 
       {/* ─── Event Detail Sheet ─── */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetContent side="right" className="w-full bg-surface sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Appointment Details</SheetTitle>
             <SheetDescription>
@@ -448,11 +447,14 @@ export function CalendarView() {
           </SheetHeader>
 
           {selectedAppt && (
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
-              <Separator />
+            <SheetBody className="flex flex-col gap-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-text">Appointment overview</h3>
+                <StatusBadge status={currentStatus} />
+              </div>
 
               {/* Patient info */}
-              <div className="space-y-1.5">
+              <dl className="flex flex-col gap-4">
                 <DetailRow label="Patient" value={`${patient?.firstName} ${patient?.lastName}`} />
                 {patient?.phone && <DetailRow label="Phone" value={patient.phone} />}
                 <DetailRow label="Service" value={service?.name ?? "—"} />
@@ -466,34 +468,29 @@ export function CalendarView() {
                 {selectedAppt.notes && (
                   <DetailRow label="Notes" value={selectedAppt.notes} />
                 )}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-text-muted">Status</span>
-                <div>
-                  <StatusBadge status={currentStatus} />
-                </div>
-              </div>
-            </div>
+              </dl>
+            </SheetBody>
           )}
 
           <SheetFooter>
             {nextActions.length > 0 && (
-              <div className="flex w-full gap-2">
+              <div className="flex w-full flex-wrap gap-3">
                 {nextActions.map((ns) => (
                   <Button
                     key={ns}
                     onClick={() => (ns === "CANCELLED" ? setCancelOpen(true) : changeStatus(ns))}
                     disabled={actionLoading}
-                    variant={ns === "CANCELLED" ? "destructive" : "default"}
-                    className="flex-1"
+                    variant={ns === "CANCELLED" ? "destructive" : "primary"}
+                    className="min-w-28 flex-1"
                   >
                     {actionLoading ? "Updating..." : statusActionLabel(ns)}
                   </Button>
                 ))}
               </div>
             )}
+            <SheetClose asChild>
+              <Button variant="outline" type="button">Close</Button>
+            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -516,9 +513,9 @@ export function CalendarView() {
 /* ─── Small helper row ─── */
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</span>
-      <span className={cn("text-right text-sm text-text", mono && "font-mono text-xs")}>{value}</span>
+    <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-4 text-sm">
+      <dt className="text-text-muted">{label}</dt>
+      <dd className={cn("min-w-0 whitespace-pre-wrap text-text", mono && "font-mono text-xs")}>{value}</dd>
     </div>
   );
 }

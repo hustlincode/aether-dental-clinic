@@ -149,7 +149,7 @@ export function NeedsConfirmationPanel() {
       }
       padded={false}
       actions={
-        <Button onClick={check} disabled={loading} size="default">
+        <Button onClick={check} disabled={loading} variant="primary" size="default">
           {loading ? (
             <Loader2 className="animate-spin" aria-hidden />
           ) : (

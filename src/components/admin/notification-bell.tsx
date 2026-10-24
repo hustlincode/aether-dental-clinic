@@ -161,7 +161,7 @@ export function NotificationBell() {
               onClick={markAllRead}
               variant="ghost"
               size="xs"
-              className="rounded-chip text-accent"
+              className="rounded-chip text-text-secondary hover:bg-background-alt hover:text-text"
             >
               <CheckCheck aria-hidden />
               Mark all as read
@@ -242,7 +242,7 @@ export function NotificationBell() {
               setOpen(false);
               if (pathname !== "/admin/notifications") router.push("/admin/notifications");
             }}
-            className="inline-flex min-h-10 w-full items-center justify-center rounded-chip px-2 text-center text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
+            className="inline-flex min-h-10 w-full items-center justify-center rounded-chip px-2 text-center text-sm font-medium text-text-secondary transition-colors hover:bg-background-alt hover:text-text"
           >
             View all notifications
           </button>

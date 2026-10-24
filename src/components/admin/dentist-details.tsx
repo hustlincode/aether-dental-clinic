@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, CalendarClock, CalendarX, RefreshCw, X } from "lucide-react";
+import { AlertCircle, CalendarClock, CalendarX, Mail, Phone, RefreshCw, X } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./data-table";
 import { StatusBadge } from "./status-badge";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/cn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { StatTone } from "@/components/admin/stat-card";
 
@@ -127,10 +130,12 @@ const columns = columnHelper.columns([
 export function DentistDetails({
   open,
   dentistId,
+  returnFocusTo,
   onClose,
 }: {
   open: boolean;
   dentistId: string | null;
+  returnFocusTo?: string | null;
   onClose: () => void;
 }) {
   const [data, setData] = useState<DentistDetailsData | null>(null);
@@ -145,9 +150,7 @@ export function DentistDetails({
     options: { initialState: { pagination: { pageIndex: 0, pageSize: 100000 } } },
   });
 
-  // Fetch dentist details whenever the drawer opens. Loading starts as true via
-  // remount (parent keys this component by dentist id), so no synchronous
-  // setState is needed inside the effect body.
+  // Keep the last loaded profile visible while refreshing the same dentist.
   useEffect(() => {
     if (!open || !dentistId) return;
     let cancelled = false;
@@ -156,7 +159,10 @@ export function DentistDetails({
       .then(async (res) => {
         const body = await res.json();
         if (!res.ok) throw new Error(body.message);
-        if (!cancelled) setData(body.data);
+        if (!cancelled) {
+          setError("");
+          setData(body.data);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load dentist details.");
@@ -188,41 +194,41 @@ export function DentistDetails({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" showCloseButton={false} className="w-full max-w-md gap-0 border-l border-border-strong bg-surface p-0">
+      <SheetContent side="right" showCloseButton={false} className="w-full gap-0 bg-surface p-0 sm:max-w-lg" onCloseAutoFocus={(event) => {
+        const trigger = returnFocusTo ? document.querySelector<HTMLElement>(returnFocusTo) : null;
+        if (trigger) {
+          event.preventDefault();
+          trigger.focus();
+        }
+      }}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <SheetTitle className="text-lg font-bold text-text">Dentist Details</SheetTitle>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onClose}
-                className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text"
-                aria-label="Close dentist details"
-              >
-                <X size={18} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Close</TooltipContent>
-          </Tooltip>
-        </div>
+        <SheetHeader className="flex-row items-start justify-between gap-4 pr-6">
+          <div className="flex flex-col gap-1">
+            <SheetTitle>Dentist Details</SheetTitle>
+            <SheetDescription>Profile, working hours, and upcoming appointments.</SheetDescription>
+          </div>
+          <SheetClose asChild>
+            <Button variant="ghost" size="icon" aria-label="Close dentist details"><X aria-hidden="true" /></Button>
+          </SheetClose>
+        </SheetHeader>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <SheetBody>
           {loading && !data ? (
-            <div className="space-y-4" aria-busy="true">
+            <div className="flex flex-col gap-4" aria-busy="true">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 animate-pulse rounded-pill bg-surface-alt" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-1/2 animate-pulse rounded bg-surface-alt" />
-                  <div className="h-3 w-2/3 animate-pulse rounded bg-surface-alt" />
+                <Skeleton className="size-12 rounded-control" />
+                <div className="flex flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-2/3" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-control bg-surface-alt" />
+                  <Skeleton key={i} className="h-20 rounded-control" />
                 ))}
               </div>
-              <div className="h-40 animate-pulse rounded-control bg-surface-alt" />
+              <Skeleton className="h-40 rounded-control" />
             </div>
           ) : error ? (
             <div className="flex flex-col items-center px-6 py-16 text-center">
@@ -231,51 +237,45 @@ export function DentistDetails({
               </div>
               <h3 className="mt-4 text-base font-semibold text-text">Unable to load dentist</h3>
               <p className="mt-1 max-w-sm text-sm text-text-muted">{error}</p>
-              <button
-                onClick={retry}
-                className="mt-4 inline-flex h-11 items-center gap-2 rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-              >
+              <Button onClick={retry} variant="outline" className="mt-4">
                 <RefreshCw className="h-4 w-4" />
                 Try Again
-              </button>
+              </Button>
             </div>
           ) : data && dentist && stats ? (
             <>
               {/* Dentist header */}
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
+              <div className="flex items-start gap-4">
+                <Avatar className="size-12 shrink-0 rounded-control border border-border">
                   <AvatarImage src={dentist.profileImage || undefined} alt={dentist.name} />
-                  <AvatarFallback className="gradient-gold text-sm text-primary-foreground">
+                  <AvatarFallback className="rounded-control bg-accent-soft text-base font-semibold text-accent">
                     {initials(dentist.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-text">{dentist.name}</p>
-                  <p className="truncate text-sm text-text-secondary">{dentist.specialization}</p>
-                  <p className="truncate text-sm text-text-muted">{dentist.email}</p>
-                  {dentist.phone && <p className="truncate text-sm text-text-muted">{dentist.phone}</p>}
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                  <h3 className="break-words text-xl font-semibold tracking-tight text-text">{dentist.name}</h3>
+                  <p className="break-words text-sm text-text-secondary">{dentist.specialization}</p>
+                  <Badge variant="secondary" className={cn(dentist.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c")}>
+                    {dentist.status === "ACTIVE" ? "Active" : "Inactive"}
+                  </Badge>
                 </div>
-                <span
-                  className={`ml-auto shrink-0 inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
-                    dentist.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c"
-                  }`}
-                >
-                  {dentist.status === "ACTIVE" ? "Active" : "Inactive"}
-                </span>
               </div>
 
-              {/* Manage schedule (Phase 4 page) */}
-              <Link
-                href={`/admin/dentists/${dentist.id}`}
-                onClick={onClose}
-                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-control border border-border bg-surface-alt px-4 text-sm font-medium text-text-secondary transition hover:border-border-accent hover:bg-accent-soft hover:text-accent"
-              >
-                <CalendarClock size={16} />
-                Manage Schedule
-              </Link>
+              <dl className="mt-6 flex flex-col gap-4 border-y border-border py-5 text-sm">
+                <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
+                  <dt className="flex items-center gap-2 text-text-muted"><Mail size={15} aria-hidden="true" />Email</dt>
+                  <dd className="break-words text-text">{dentist.email}</dd>
+                </div>
+                {dentist.phone && (
+                  <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
+                    <dt className="flex items-center gap-2 text-text-muted"><Phone size={15} aria-hidden="true" />Phone</dt>
+                    <dd className="break-words text-text">{dentist.phone}</dd>
+                  </div>
+                )}
+              </dl>
 
               {/* Stats grid */}
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="mt-6 grid grid-cols-2 gap-4 border-b border-border pb-5">
                 <StatCard label="Total Appointments" value={String(stats.totalAppointments)} tone="neutral" />
                 <StatCard label="Upcoming" value={String(stats.upcomingCount)} tone="accent" />
               </div>
@@ -283,36 +283,34 @@ export function DentistDetails({
               {/* Weekly schedule */}
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-text">Weekly Schedule</h3>
-                <div className="mt-3 overflow-hidden rounded-card border border-border">
+                <dl className="mt-3 divide-y divide-border">
                   {schedule.map((row, index) => (
                     <div
                       key={DAY_ORDER[index]}
-                      className={`flex items-center justify-between px-3 py-2 text-sm ${
-                        index % 2 === 0 ? "bg-surface-alt" : "bg-surface"
-                      }`}
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm"
                     >
-                      <span className="font-medium text-text">{DAY_LABELS[DAY_ORDER[index]]}</span>
-                      <span className="text-text-secondary">
+                      <dt className="font-medium text-text">{DAY_LABELS[DAY_ORDER[index]]}</dt>
+                      <dd className="text-text-secondary tabular-nums">
                         {row && row.isWorking
                           ? `${fmtTime(row.startTime)} – ${fmtTime(row.endTime)}`
                           : "Off"}
-                      </span>
+                      </dd>
                     </div>
                   ))}
-                </div>
+                </dl>
               </div>
 
               {/* Upcoming appointments */}
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-text">Upcoming Appointments</h3>
                 {data.upcoming.length === 0 ? (
-                  <div className="mt-3 flex flex-col items-center rounded-card border border-border bg-surface-alt px-6 py-10 text-center">
+                  <div className="mt-3 flex flex-col items-center rounded-control border border-dashed border-border px-5 py-8 text-center">
                     <CalendarX size={28} className="text-text-muted" />
                     <p className="mt-3 text-sm text-text-secondary">No upcoming appointments</p>
                     <p className="mt-1 text-xs text-text-muted">This dentist has no upcoming appointments.</p>
                   </div>
                 ) : (
-                  <div className="card-surface mt-3 overflow-hidden">
+                  <div className="mt-3 overflow-hidden rounded-control border border-border">
                     <DataTable table={table} />
                   </div>
                 )}
@@ -322,7 +320,17 @@ export function DentistDetails({
               </div>
             </>
           ) : null}
-        </div>
+        </SheetBody>
+        <SheetFooter>
+          <SheetClose asChild><Button variant="outline">Close</Button></SheetClose>
+          {dentist && (
+            <Button asChild variant="primary">
+              <Link href={`/admin/dentists/${dentist.id}`} onClick={onClose}>
+                <CalendarClock aria-hidden="true" />Manage Schedule
+              </Link>
+            </Button>
+          )}
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -339,10 +347,10 @@ const STAT_TONE_STYLES: Record<StatTone, string> = {
 
 function StatCard({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: StatTone }) {
   return (
-    <div className="rounded-control border border-border bg-surface-alt px-3 py-2.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
-      <p className={`mt-1 truncate text-base font-semibold ${STAT_TONE_STYLES[tone]}`}>{value}</p>
-      {sub && <p className="mt-0.5 truncate text-xs text-text-muted">{sub}</p>}
+    <div className="min-w-0">
+      <p className="text-xs font-medium text-text-muted">{label}</p>
+      <p className={cn("mt-1 break-words text-lg font-semibold tabular-nums", STAT_TONE_STYLES[tone])}>{value}</p>
+      {sub && <p className="mt-1 break-words text-xs leading-relaxed text-text-muted">{sub}</p>}
     </div>
   );
 }

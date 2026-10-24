@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
 import {
   Sheet,
+  SheetBody,
   SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
+  SheetFooter,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
@@ -36,13 +38,14 @@ export function MobileNav() {
         />
       </SheetTrigger>
       <SheetContent side="right" className="w-68 sm:max-w-sm">
-        <SheetHeader className="border-b border-border">
+        <SheetHeader>
           <SheetTitle>
             <Logo href={null} wordmarkClassName="text-base" markClassName="h-7 w-7" />
           </SheetTitle>
           <SheetDescription>Explore our services, team, and FAQs.</SheetDescription>
         </SheetHeader>
-        <nav aria-label="Mobile menu" className="flex flex-col gap-1 px-2">
+        <SheetBody className="px-3 py-4">
+        <nav aria-label="Mobile menu" className="flex flex-col gap-1">
           {NAV_LINKS.map((link) => (
             <SheetClose key={link.href} asChild>
               <Link
@@ -62,13 +65,14 @@ export function MobileNav() {
             </Link>
           </SheetClose>
         </nav>
-        <div className="mt-auto p-4">
+        </SheetBody>
+        <SheetFooter>
           <SheetClose asChild>
             <Button asChild size="default" className="w-full">
               <Link href="/book">Book Now</Link>
             </Button>
           </SheetClose>
-        </div>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

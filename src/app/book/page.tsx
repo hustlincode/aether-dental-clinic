@@ -671,17 +671,16 @@ function SelectTime({ slots, loading, selected, onSelect, onBack }: { slots: Slo
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {slots.map((s) => (
-            <button
+            <Button
               key={s.start}
+              type="button"
+              variant={selected === s.start ? "default" : "outline"}
+              aria-pressed={selected === s.start}
               onClick={() => onSelect(s)}
-              className={`inline-flex min-h-11 items-center justify-center rounded-control border text-sm font-medium transition-all duration-(--dur-fast) ${
-                selected === s.start
-                  ? "border-accent bg-accent-fill text-[#0E0F10]"
-                  : "border-border bg-surface text-text-secondary hover:border-border-accent hover:text-accent"
-              }`}
+              className="min-h-11 px-2"
             >
               {formatTime(s.start)}
-            </button>
+            </Button>
           ))}
         </div>
       )}

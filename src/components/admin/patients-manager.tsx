@@ -73,6 +73,8 @@ export function PatientsManager({ role }: { role: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsReturnFocus, setDetailsReturnFocus] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
@@ -223,7 +225,8 @@ export function PatientsManager({ role }: { role: string }) {
         const patient = info.row.original;
         return (
           <button
-            onClick={() => setDetailsId(patient.id)}
+            data-patient-details-trigger={patient.id}
+            onClick={() => { setDetailsReturnFocus(`[data-patient-details-trigger="${CSS.escape(patient.id)}"]`); setDetailsId(patient.id); setDetailsOpen(true); }}
             className="flex items-center gap-3 text-left"
             title="View patient details"
           >
@@ -314,7 +317,7 @@ export function PatientsManager({ role }: { role: string }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-xs" aria-label="More actions">
+                    <Button variant="ghost" size="icon-xs" aria-label="More actions" data-patient-actions-trigger={patient.id}>
                       <MoreHorizontal aria-hidden />
                     </Button>
                   </DropdownMenuTrigger>
@@ -322,7 +325,11 @@ export function PatientsManager({ role }: { role: string }) {
                 <TooltipContent>More actions</TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end" className="bg-surface">
-                <DropdownMenuItem onSelect={() => setDetailsId(patient.id)}>
+                <DropdownMenuItem onSelect={() => {
+                  setDetailsReturnFocus(`[data-patient-actions-trigger="${CSS.escape(patient.id)}"]`);
+                  setDetailsId(patient.id);
+                  setDetailsOpen(true);
+                }}>
                   <Eye size={15} />
                   View patient
                 </DropdownMenuItem>
@@ -387,6 +394,7 @@ export function PatientsManager({ role }: { role: string }) {
           <>
             {canManage && (
               <Button
+                variant="primary"
                 size="default"
                 onClick={() => {
                   setEditingPatient(null);
@@ -450,6 +458,7 @@ export function PatientsManager({ role }: { role: string }) {
             action={
               canManage ? (
                 <Button
+                  variant="primary"
                   size="default"
                   onClick={() => {
                     setEditingPatient(null);
@@ -486,7 +495,7 @@ export function PatientsManager({ role }: { role: string }) {
       />
 
       {/* Details drawer */}
-      <PatientDetails key={detailsId || "closed"} open={!!detailsId} patientId={detailsId} onClose={() => setDetailsId(null)} />
+      <PatientDetails key={detailsId || "closed"} open={detailsOpen} patientId={detailsId} returnFocusTo={detailsReturnFocus} onClose={() => setDetailsOpen(false)} />
     </PageContainer>
   );
 }

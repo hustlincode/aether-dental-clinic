@@ -49,7 +49,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /* Brand CTA — the flat gold fill specified for the public site
+           (BUTTON-REFINEMENT-SPEC §3.1). */
         default: "bg-accent-fill text-primary-foreground hover:bg-accent-fill-hover active:bg-accent-fill",
+        /* Neutral primary action for the staff dashboard: shadcn's standard
+           solid — near-black in light, near-white in dark. It is deliberately
+           built from the theme's neutral foreground/surface pair instead of
+           `--primary`, because `--primary` aliases the brand gold here. This
+           keeps the admin free of gold action buttons while the public site
+           keeps its gold CTA, and resolves correctly inside portals. */
+        primary: "bg-foreground text-background hover:bg-foreground/90 active:bg-foreground",
         destructive: destructiveStyles,
         danger: destructiveStyles,
         outline: "border border-border bg-surface hover:bg-accent-surface hover:text-accent",

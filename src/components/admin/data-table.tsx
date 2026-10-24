@@ -498,7 +498,7 @@ function PageNumbers({
           <Button
             key={item}
             type="button"
-            variant={item === current ? "default" : "ghost"}
+            variant={item === current ? "primary" : "ghost"}
             size="icon-sm"
             onClick={() => onSelect(item)}
             aria-current={item === current ? "page" : undefined}
@@ -506,7 +506,7 @@ function PageNumbers({
               "text-xs font-semibold",
               // `ghost` carries no ink of its own; the inactive page number
               // keeps the secondary text colour it always had. The active one
-              // gets its ink from the `default` variant.
+              // gets its ink from the `primary` variant.
               item !== current && "text-text-secondary",
             )}
           >

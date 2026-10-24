@@ -77,6 +77,8 @@ export function DentistsManager({ role }: { role: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDentist, setEditingDentist] = useState<Dentist | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsReturnFocus, setDetailsReturnFocus] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -209,7 +211,8 @@ export function DentistsManager({ role }: { role: string }) {
         const dentist = info.row.original;
         return (
           <button
-            onClick={() => setDetailsId(dentist.id)}
+            data-dentist-details-trigger={dentist.id}
+            onClick={() => { setDetailsReturnFocus(`[data-dentist-details-trigger="${CSS.escape(dentist.id)}"]`); setDetailsId(dentist.id); setDetailsOpen(true); }}
             className="flex items-center gap-3 text-left"
             title="View dentist details"
           >
@@ -271,7 +274,7 @@ export function DentistsManager({ role }: { role: string }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-xs" aria-label="More actions">
+                    <Button variant="ghost" size="icon-xs" aria-label="More actions" data-dentist-actions-trigger={dentist.id}>
                       <MoreHorizontal aria-hidden />
                     </Button>
                   </DropdownMenuTrigger>
@@ -279,7 +282,11 @@ export function DentistsManager({ role }: { role: string }) {
                 <TooltipContent>More actions</TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end" className="bg-surface">
-                <DropdownMenuItem onSelect={() => setDetailsId(dentist.id)}>
+                <DropdownMenuItem onSelect={() => {
+                  setDetailsReturnFocus(`[data-dentist-actions-trigger="${CSS.escape(dentist.id)}"]`);
+                  setDetailsId(dentist.id);
+                  setDetailsOpen(true);
+                }}>
                   <Eye size={15} />
                   View dentist
                 </DropdownMenuItem>
@@ -330,6 +337,7 @@ export function DentistsManager({ role }: { role: string }) {
           <>
             {canManage && (
               <Button
+                variant="primary"
                 size="default"
                 onClick={() => {
                   setEditingDentist(null);
@@ -384,6 +392,7 @@ export function DentistsManager({ role }: { role: string }) {
             action={
               canManage ? (
                 <Button
+                  variant="primary"
                   size="default"
                   onClick={() => {
                     setEditingDentist(null);
@@ -420,7 +429,7 @@ export function DentistsManager({ role }: { role: string }) {
       />
 
       {/* Details drawer */}
-      <DentistDetails key={detailsId || "closed"} open={!!detailsId} dentistId={detailsId} onClose={() => setDetailsId(null)} />
+      <DentistDetails key={detailsId || "closed"} open={detailsOpen} dentistId={detailsId} returnFocusTo={detailsReturnFocus} onClose={() => setDetailsOpen(false)} />
     </PageContainer>
   );
 }

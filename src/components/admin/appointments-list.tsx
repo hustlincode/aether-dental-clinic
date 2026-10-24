@@ -15,6 +15,7 @@ import { SectionCard } from "@/components/admin/section-card";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { TableSkeleton } from "@/components/admin/table-skeleton";
+import { DatePickerField } from "@/components/admin/date-picker-field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +28,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -92,9 +94,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, Appt>();
 export function AppointmentsList({ role, initialDateKey }: { role: string; initialDateKey?: string }) {
   const [query, setQuery] = useState("");
   const [params, setParams] = useState({ page: 1, status: "", search: "" });
-  const [datePreset, setDatePreset] = useState<"all" | "today">(
-    initialDateKey && initialDateKey === getClinicDateKey() ? "today" : "all",
-  );
+  const [dateFilter, setDateFilter] = useState(initialDateKey ?? "");
   const [appts, setAppts] = useState<Appt[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,7 +118,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
     const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (statusFilter) qs.set("status", statusFilter);
     if (searchFilter) qs.set("search", searchFilter);
-    if (datePreset === "today") qs.set("date", getClinicDateKey());
+    if (dateFilter) qs.set("date", dateFilter);
 
     fetch(`/api/appointments?${qs.toString()}`)
       .then(async (res) => {
@@ -139,7 +139,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
     return () => {
       cancelled = true;
     };
-  }, [page, statusFilter, searchFilter, datePreset, refreshKey]);
+  }, [page, statusFilter, searchFilter, dateFilter, refreshKey]);
 
   /* Loading is toggled by user actions (never synchronously inside the effect),
      so the initial state starts as true and every interaction re-shows it. */
@@ -164,9 +164,9 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
     beginLoad();
   }
 
-  function handleDatePresetChange(value: "all" | "today") {
-    if (value === datePreset) return;
-    setDatePreset(value);
+  function handleDateChange(value: string) {
+    if (value === dateFilter) return;
+    setDateFilter(value);
     setParams((p) => ({ ...p, page: 1 }));
     beginLoad();
   }
@@ -349,15 +349,17 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
           />
         </div>
         <div className="flex items-center gap-2">
-          <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as "all" | "today")}>
-            <SelectTrigger aria-label="Filter by date" size="sm" className="rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
-              <SelectValue placeholder="All dates" />
-            </SelectTrigger>
-            <SelectContent className="bg-surface">
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-            </SelectContent>
-          </Select>
+          <DatePickerField
+            id="appointments-date-filter"
+            label="Filter by date"
+            hideLabel
+            variant="button"
+            value={dateFilter}
+            onChange={handleDateChange}
+            placeholder="All dates"
+            allowClear
+            className="w-auto"
+          />
           <Select value={statusFilter || "__all__"} onValueChange={(v) => handleStatusChange(v === "__all__" ? "" : v)}>
             <SelectTrigger aria-label="Filter by status" size="sm" className="rounded-control border-border bg-surface px-3 text-sm text-text focus-visible:ring-ring/20 focus-visible:ring-focus/40">
               <SelectValue placeholder="All statuses" />
@@ -429,7 +431,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
                         <Button
                           key={item}
                           type="button"
-                          variant={item === page ? "default" : "ghost"}
+                          variant={item === page ? "primary" : "ghost"}
                           size="icon-sm"
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
@@ -437,7 +439,6 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
                             "text-xs font-semibold",
                             // `ghost` carries no ink of its own; the inactive
                             // page number keeps the secondary text colour.
-                            item === page && "text-primary-foreground",
                             item !== page && "text-text-secondary",
                           )}
                         >
@@ -456,13 +457,12 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
                         <Button
                           key={item}
                           type="button"
-                          variant={item === page ? "default" : "ghost"}
+                          variant={item === page ? "primary" : "ghost"}
                           size="icon-sm"
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
                           className={cn(
                             "text-xs font-semibold",
-                            item === page && "text-primary-foreground",
                             item !== page && "text-text-secondary",
                           )}
                         >
@@ -544,13 +544,12 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
         const isCancel = a === "CANCELLED";
         const isPrimary = i === 0 && !isCancel;
         return (
-          /* Hand-rolled, not <Button size="xs">: these three treatments each carry
-             an explicit ink, and tailwind-merge treats every custom `text-*` token
-             as one group — a size that declares a font-size (`text-caption`)
-             evicts the variant's `text-destructive-foreground` /
-             `text-primary-foreground`, and a `className` colour evicts the size.
-             Either way the chip loses its ink. Height and hit are what changed
-             here, so the `::after` contract is applied directly instead. */
+          /* Hand-rolled, not <Button size="xs">: each of the three treatments
+             needs its own ink, and a `className` colour beats the variant's
+             (the merge engine keeps every `text-*` colour in one group), so a
+             `<Button>` here would be a base list plus three overrides. Height,
+             ink and hit area are what matter, so the `::after` contract is
+             applied directly instead. */
           <button
             key={a}
             onClick={() => onChange(a)}
@@ -558,8 +557,8 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
               isCancel
                 ? "border-destructive/30 bg-destructive text-white hover:bg-destructive/90"
                 : isPrimary
-                  ? "border-accent bg-accent-fill text-primary-foreground hover:bg-accent-fill-hover"
-                  : "border-border bg-accent-soft text-accent hover:bg-accent-fill hover:text-primary-foreground"
+                  ? "border-foreground bg-foreground text-background hover:bg-foreground/90"
+                  : "border-border bg-surface text-text-secondary hover:bg-background-alt hover:text-text"
             }`}
           >
             {statusActionLabel(a)}
@@ -578,23 +577,6 @@ interface SelectOption {
 
 function localDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Clinic-local "today" in Asia/Manila as a YYYY-MM-DD key, matching the
-// @db.Date keys served by /api/appointments. Client mirror of
-// src/lib/clinic-time.ts clinicDateKey; kept here so the server env-dependent
-// module stays out of the client bundle.
-const CLINIC_TZ = "Asia/Manila";
-
-function getClinicDateKey(instant: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: CLINIC_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(instant);
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function EditAppointmentDialog({
@@ -750,17 +732,15 @@ function EditAppointmentDialog({
         <div className="grid gap-4">
           <fieldset className="grid gap-3 sm:grid-cols-2">
             <legend className="text-xs font-semibold uppercase tracking-wide text-text-muted">Schedule</legend>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-date" className="text-sm font-medium text-text">Date</label>
-              <input
-                id="edit-date"
-                type="date"
-                min={minDate}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-text transition-[color,box-shadow] focus:border-accent focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:ring-focus/40"
-              />
-            </div>
+            <DatePickerField
+              id="edit-date"
+              label="Date"
+              value={date}
+              onChange={setDate}
+              min={minDate}
+              required
+              labelClassName="text-text"
+            />
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text">Dentist</label>
               <Select value={dentistId || undefined} onValueChange={setDentistId} disabled={!canEditPatient}>
@@ -800,7 +780,9 @@ function EditAppointmentDialog({
                   <SelectValue placeholder="Select a time" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface">
-                  {slots.map((s) => (<SelectItem key={s} value={s}>{fmtTime(s)}</SelectItem>))}
+                  <SelectGroup>
+                    {slots.map((s) => (<SelectItem key={s} value={s}>{fmtTime(s)}</SelectItem>))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               {loadingSlots && <span className="text-xs text-text-muted">Checking availability...</span>}
@@ -869,14 +851,14 @@ function EditAppointmentDialog({
         <DialogFooter>
           <button
             onClick={onClose}
-            className="inline-flex h-11 items-center rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent"
+            className="inline-flex h-11 items-center rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-background-alt hover:text-text"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex h-11 items-center rounded-control border border-accent bg-accent-fill px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent-fill-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-control border border-foreground bg-foreground px-4 text-sm font-semibold text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

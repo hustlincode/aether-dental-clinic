@@ -1,7 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type BrowserContext } from "@playwright/test";
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { encode } from "next-auth/jwt";
+
+async function chooseTime(page: Page, label: string, value: string) {
+  await page.getByRole("button", { name: new RegExp(`^${label}(?: |$)`) }).click();
+  const popup = page.getByRole("dialog");
+  const [hour, minute] = value.split(":");
+  await popup.getByRole("listbox", { name: "Hour", exact: true }).getByRole("option", { name: hour, exact: true }).click();
+  await popup.getByRole("listbox", { name: "Minute", exact: true }).getByRole("option", { name: minute, exact: true }).click();
+  await popup.getByRole("button", { name: "OK", exact: true }).click();
+  await expect(popup).toHaveCount(0);
+}
 
 test.describe("clinic configuration", () => {
   test.skip(!process.env.TEST_DATABASE_URL, "Requires an isolated PostgreSQL TEST_DATABASE_URL.");
@@ -42,11 +52,11 @@ test.describe("clinic configuration", () => {
     await page.getByLabel("Address", { exact: true }).fill("Browser test clinic address");
     await page.getByLabel("Public phone", { exact: true }).fill("09123456789");
     await page.getByLabel("Public email", { exact: true }).fill("browser-clinic@example.test");
-    await page.getByLabel("Opening time", { exact: true }).fill("08:00");
+    await chooseTime(page, "Opening time", "08:00");
     let saved = page.waitForResponse(response => response.url().endsWith("/api/admin/configuration") && response.request().method() === "PATCH");
     await page.getByRole("button", { name: "Save contact details", exact: true }).click();
     expect((await saved).status()).toBe(200);
-    await expect(page.getByLabel("Opening time", { exact: true })).toHaveValue("08:00");
+    await expect(page.getByRole("button", { name: /^Opening time(?: |$)/ })).toContainText("08:00");
     expect((await prisma.clinicSetting.findUniqueOrThrow({ where: { id: "singleton" } })).openingTime).toBe("09:00");
     saved = page.waitForResponse(response => response.url().endsWith("/api/admin/configuration") && response.request().method() === "PATCH");
     await page.getByRole("button", { name: "Save operating hours", exact: true }).click();
@@ -94,7 +104,7 @@ test.describe("clinic configuration", () => {
     const address = page.getByLabel("Address", { exact: true });
     await expect(address).toBeVisible();
     await address.fill("Unsaved local contact");
-    await page.getByLabel("Closing time", { exact: true }).fill("16:00");
+    await chooseTime(page, "Closing time", "16:00");
     const previous = await prisma.clinicSetting.findUniqueOrThrow({ where: { id: "singleton" } });
     await prisma.clinicSetting.update({ where: { id: "singleton" }, data: { address: "Concurrent administrator contact", updatedAt: new Date(previous.updatedAt.getTime() + 1000) } });
     const stale = page.waitForResponse(response => response.url().endsWith("/api/admin/configuration") && response.request().method() === "PATCH");
@@ -102,11 +112,11 @@ test.describe("clinic configuration", () => {
     expect((await stale).status()).toBe(409);
     await expect(page.getByRole("button", { name: "Reload settings", exact: true })).toBeVisible();
     await expect(address).toHaveValue("Unsaved local contact");
-    await expect(page.getByLabel("Closing time", { exact: true })).toHaveValue("16:00");
+    await expect(page.getByRole("button", { name: /^Closing time(?: |$)/ })).toContainText("16:00");
     expect((await prisma.clinicSetting.findUniqueOrThrow({ where: { id: "singleton" } })).address).toBe("Concurrent administrator contact");
     await page.getByRole("button", { name: "Reload settings", exact: true }).click();
     await expect(address).toHaveValue("Concurrent administrator contact");
-    await expect(page.getByLabel("Closing time", { exact: true })).toHaveValue("17:00");
+    await expect(page.getByRole("button", { name: /^Closing time(?: |$)/ })).toContainText("17:00");
     await expect(page.getByRole("button", { name: "Reload settings", exact: true })).toHaveCount(0);
   });
 

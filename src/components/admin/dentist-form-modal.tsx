@@ -285,7 +285,7 @@ export function DentistFormModal({
               <Button type="button" variant="ghost" size="default" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" size="default" disabled={isSubmitting}>
+              <Button type="submit" variant="primary" size="default" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : initialData ? "Update Dentist" : "Add Dentist"}
               </Button>
             </div>

@@ -248,7 +248,7 @@ function ServiceModal({
             <Button type="button" variant="ghost" size="default" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" size="default" disabled={saving}>
+            <Button type="submit" variant="primary" size="default" disabled={saving}>
               {saving ? "Saving..." : initialData ? "Update Service" : "Create Service"}
             </Button>
           </div>
@@ -472,6 +472,7 @@ export function ServicesManager() {
         description="Manage your clinic's services, pricing, and durations."
         actions={
           <Button
+            variant="primary"
             size="default"
             onClick={() => {
               setEditingService(null);

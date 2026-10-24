@@ -5,6 +5,7 @@ import { CalendarPlus, CalendarX, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/admin/date-picker-field";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 
@@ -174,16 +175,14 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
           <p className="mt-0.5 text-xs text-text-muted">Leave the reason empty for a generic block.</p>
         </header>
         <form onSubmit={handleAdd} className="space-y-4 p-5">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-text-secondary">Date</span>
-            <input
-              type="date"
-              value={date}
-              min={today}
-              onChange={(e) => setDate(e.target.value)}
-              className={inputClass}
-            />
-          </label>
+          <DatePickerField
+            id="blocked-date"
+            label="Date"
+            value={date}
+            onChange={setDate}
+            min={today}
+            required
+          />
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-text-secondary">Reason (optional)</span>
             <input
@@ -197,6 +196,7 @@ export function BlockedDatesPanel({ dentistId }: { dentistId: string }) {
           </label>
           <Button
             type="submit"
+            variant="primary"
             size="default"
             className="w-full"
             disabled={submitting || loading || !date}

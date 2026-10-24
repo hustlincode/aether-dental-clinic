@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DatePickerField } from "@/components/admin/date-picker-field";
+import { TimeField } from "@/components/admin/time-field";
 import { clinicDateKey } from "@/lib/clinic-time";
 import { PageContainer } from "./page-container";
 import { PageHeader } from "./page-header";
@@ -143,13 +145,28 @@ export function ConfigurationManager({ readOnly }: { readOnly: boolean }) {
           {(["contact", "hours"] as const).map((section) => <SectionCard key={section} title={section === "contact" ? "Contact details" : "Operating hours"} description={section === "contact" ? "Aether Dental branding stays fixed. Empty optional contact fields are hidden publicly." : "Changes take effect immediately in Manila time. Dentist schedules still apply. Conflicting appointments must be resolved first."}>
             <form onSubmit={(event) => void save(event, section)} className="space-y-4">
               <fieldset disabled={readOnly || saving !== null} className="space-y-4">
-                {(section === "contact" ? contactFields : hoursFields).map((field) => <div key={field}>
-                  <label htmlFor={field} className="mb-1 block text-sm font-medium text-text-secondary">{labels[field]}</label>
-                  <Input id={field} type={section === "hours" ? "time" : field === "email" ? "email" : field === "phone" ? "tel" : "text"} required={field === "openingTime" || field === "closingTime"} value={draft[field] ?? ""} onChange={(event) => setDraft({ ...draft, [field]: event.target.value })} aria-invalid={Boolean(feedback[section]?.fields?.[field])} aria-describedby={feedback[section]?.fields?.[field] ? `${field}-error` : undefined} />
-                  {feedback[section]?.fields?.[field] && <p id={`${field}-error`} className="mt-1 text-sm text-error">{feedback[section]?.fields?.[field].join(" ")}</p>}
-                </div>)}
+                {(section === "contact" ? contactFields : hoursFields).map((field) => (
+                  section === "hours" ? (
+                    <TimeField
+                      key={field}
+                      disabled={readOnly || saving !== null}
+                      id={field}
+                      label={labels[field]}
+                      value={draft[field] ?? ""}
+                      onChange={(value) => setDraft({ ...draft, [field]: value })}
+                      required={field === "openingTime" || field === "closingTime"}
+                      error={feedback[section]?.fields?.[field]?.join(" ")}
+                    />
+                  ) : (
+                    <div key={field}>
+                      <label htmlFor={field} className="mb-1 block text-sm font-medium text-text-secondary">{labels[field]}</label>
+                      <Input id={field} type={field === "email" ? "email" : field === "phone" ? "tel" : "text"} required={false} value={draft[field] ?? ""} onChange={(event) => setDraft({ ...draft, [field]: event.target.value })} aria-invalid={Boolean(feedback[section]?.fields?.[field])} aria-describedby={feedback[section]?.fields?.[field] ? `${field}-error` : undefined} />
+                      {feedback[section]?.fields?.[field] && <p id={`${field}-error`} className="mt-1 text-sm text-error">{feedback[section]?.fields?.[field].join(" ")}</p>}
+                    </div>
+                  )
+                ))}
                 {section === "hours" && <p className="text-sm text-text-muted">Leave both lunch fields empty for no lunch break. Overnight hours are not supported.</p>}
-                <Button type="submit" disabled={!(section === "contact" ? contactFields : hoursFields).some((field) => (draft[field] || "") !== (configuration[field] || ""))}>{saving === section ? "Saving…" : section === "contact" ? "Save contact details" : "Save operating hours"}</Button>
+                <Button type="submit" variant="primary" disabled={!(section === "contact" ? contactFields : hoursFields).some((field) => (draft[field] || "") !== (configuration[field] || ""))}>{saving === section ? "Saving…" : section === "contact" ? "Save contact details" : "Save operating hours"}</Button>
               </fieldset>
               <FeedbackMessage feedback={feedback[section]} reload={reload} />
             </form>
@@ -163,9 +180,17 @@ export function ConfigurationManager({ readOnly }: { readOnly: boolean }) {
             </li>)}</ul>}</div>
             <form onSubmit={(event) => { event.preventDefault(); void mutateClosure(); }} className="space-y-4">
               <fieldset disabled={readOnly || closureBusy} className="space-y-4">
-                <div><label htmlFor="closure-date" className="mb-1 block text-sm font-medium text-text-secondary">Closure date (Manila)</label><Input id="closure-date" type="date" required min={clinicDateKey()} value={date} onChange={(event) => setDate(event.target.value)} aria-invalid={Boolean(closureFeedback?.fields?.date)} aria-describedby={closureFeedback?.fields?.date ? "closure-date-error" : undefined} />{closureFeedback?.fields?.date && <p id="closure-date-error" className="mt-1 text-sm text-error">{closureFeedback.fields.date.join(" ")}</p>}</div>
+                <DatePickerField
+                  id="closure-date"
+                  label="Closure date (Manila)"
+                  value={date}
+                  onChange={setDate}
+                  min={clinicDateKey()}
+                  required
+                  error={closureFeedback?.fields?.date?.join(" ")}
+                />
                 <div><label htmlFor="closure-reason" className="mb-1 block text-sm font-medium text-text-secondary">Internal reason (optional)</label><Input id="closure-reason" value={reason} maxLength={200} onChange={(event) => setReason(event.target.value)} aria-describedby="closure-reason-help" aria-invalid={Boolean(closureFeedback?.fields?.reason)} /><p id="closure-reason-help" className="mt-1 text-sm text-text-muted">Only staff can see this reason.</p>{closureFeedback?.fields?.reason && <p className="mt-1 text-sm text-error">{closureFeedback.fields.reason.join(" ")}</p>}</div>
-                <Button type="submit" disabled={!date}>{closureBusy ? "Updating…" : "Add clinic closure"}</Button>
+                <Button type="submit" variant="primary" disabled={!date}>{closureBusy ? "Updating…" : "Add clinic closure"}</Button>
               </fieldset>
               <FeedbackMessage feedback={closureFeedback} reload={reload} />
             </form>
