@@ -141,14 +141,14 @@ export function NotificationsHistory() {
           <button
             onClick={() => changeFilter("all")}
             aria-pressed={filter === "all"}
-            className={`inline-flex h-10 items-center rounded-chip px-3 text-sm font-medium transition-colors ${filter === "all" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
+            className={`inline-flex h-10 items-center rounded-chip px-3 text-sm font-medium transition-colors ${filter === "all" ? "bg-background-alt text-text" : "text-text-secondary hover:text-text"}`}
           >
             All
           </button>
           <button
             onClick={() => changeFilter("unread")}
             aria-pressed={filter === "unread"}
-            className={`inline-flex h-10 items-center gap-1.5 rounded-chip px-3 text-sm font-medium transition-colors ${filter === "unread" ? "bg-accent-soft text-accent" : "text-text-secondary hover:text-text"}`}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-chip px-3 text-sm font-medium transition-colors ${filter === "unread" ? "bg-background-alt text-text" : "text-text-secondary hover:text-text"}`}
           >
             Unread
             {unreadCount > 0 && (
@@ -251,7 +251,7 @@ export function NotificationsHistory() {
                     onClick={() => goToPage(page - 1)}
                     disabled={page <= 1}
                     aria-label="Previous page"
-                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-background-alt hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -269,7 +269,7 @@ export function NotificationsHistory() {
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
                           className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
-                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                            item === page ? "bg-foreground text-background" : "text-text-secondary hover:bg-background-alt hover:text-text"
                           }`}
                         >
                           {item}
@@ -287,7 +287,7 @@ export function NotificationsHistory() {
                           onClick={() => goToPage(item)}
                           aria-current={item === page ? "page" : undefined}
                           className={`flex size-10 items-center justify-center rounded-control text-sm font-medium transition-colors ${
-                            item === page ? "bg-accent-fill text-primary-foreground" : "text-text-secondary hover:bg-accent-soft hover:text-accent"
+                            item === page ? "bg-foreground text-background" : "text-text-secondary hover:bg-background-alt hover:text-text"
                           }`}
                         >
                           {item}
@@ -299,7 +299,7 @@ export function NotificationsHistory() {
                     onClick={() => goToPage(page + 1)}
                     disabled={!pagination || page >= pagination.totalPages}
                     aria-label="Next page"
-                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex size-10 items-center justify-center rounded-control border border-border text-text-secondary transition-colors hover:bg-background-alt hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
