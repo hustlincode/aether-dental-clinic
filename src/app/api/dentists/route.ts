@@ -25,9 +25,17 @@ const STAFF_ROLES = new Set(["ADMIN", "RECEPTIONIST", "DENTIST"]);
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    if (searchParams.get("view") === "booking") {
+      const dentists = await prisma.dentist.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true, name: true, specialization: true, profileImage: true, status: true },
+        orderBy: { name: "asc" },
+      });
+      return ok(dentists);
+    }
     const wantsAll = searchParams.get("all") === "true";
 
-    const user = await getSessionUser();
+    const user = wantsAll ? await getSessionUser() : null;
     const isStaff = !!user && STAFF_ROLES.has(user.role);
     const includeInactive = wantsAll && isStaff;
 
