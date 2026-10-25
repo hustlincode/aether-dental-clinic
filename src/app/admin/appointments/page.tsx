@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/server-session";
 import { redirect } from "next/navigation";
 import { AppointmentsList } from "@/components/admin/appointments-list";
 
@@ -11,7 +11,7 @@ export default async function AdminAppointmentsPage({
 }: {
   searchParams: Promise<{ date?: string }>;
 }) {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user) redirect("/login");
   const user = session.user;
 
