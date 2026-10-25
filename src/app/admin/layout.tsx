@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/server-session";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { NotificationsProvider } from "@/components/admin/notifications-provider";
 
 export const metadata = { title: "Aether Dental — Admin" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user) {
     redirect("/login");
   }
@@ -32,8 +33,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ].filter((n) => n.roles.includes(role));
 
   return (
-    <AdminShell navItems={navItems} user={{ name, role, isDemo }}>
-      {children}
-    </AdminShell>
+    <NotificationsProvider key={user.id} isDemo={isDemo}>
+      <AdminShell navItems={navItems} user={{ name, role, isDemo }}>
+        {children}
+      </AdminShell>
+    </NotificationsProvider>
   );
 }
