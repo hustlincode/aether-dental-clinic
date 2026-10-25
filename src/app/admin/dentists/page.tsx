@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/server-session";
 import { redirect } from "next/navigation";
 import { DentistsManager } from "@/components/admin/dentists-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDentistsPage() {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/admin");
 
