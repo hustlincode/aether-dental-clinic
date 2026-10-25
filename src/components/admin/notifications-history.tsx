@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { BellDot, CheckCheck, ChevronLeft, ChevronRight, Inbox, RefreshCw } from "lucide-react";
 import { notificationColor, notificationIcon, typeLabel } from "./notification-meta";
 import { formatDateTime, timeAgo } from "@/lib/time";
-import type { NotificationItem } from "./notification-bell";
+import type { NotificationItem } from "@/lib/client-notifications";
+import { useNotifications } from "./notifications-provider";
 import { SectionCard } from "./section-card";
 import { EmptyState } from "./empty-state";
 import { ErrorState } from "./error-state";
@@ -47,40 +48,39 @@ export function NotificationsHistory() {
 
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<NotificationItem[] | null>(null);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loadedItems, setItems] = useState<NotificationItem[] | null>(null);
+  const [loadedPagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const { count, loadHistory, markRead, markAllRead, projectItems, pending, isDemo } = useNotifications();
+  const unreadCount = count ?? 0;
+  const projected = loadedItems === null ? null : projectItems(loadedItems);
+  const items = filter === "unread" ? projected?.filter((item) => !item.isRead) ?? null : projected;
+  const pagination = loadedPagination && filter === "unread" && count !== null
+    ? { ...loadedPagination, total: count, totalPages: Math.ceil(count / PAGE_SIZE) }
+    : loadedPagination;
 
   useEffect(() => {
-    let cancelled = false;
-
-    const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (filter === "unread") qs.set("unread", "1");
-
-    fetch(`/api/notifications?${qs.toString()}`, { cache: "no-store" })
-      .then(async (res) => {
-        const body = await res.json();
-        if (cancelled) return;
-        if (!res.ok) throw new Error(body.message || "Unable to load notifications.");
-        setItems(body.data?.items || []);
-        setPagination(body.data?.pagination || body.data ? { page, pageSize: PAGE_SIZE, total: body.data.total, totalPages: body.data.totalPages } : null);
-        setUnreadCount(body.data?.unreadCount ?? 0);
+    const controller = new AbortController();
+    loadHistory(page, filter === "unread", controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setItems(data.items);
+        setPagination({ page: data.page, pageSize: data.pageSize, total: data.total, totalPages: data.totalPages });
         setError("");
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load notifications.");
+        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Unable to load notifications.");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [filter, page, refreshKey]);
+  }, [filter, page, refreshKey, loadHistory]);
 
   // Loading is controlled by explicit user actions (never synchronously inside
   // the effect), so user interactions re-show the loading state.
@@ -91,26 +91,25 @@ export function NotificationsHistory() {
 
   function refresh() {
     beginLoad();
+    if (filter === "unread" && pagination && page > Math.max(1, pagination.totalPages)) setPage(1);
     setRefreshKey((k) => k + 1);
   }
 
   function changeFilter(next: "all" | "unread") {
+    if (next === filter) return;
     setFilter(next);
     setPage(1);
     beginLoad();
   }
 
   function goToPage(p: number) {
+    if (p === page) return;
     setPage(p);
     beginLoad();
   }
 
-  async function openNotification(n: NotificationItem) {
-    if (!n.isRead) {
-      setItems((prev) => prev?.map((x) => (x.id === n.id ? { ...x, isRead: true, readAt: new Date().toISOString() } : x)) ?? prev);
-      setUnreadCount((c) => Math.max(0, c - 1));
-      fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {});
-    }
+  function openNotification(n: NotificationItem) {
+    if (!n.isRead && !isDemo) void markRead(n);
     const target =
       n.entityType === "patient"
         ? "/admin/patients"
@@ -118,16 +117,6 @@ export function NotificationsHistory() {
           ? "/admin/dentists"
           : "/admin/appointments";
     if (target !== pathname) router.push(target);
-  }
-
-  async function markAllRead() {
-    setItems((prev) => prev?.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })) ?? prev);
-    setUnreadCount(0);
-    try {
-      await fetch("/api/notifications/read-all", { method: "PATCH" });
-    } catch {
-      // non-fatal
-    }
   }
 
   const start = pagination && pagination.total > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
@@ -167,14 +156,14 @@ export function NotificationsHistory() {
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          <button
+          {!isDemo && <button
             onClick={markAllRead}
-            disabled={unreadCount === 0}
+            disabled={unreadCount === 0 || pending}
             className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-all hover:border-border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCheck className="h-4 w-4" />
             Mark all as read
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -212,6 +201,7 @@ export function NotificationsHistory() {
                   <button
                     key={n.id}
                     onClick={() => openNotification(n)}
+                    disabled={pending}
                     className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-accent-soft sm:px-5 ${
                       !n.isRead ? "bg-accent-soft/50" : ""
                     }`}
