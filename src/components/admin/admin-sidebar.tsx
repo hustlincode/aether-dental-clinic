@@ -85,6 +85,7 @@ export function AdminSidebar({
       <div className={`flex items-center justify-between px-3 py-4 ${collapsed ? "flex-col gap-3" : ""}`}>
         <Link
           href="/admin"
+          prefetch={pathname === "/admin" ? false : undefined}
           aria-label="Aether Dental admin home"
           className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}
         >
@@ -135,6 +136,7 @@ export function AdminSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={active ? false : undefined}
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   onClick={onCloseMobile}
