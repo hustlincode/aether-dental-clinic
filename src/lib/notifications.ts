@@ -316,6 +316,23 @@ export interface NotificationListParams {
   unreadOnly?: boolean;
 }
 
+/** Latest notifications for the bell; no pagination count is needed. */
+export async function getNotificationPreview(userId: string, pageSize: number) {
+  const [items, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId },
+      select: {
+        id: true, type: true, title: true, message: true,
+        entityType: true, entityId: true, isRead: true, readAt: true, createdAt: true,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: pageSize,
+    }),
+    getUnreadCount(userId),
+  ]);
+  return { items, unreadCount };
+}
+
 /** Paginated notification list (newest first) — always scoped to one user. */
 export async function getNotifications(userId: string, params: NotificationListParams) {
   const where: Prisma.NotificationWhereInput = {
@@ -323,15 +340,16 @@ export async function getNotifications(userId: string, params: NotificationListP
     ...(params.unreadOnly ? { isRead: false } : {}),
   };
 
+  const unreadCountPromise = getUnreadCount(userId);
   const [items, total, unreadCount] = await Promise.all([
     prisma.notification.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (params.page - 1) * params.pageSize,
       take: params.pageSize,
     }),
-    prisma.notification.count({ where }),
-    prisma.notification.count({ where: { userId, isRead: false } }),
+    params.unreadOnly ? unreadCountPromise : prisma.notification.count({ where }),
+    unreadCountPromise,
   ]);
 
   return {
