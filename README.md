@@ -240,3 +240,51 @@ the intended `DATABASE_URL`; the benchmark itself does not load database credent
 Protected browser regressions and all write-based tests use the isolated test database.
 In-app reminders remain dashboard-triggered best-effort work after the response;
 durable delivery and concurrent reminder deduplication require a separate follow-up.
+
+### Admin navigation and notifications
+
+Successful login, demo access and logout each replace the document once. Server
+pages and their admin layout share session resolution within that render; API
+requests still resolve current permissions independently.
+
+Notification state belongs to the authenticated admin layout. The badge loads once
+on entry, except direct history entry uses its list response. Navigation, window
+focus and idle time never poll the badge. Opening the bell explicitly refreshes its
+ten-item preview, sharing any pending request. History and preview responses supply
+their unread counts; marking read updates both views, rolls back failures and never
+requests another count. Demo interactions send no notification PATCH requests.
+Notifications created elsewhere appear on the next notification interaction.
+
+The optional `GET /api/notifications?view=preview&pageSize=10` returns only
+`{ items, unreadCount }` inside the usual success envelope. Existing paginated and
+count endpoints remain compatible. Reads are private with `Cache-Control: private,
+no-store` and `Server-Timing` stages for `auth` and `data`.
+
+`vercel.json` selects Singapore (`sin1`) for the next deployment, near the configured
+Supabase transaction pooler. Existing deployment rules and connection settings are
+unchanged. After deployment, verify function placement and measure authenticated
+cold starts separately from 30 warm requests; the warm p95 target is below one second.
+
+Run `npm run test:e2e:demo` for the separate demo-enabled browser suite.
+`npm run perf:notifications` measures a running local production server on port
+3110 with demo access enabled and a synthetic demo account in an isolated test
+database. It never creates fixtures or marks notifications read. Configure
+`PERF_BASE_URL`, `PERF_SAMPLES` (default 30), or `PERF_OUTPUT` as needed. The output
+separates browser TTFB, body download, response size and server auth/data duration;
+first observed requests are reported separately and do not prove a platform cold
+start. No credentials, cookies or notification bodies are saved.
+
+Measured on October 25, 2026 against a local production build and isolated local
+PostgreSQL, with 40 synthetic notifications and 30 authenticated repeat samples:
+
+| Request | Warm median / p95 total | p95 TTFB | p95 body download |
+| --- | --- | --- | --- |
+| Unread count | 9.2 / 14.4 ms | 13.4 ms | 2.0 ms |
+| Ten-item preview | 10.7 / 17.1 ms | 16.2 ms | 2.0 ms |
+| History (20 items) | 8.4 / 20.6 ms | 20.1 ms | 1.8 ms |
+
+The first observed count, preview and history requests took 128.4, 47.7 and
+153.3 ms respectively. Login, bell opening and history navigation produced one
+dashboard request, one initial count, one preview and one history request. These
+measurements validate local behavior; production network, dataset size, function
+placement and cold starts still require measurement after deployment.
