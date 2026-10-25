@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function SignOutButton({
@@ -15,13 +15,14 @@ export function SignOutButton({
   iconOnly?: boolean;
   variant?: "sidebar" | "header";
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
+        disabled={loading}
         aria-label="Sign out"
         title="Sign out"
         className={`flex items-center gap-2 rounded-control transition-all ${
@@ -42,10 +43,16 @@ export function SignOutButton({
         cancelLabel="Cancel"
         destructive
         onConfirm={async () => {
+          if (loading) return;
+          setLoading(true);
           setOpen(false);
-          await signOut({ redirect: false });
-          router.push("/login");
-          router.refresh();
+          try {
+            await signOut({ redirect: false });
+            window.location.replace("/login");
+          } catch {
+            setLoading(false);
+            toast.error("Unable to sign out. Please try again.");
+          }
         }}
         onCancel={() => setOpen(false)}
       />

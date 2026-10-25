@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/server-session";
 import { redirect } from "next/navigation";
 import { CalendarView } from "@/components/admin/calendar-view";
 import { PageContainer } from "@/components/admin/page-container";
@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/admin/page-header";
 export const dynamic = "force-dynamic";
 
 export default async function AdminCalendarPage() {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user) redirect("/login");
 
   return (

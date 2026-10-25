@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
@@ -15,7 +14,7 @@ export interface LoginFormProps {
 }
 
 export function LoginForm({ demoEnabled }: LoginFormProps) {
-  const router = useRouter();
+  const submitting = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,48 +22,61 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
   const [error, setError] = useState("");
 
   function goToDashboard() {
-    router.push("/admin");
-    router.refresh();
+    window.location.replace("/admin");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    let navigating = false;
     setError("");
     setLoading(true);
     try {
       const res = await signIn("credentials", { redirect: false, email, password });
-      if (res?.error) {
+      if (!res?.ok || res.error) {
         setError("Invalid email or password.");
         document.getElementById("login-email")?.focus();
         toast.error("Invalid credentials. Please try again.");
       } else {
         goToDashboard();
+        navigating = true;
       }
     } catch {
       setError("Unable to sign in. Please try again.");
       toast.error("Unable to sign in.");
     } finally {
-      setLoading(false);
+      if (!navigating) {
+        submitting.current = false;
+        setLoading(false);
+      }
     }
   }
 
   async function handleDemo() {
+    if (submitting.current) return;
+    submitting.current = true;
+    let navigating = false;
     setError("");
     setDemoLoading(true);
     try {
       // Passwordless provider: the session is flagged read-only server-side.
       const res = await signIn("demo", { redirect: false });
-      if (res?.error) {
+      if (!res?.ok || res.error) {
         setError("Demo access is unavailable right now. Please try again later.");
         toast.error("Demo access is unavailable right now.");
       } else {
         goToDashboard();
+        navigating = true;
       }
     } catch {
       setError("Unable to open the demo. Please try again.");
       toast.error("Unable to open the demo.");
     } finally {
-      setDemoLoading(false);
+      if (!navigating) {
+        submitting.current = false;
+        setDemoLoading(false);
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, CheckCheck, Inbox, RefreshCw } from "lucide-react";
 import { notificationColor, notificationIcon, typeLabel } from "./notification-meta";
@@ -9,129 +9,40 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
-export interface NotificationItem {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  entityType: string;
-  entityId: string | null;
-  isRead: boolean;
-  readAt: string | null;
-  createdAt: string;
-}
+import { useNotifications } from "./notifications-provider";
+import type { NotificationItem } from "@/lib/client-notifications";
 
-const LIST_LIMIT = 10;
+export type { NotificationItem } from "@/lib/client-notifications";
 
 export function NotificationBell() {
   const router = useRouter();
   const pathname = usePathname();
-
   const [open, setOpen] = useState(false);
-  const [count, setCount] = useState(0);
-  const [items, setItems] = useState<NotificationItem[] | null>(null);
-  const [error, setError] = useState("");
-  const [retryKey, setRetryKey] = useState(0);
+  const { count, preview, previewError: error, previewLoading, pending, isDemo, loadPreview, markRead, markAllRead, projectItems } = useNotifications();
+  const items = preview === null ? null : projectItems(preview);
+  const hasUnread = (count ?? 0) > 0;
 
-  /* â”€â”€â”€ Unread count (separate, lightweight fetch) â”€â”€â”€ */
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/notifications/unread-count", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
-        if (!cancelled && body?.data && typeof body.data.count === "number") {
-          setCount(body.data.count);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
-
-  useEffect(() => {
-    function onFocus() {
-      fetch("/api/notifications/unread-count", { cache: "no-store" })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((body) => {
-          if (body?.data && typeof body.data.count === "number") setCount(body.data.count);
-        })
-        .catch(() => {});
-    }
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
-
-  /* â”€â”€â”€ List (fresh fetch whenever the panel opens / retry is pressed) â”€â”€â”€ */
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    fetch(`/api/notifications?pageSize=${LIST_LIMIT}`, { cache: "no-store" })
-      .then(async (res) => {
-        const body = await res.json();
-        if (cancelled) return;
-        if (!res.ok) throw new Error(body.message || "Unable to load notifications.");
-        setError("");
-        setItems(body.data?.items || []);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load notifications.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, retryKey]);
-
-  /* â”€â”€â”€ Actions â”€â”€â”€ */
-  async function markAllRead() {
-    // Optimistic update with rollback so the UI can't desync from the server.
-    const prevItems = items;
-    const prevCount = count;
-    setItems((prev) => prev?.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })) ?? prev);
-    setCount(0);
-    try {
-      const res = await fetch("/api/notifications/read-all", { method: "PATCH" });
-      if (!res.ok) throw new Error("Unable to mark all notifications as read.");
-    } catch (err) {
-      setItems(prevItems);
-      setCount(prevCount);
-      setError(err instanceof Error ? err.message : "Unable to mark all notifications as read.");
-    }
-  }
-
-  async function openNotification(n: NotificationItem) {
-    if (!n.isRead) {
-      setItems((prev) => prev?.map((x) => (x.id === n.id ? { ...x, isRead: true, readAt: new Date().toISOString() } : x)) ?? prev);
-      setCount((c) => Math.max(0, c - 1));
-      fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {});
-    }
+  function openNotification(n: NotificationItem) {
+    if (!n.isRead && !isDemo) void markRead(n);
     setOpen(false);
-
-    const target =
-      n.entityType === "patient"
-        ? "/admin/patients"
-        : n.entityType === "dentist"
-          ? "/admin/dentists"
-          : "/admin/appointments";
+    const target = n.entityType === "patient" ? "/admin/patients" : n.entityType === "dentist" ? "/admin/dentists" : "/admin/appointments";
     if (target !== pathname) router.push(target);
   }
 
-  const unreadItems = items?.some((n) => !n.isRead) ?? false;
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (next) void loadPreview(); }}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={count > 0 ? `Notifications, ${count} unread` : "Notifications, no unread"}
+              aria-label={count === null ? "Notifications" : hasUnread ? `Notifications, ${count} unread` : "Notifications, no unread"}
               aria-haspopup="true"
               aria-expanded={open}
             >
               <Bell className="size-4 text-text-secondary max-compact:size-5" strokeWidth={2} aria-hidden />
-              {count > 0 && (
+              {hasUnread && count !== null && (
                 <span
                   className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-micro font-bold leading-none text-white"
                   aria-hidden
@@ -154,11 +65,12 @@ export function NotificationBell() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
             <div className="text-sm font-semibold text-text">Notifications</div>
-            <div className="text-xs text-text-muted">{count} unread</div>
+            <div className="text-xs text-text-muted">{count === null ? "Unread count not loaded" : `${count} unread`}</div>
           </div>
-          {unreadItems && (
+          {hasUnread && !isDemo && (
             <Button
               onClick={markAllRead}
+              disabled={pending}
               variant="ghost"
               size="xs"
               className="rounded-chip text-text-secondary hover:bg-background-alt hover:text-text"
@@ -171,11 +83,13 @@ export function NotificationBell() {
 
         {/* Body */}
         <div className="max-h-112 overflow-y-auto">
+          {previewLoading && items && <p role="status" className="px-4 py-2 text-xs text-text-muted">Refreshing notifications...</p>}
           {error ? (
             <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
               <p className="text-sm text-error">{error}</p>
               <button
-                onClick={() => setRetryKey((k) => k + 1)}
+                onClick={() => void loadPreview()}
+                disabled={previewLoading}
                 className="inline-flex h-10 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition hover:border-accent hover:bg-accent-soft hover:text-accent"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden />
@@ -208,6 +122,7 @@ export function NotificationBell() {
                   <li key={n.id}>
                     <button
                       onClick={() => openNotification(n)}
+                      disabled={pending}
                       className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent-soft ${
                         !n.isRead ? "bg-accent-soft/50" : ""
                       }`}
