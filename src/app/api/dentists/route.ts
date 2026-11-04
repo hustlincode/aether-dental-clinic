@@ -13,7 +13,7 @@ const createDentistSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });
 
-const STAFF_ROLES = new Set(["ADMIN", "RECEPTIONIST", "DENTIST"]);
+const STAFF_ROLES = new Set(["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"]);
 
 // GET /api/dentists - list dentists.
 //
@@ -41,6 +41,7 @@ export async function GET(req: Request) {
 
     const dentists = await prisma.dentist.findMany({
       where: includeInactive ? undefined : { status: "ACTIVE" },
+      omit: { userId: true },
       include: {
         availability: { orderBy: { dayOfWeek: "asc" } },
         _count: { select: { appointments: true } },
