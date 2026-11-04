@@ -3,7 +3,7 @@
  *
  * One-time security action for deployments that were seeded with the old
  * default passwords (admin123 / reception123 / dentist123): generates a strong
- * random password for every staff account (ADMIN, RECEPTIONIST, DENTIST) and
+ * random password for every staff account and
  * prints them once. The passwordless demo account is skipped — it can only be
  * reached through the read-only demo provider.
  *
@@ -25,14 +25,14 @@ async function main() {
   const skipped: string[] = [];
 
   for (const user of users) {
-    if (user.email.toLowerCase() === demoEmail) {
+    if ([demoEmail, "demo@aetherdental.ph"].includes(user.email.toLowerCase())) {
       skipped.push(user.email);
       continue;
     }
     const password = randomBytes(12).toString("base64url");
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: bcrypt.hashSync(password, 10) },
+      data: { passwordHash: bcrypt.hashSync(password, 10), sessionVersion: { increment: 1 } },
     });
     rotated.push({ email: user.email, role: user.role, password });
   }
@@ -49,7 +49,7 @@ async function main() {
   if (skipped.length > 0) {
     console.log(`\nSkipped demo account(s) (passwordless read-only access): ${skipped.join(", ")}`);
   }
-  console.log("\nReminder: this invalidates every existing staff session's credentials.");
+  console.log("\nExisting staff sessions have been revoked.");
 }
 
 main()
