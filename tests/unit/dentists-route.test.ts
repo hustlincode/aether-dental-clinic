@@ -30,6 +30,7 @@ test("booking dentist projection stays public and active while staff lists retai
   assert.equal(authCalls, 0);
   assert.deepEqual(publicList.data[0]._count, { appointments: 12 });
   assert.deepEqual(queries.at(-1)?.include, { availability: { orderBy: { dayOfWeek: "asc" } }, _count: { select: { appointments: true } } });
+  assert.deepEqual(queries.at(-1)?.omit, { userId: true }, "Public lists cannot expose login linkage");
   await get("?all=true");
   assert.equal(authCalls, 1);
   assert.deepEqual(queries.at(-1)?.where, { status: "ACTIVE" });

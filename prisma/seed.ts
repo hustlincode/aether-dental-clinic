@@ -188,6 +188,7 @@ async function main() {
         email: dentUser,
         passwordHash: hash(dentPassword.password),
         role: Role.DENTIST,
+        dentist: { connect: { id: dentist.id } },
       },
     });
     dentistLogins.push({ email: dentUser, password: dentPassword.password, generated: dentPassword.generated });

@@ -21,15 +21,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isDemo = user.isDemo === true;
 
   const navItems = [
-    { href: "/admin", label: "Dashboard", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Overview" },
-    { href: "/admin/appointments", label: "Appointments", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Clinic" },
-    { href: "/admin/calendar", label: "Calendar", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Clinic" },
-    { href: "/admin/patients", label: "Patients", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Clinic" },
+    { href: "/admin", label: "Dashboard", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Overview" },
+    { href: "/admin/appointments", label: "Appointments", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Clinic" },
+    { href: "/admin/calendar", label: "Calendar", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Clinic" },
+    { href: "/admin/patients", label: "Patients", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Clinic" },
     { href: "/admin/dentists", label: "Dentists", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/services", label: "Services", roles: ["ADMIN"], group: "Clinic" },
+    { href: "/admin/users", label: "Users", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/configuration", label: "Configuration", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/reports", label: "Reports", roles: ["ADMIN"], group: "Insights" },
-    { href: "/admin/notifications", label: "Notifications", roles: ["ADMIN", "RECEPTIONIST", "DENTIST"], group: "Insights" },
+    { href: "/admin/notifications", label: "Notifications", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Insights" },
   ].filter((n) => n.roles.includes(role));
 
   return (

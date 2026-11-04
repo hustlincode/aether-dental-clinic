@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { CancelAppointmentDialog } from "@/components/admin/cancel-appointment-dialog";
 import { statusActionLabel } from "@/lib/status-labels";
+import type { AppointmentStatus } from "@prisma/client";
+import { canChangeAppointmentStatus } from "@/lib/appointment-rules";
 import { Sheet, SheetBody, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,7 +77,7 @@ function fmtLongDate(iso: string) {
 }
 
 /* ─── CalendarView ─── */
-export function CalendarView() {
+export function CalendarView({ role }: { role: string }) {
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -271,7 +273,9 @@ export function CalendarView() {
   const service = selectedAppt?.service;
   const dentist = selectedAppt?.dentist;
   const currentStatus = selectedAppt?.status ?? "";
-  const nextActions = (allowedNext[currentStatus] ?? []).slice(0, 2);
+  const nextActions = (allowedNext[currentStatus] ?? []).filter((next) =>
+    canChangeAppointmentStatus(role, currentStatus as AppointmentStatus, next as AppointmentStatus),
+  ).slice(0, 2);
 
   const selectedItems = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
 

@@ -60,10 +60,10 @@ export async function getUsersByRole(...roles: Role[]) {
   return users.map((u) => u.id);
 }
 
-/** Returns the User id of the staff account linked to a dentist (same email), or null. */
-export async function getDentistUserId(dentistEmail: string) {
-  const user = await prisma.user.findUnique({
-    where: { email: dentistEmail },
+/** Only the active Dentist-role account linked to this clinical profile may receive its alerts. */
+export async function getDentistUserId(dentistId: string) {
+  const user = await prisma.user.findFirst({
+    where: { active: true, role: Role.DENTIST, dentist: { is: { id: dentistId } } },
     select: { id: true },
   });
   return user?.id ?? null;
@@ -120,7 +120,7 @@ export async function notifyAppointmentRescheduled(
   previous?: { date?: Date; time?: string }
 ) {
   const userIds = await getUsersByRole(Role.ADMIN, Role.RECEPTIONIST);
-  const dentistUserId = await getDentistUserId(appt.dentist.email);
+  const dentistUserId = await getDentistUserId(appt.dentist.id);
   if (dentistUserId) userIds.push(dentistUserId);
 
   const newDetail = `${fmtDate(appt.appointmentDate)} at ${fmtTime(appt.startTime)}`;
@@ -141,7 +141,7 @@ export async function notifyAppointmentRescheduled(
 /** Appointment cancelled → Admin + Receptionist + assigned Dentist. */
 export async function notifyAppointmentCancelled(appt: ApptForNotification) {
   const userIds = await getUsersByRole(Role.ADMIN, Role.RECEPTIONIST);
-  const dentistUserId = await getDentistUserId(appt.dentist.email);
+  const dentistUserId = await getDentistUserId(appt.dentist.id);
   if (dentistUserId) userIds.push(dentistUserId);
 
   return notifyUsers(userIds, {
@@ -156,7 +156,7 @@ export async function notifyAppointmentCancelled(appt: ApptForNotification) {
 /** Patient checked in → assigned Dentist + Receptionist. */
 export async function notifyPatientCheckedIn(appt: ApptForNotification) {
   const userIds = await getUsersByRole(Role.RECEPTIONIST);
-  const dentistUserId = await getDentistUserId(appt.dentist.email);
+  const dentistUserId = await getDentistUserId(appt.dentist.id);
   if (dentistUserId) userIds.push(dentistUserId);
 
   return notifyUsers(userIds, {
@@ -171,7 +171,7 @@ export async function notifyPatientCheckedIn(appt: ApptForNotification) {
 /** Appointment completed → Admin + Receptionist + assigned Dentist. */
 export async function notifyAppointmentCompleted(appt: ApptForNotification) {
   const userIds = await getUsersByRole(Role.ADMIN, Role.RECEPTIONIST);
-  const dentistUserId = await getDentistUserId(appt.dentist.email);
+  const dentistUserId = await getDentistUserId(appt.dentist.id);
   if (dentistUserId) userIds.push(dentistUserId);
 
   return notifyUsers(userIds, {
@@ -233,7 +233,7 @@ export async function processUpcomingAppointmentReminders() {
       id: true,
       startTime: true,
       patient: { select: { firstName: true, lastName: true } },
-      dentist: { select: { email: true } },
+      dentist: { select: { id: true } },
     },
   });
   if (appointments.length === 0) return { checked: 0, created: 0 };
@@ -245,19 +245,22 @@ export async function processUpcomingAppointmentReminders() {
     }),
     getUsersByRole(Role.ADMIN, Role.RECEPTIONIST),
     prisma.user.findMany({
-      where: { email: { in: [...new Set(appointments.map((appt) => appt.dentist.email))] } },
-      select: { id: true, email: true },
+      where: {
+        active: true, role: Role.DENTIST,
+        dentist: { is: { id: { in: [...new Set(appointments.map((appt) => appt.dentist.id))] } } },
+      },
+      select: { id: true, dentist: { select: { id: true } } },
     }),
   ]);
   // shortcut: deduplication covers existing rows; add a unique delivery key before introducing concurrent workers.
   const seen = new Set(existing.map((n) => `${n.userId}:${n.entityId}`));
-  const dentistUserIds = new Map(dentistUsers.map((user) => [user.email, user.id]));
+  const dentistUserIds = new Map(dentistUsers.flatMap((user) => user.dentist ? [[user.dentist.id, user.id] as const] : []));
 
   const rows: Prisma.NotificationCreateManyInput[] = [];
   for (const appt of appointments) {
     const message = `${appt.patient.firstName} ${appt.patient.lastName} has an appointment tomorrow at ${fmtTime(appt.startTime)}.`;
     const targets = [...adminAndReception];
-    const dentistUserId = dentistUserIds.get(appt.dentist.email);
+    const dentistUserId = dentistUserIds.get(appt.dentist.id);
     if (dentistUserId) targets.push(dentistUserId);
 
     for (const userId of new Set(targets)) {

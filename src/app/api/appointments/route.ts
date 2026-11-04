@@ -51,6 +51,9 @@ function parsePositiveInt(raw: string | null, fallback: number, max = Number.MAX
 export async function POST(req: Request) {
   // Auth is optional: public users may book without logging in.
   const sessionUser = await getSessionUser();
+  if (sessionUser?.isDemo || sessionUser?.role === "ASSISTANT") {
+    return NextResponse.json({ success: false, message: "You do not have permission to book appointments." }, { status: 403 });
+  }
 
   let body: z.infer<typeof bookingSchema>;
   try {
@@ -264,7 +267,7 @@ export async function GET(req: Request) {
 
     // Role-scoping: dentists only see their own appointments
     if (user.role === "DENTIST") {
-      const assigned = await prisma.dentist.findFirst({ where: { email: user.email } });
+      const assigned = await prisma.dentist.findFirst({ where: { userId: user.id } });
       if (!assigned) {
         return NextResponse.json({
           success: true,

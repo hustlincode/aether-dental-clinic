@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { isDemoEnabled, isDemoEmail, refreshAuthToken } from "@/lib/auth-policy";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   password: z.string().min(1),
 });
 
@@ -59,6 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           role: user.role,
+          sessionVersion: user.sessionVersion,
           // Even if the demo account's password ever becomes known, a session
           // opened with it must never gain write access.
           isDemo: isDemoEmail(user.email),
@@ -87,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 name: "Demo visitor",
                 email: demoUser.email,
                 role: demoUser.role,
+                sessionVersion: demoUser.sessionVersion,
                 isDemo: true,
               };
             },
@@ -99,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.isDemo = user.isDemo === true;
+        token.sessionVersion = user.sessionVersion;
       }
       return refreshAuthToken(token);
     },

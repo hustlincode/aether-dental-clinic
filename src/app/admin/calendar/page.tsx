@@ -19,7 +19,7 @@ export default async function AdminCalendarPage() {
       />
 
       <div className="animate-fade-in">
-        <CalendarView />
+        <CalendarView role={session.user.role} />
       </div>
     </PageContainer>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { staffRoleLabel } from "@/lib/staff-roles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/admin/sign-out";
 import { HamburgerButton } from "@/components/ui/hamburger-button";
@@ -20,6 +21,7 @@ const pageTitleMap: Record<string, string> = {
   "/admin/calendar": "Calendar",
   "/admin/patients": "Patients",
   "/admin/dentists": "Dentists",
+  "/admin/users": "Users",
   "/admin/services": "Services",
   "/admin/reports": "Reports",
   "/admin/notifications": "Notifications",
@@ -36,7 +38,7 @@ export function AdminHeader({ onToggleSidebar, user, mobileOpen }: AdminHeaderPr
   const pathname = usePathname();
   const title = pageTitleMap[pathname] ?? "Admin";
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
-  const roleLabel = user.isDemo ? "Demo viewer" : user.role?.toLowerCase() ?? "staff";
+  const roleLabel = user.isDemo ? "Demo viewer" : staffRoleLabel(user.role);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface/85 px-4 backdrop-blur">

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
 import { ZodError } from "zod";
 
-export type ApiRole = "ADMIN" | "RECEPTIONIST" | "DENTIST";
+export type ApiRole = Role;
 
 export interface ApiSessionUser {
   id: string;

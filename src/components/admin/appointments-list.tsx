@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "./status-badge";
 import { CancelAppointmentDialog } from "./cancel-appointment-dialog";
 import { statusActionLabel } from "@/lib/status-labels";
+import type { AppointmentStatus } from "@prisma/client";
+import { canChangeAppointmentStatus } from "@/lib/appointment-rules";
 import { toast } from "sonner";
 import { DataTable, type DataTableFeatures } from "./data-table";
 import { PageContainer } from "@/components/admin/page-container";
@@ -534,7 +536,7 @@ function StatusActions({ status, role, onChange }: { status: string; role: strin
     NO_SHOW: [],
   };
 
-  const actions = (next[status] || []).filter((action) => role !== "DENTIST" || action !== "CANCELLED");
+  const actions = (next[status] || []).filter((action) => canChangeAppointmentStatus(role, status as AppointmentStatus, action as AppointmentStatus));
 
   if (actions.length === 0) return <span className="text-xs text-text-muted">—</span>;
 
@@ -590,7 +592,8 @@ function EditAppointmentDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const canEditPatient = role !== "DENTIST";
+  const notesOnly = role === "ASSISTANT";
+  const canEditPatient = role === "ADMIN" || role === "RECEPTIONIST";
 
   const [firstName, setFirstName] = useState(appointment.patient.firstName);
   const [lastName, setLastName] = useState(appointment.patient.lastName);
@@ -617,6 +620,7 @@ function EditAppointmentDialog({
 
   useEffect(() => {
     let cancelled = false;
+    if (notesOnly) return;
     Promise.all([
       fetch("/api/services?all=true").then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/dentists?all=true").then(async (r) => ({ ok: r.ok, body: await r.json() })),
@@ -630,10 +634,10 @@ function EditAppointmentDialog({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [notesOnly]);
 
   useEffect(() => {
-    if (!dentistId || !serviceId || !date) return;
+    if (notesOnly || !dentistId || !serviceId || !date) return;
     let cancelled = false;
     // Same deferred-setState pattern as the booking page: the loading flag is
     // flipped inside a timer so we never set state synchronously in the effect.
@@ -663,25 +667,22 @@ function EditAppointmentDialog({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [dentistId, serviceId, date, appointment.id]);
+  }, [dentistId, serviceId, date, appointment.id, notesOnly]);
 
   async function handleSave() {
     setSaving(true);
     setError("");
     try {
-      if (!time) {
+      if (!notesOnly && !time) {
         setError("Please select a time.");
         return;
       }
-      if (!serviceId || !dentistId || !date) {
+      if (!notesOnly && (!serviceId || !dentistId || !date)) {
         setError("Please fill in the dentist, service, and date.");
         return;
       }
       const payload: Record<string, unknown> = {
-        appointmentDate: date,
-        startTime: time,
-        serviceId,
-        dentistId,
+        ...(!notesOnly ? { appointmentDate: date, startTime: time, serviceId, ...(canEditPatient ? { dentistId } : {}) } : {}),
         notes: notes.trim() || null,
         ...(canEditPatient
           ? {
@@ -719,7 +720,7 @@ function EditAppointmentDialog({
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit appointment</DialogTitle>
+          <DialogTitle>{notesOnly ? "Edit appointment notes" : "Edit appointment"}</DialogTitle>
           <DialogDescription>
             {appointment.referenceNumber} · {appointment.patient.firstName} {appointment.patient.lastName}
           </DialogDescription>
@@ -730,7 +731,7 @@ function EditAppointmentDialog({
         )}
 
         <div className="grid gap-4">
-          <fieldset className="grid gap-3 sm:grid-cols-2">
+          {!notesOnly && <fieldset className="grid gap-3 sm:grid-cols-2">
             <legend className="text-xs font-semibold uppercase tracking-wide text-text-muted">Schedule</legend>
             <DatePickerField
               id="edit-date"
@@ -790,7 +791,7 @@ function EditAppointmentDialog({
                 <span className="text-xs text-text-muted">No available slots for this selection.</span>
               )}
             </div>
-          </fieldset>
+          </fieldset>}
 
           {canEditPatient && (
             <fieldset className="grid gap-3 sm:grid-cols-2">

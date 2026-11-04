@@ -36,6 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const dentist = await prisma.dentist.findUnique({
       where: { id },
+      omit: { userId: true },
       include: { availability: { orderBy: { dayOfWeek: "asc" } } },
     });
 

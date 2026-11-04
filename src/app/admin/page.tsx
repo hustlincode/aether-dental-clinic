@@ -33,8 +33,8 @@ export default async function AdminDashboard() {
   const todayKey = clinicDateKey();
   // Role scoping for dentists
   let dentistId: string | undefined;
-  if (user.role === "DENTIST" && user.email) {
-    const assigned = await prisma.dentist.findFirst({ where: { email: user.email }, select: { id: true } });
+  if (user.role === "DENTIST") {
+    const assigned = await prisma.dentist.findUnique({ where: { userId: user.id }, select: { id: true } });
     dentistId = assigned?.id;
   }
   const dentistFilter: Prisma.AppointmentWhereInput = user.role === "DENTIST"
