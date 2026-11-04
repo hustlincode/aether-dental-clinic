@@ -7,21 +7,21 @@ import { mockPrismaMethod } from "../helpers/mock-prisma";
 test("reminders batch dentist accounts, preserve recipients and use the clinic-local tomorrow", async (t) => {
   t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-24T17:15:00Z") });
   const appointmentQuery = mockPrismaMethod(t, prisma.appointment, "findMany", async () => [
-    { id: "a", startTime: "09:00", patient: { firstName: "Test", lastName: "One" }, dentist: { email: "dentist@example.test" } },
-    { id: "b", startTime: "10:00", patient: { firstName: "Test", lastName: "Two" }, dentist: { email: "dentist@example.test" } },
-    { id: "c", startTime: "11:00", patient: { firstName: "Test", lastName: "Three" }, dentist: { email: "missing@example.test" } },
+    { id: "a", startTime: "09:00", patient: { firstName: "Test", lastName: "One" }, dentist: { id: "profile" } },
+    { id: "b", startTime: "10:00", patient: { firstName: "Test", lastName: "Two" }, dentist: { id: "profile" } },
+    { id: "c", startTime: "11:00", patient: { firstName: "Test", lastName: "Three" }, dentist: { id: "missing-profile" } },
   ]);
   mockPrismaMethod(t, prisma.notification, "findMany", async () => [{ userId: "admin", entityId: "a" }]);
   const users = mockPrismaMethod(t, prisma.user, "findMany", async (...args: never[]) => {
-    const query = args[0] as { where: { role?: unknown; email?: { in: string[] }; active?: boolean } };
-    if (query.where.role) {
-      assert.equal(query.where.active, true);
+    const query = args[0] as { where: { role?: unknown; active?: boolean; dentist?: { is: { id: { in: string[] } } } } };
+    assert.equal(query.where.active, true);
+    if (query.where.role !== "DENTIST") {
       return [{ id: "admin" }, { id: "reception" }];
     }
-    assert.deepEqual(query.where.email?.in, ["dentist@example.test", "missing@example.test"]);
-    return [{ id: "dentist", email: "dentist@example.test" }];
+    assert.deepEqual(query.where.dentist?.is.id.in, ["profile", "missing-profile"]);
+    return [{ id: "dentist", dentist: { id: "profile" } }];
   });
-  const singleUser = mockPrismaMethod(t, prisma.user, "findUnique", async () => { throw new Error("Per-appointment account lookup must not run"); });
+  const singleUser = mockPrismaMethod(t, prisma.user, "findFirst", async () => { throw new Error("Per-appointment account lookup must not run"); });
   const created: { userId: string; entityId: string; message: string }[] = [];
   mockPrismaMethod(t, prisma.notification, "createMany", async (...args: never[]) => {
     const { data } = args[0] as { data: typeof created };
