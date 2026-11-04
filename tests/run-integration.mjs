@@ -18,9 +18,11 @@ for (const configured of [process.env.DATABASE_URL, process.env.DIRECT_URL].filt
 }
 const env = { ...process.env, DATABASE_URL: target, DIRECT_URL: target, TEST_DATABASE_URL: target, RUN_DATABASE_TESTS: "1", SMTP_HOST: "", EMAIL_PREVIEW_MODE: "false", NEXTAUTH_SECRET: "isolated-integration-secret", AUTH_SECRET: "isolated-integration-secret", DEMO_MODE: "false" };
 for (const args of [
+  ["--import", "tsx", "--test", "tests/integration/user-migration.test.ts"],
   ["node_modules/prisma/build/index.js", "db", "push", "--skip-generate"],
   ["--import", "tsx", "--test", "tests/integration/booking.test.ts"],
   ["--import", "tsx", "--test", "tests/integration/configuration.test.ts"],
+  ["--import", "tsx", "--test", "tests/integration/users.test.ts"],
 ]) {
   const result = spawnSync(process.execPath, args, { env, stdio: "inherit" });
   if (result.error) throw result.error;
