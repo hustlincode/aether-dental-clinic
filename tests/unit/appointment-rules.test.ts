@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appointmentEnd, canTransition, isFutureSlot, isValidDateKey, isValidTime } from "../../src/lib/appointment-rules";
+import { appointmentEnd, canChangeAppointmentStatus, canTransition, isFutureSlot, isValidDateKey, isValidTime } from "../../src/lib/appointment-rules";
 import { generateAppointmentReference } from "../../src/lib/reference";
 
 test("booking validates real calendar dates and bounded 24-hour times", () => {
@@ -39,4 +39,21 @@ test("references remain distinct for concurrent calls across appointment years",
   assert.equal(new Set(references).size, references.length);
   assert.match(references[0], /^APT-2026-/);
   assert.match(references[1], /^APT-2027-/);
+});
+
+test("assistant clinical status permissions preserve retries and reject every other transition", () => {
+  const statuses = ["PENDING", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED", "NO_SHOW"] as const;
+  for (const from of statuses) {
+    for (const to of statuses) {
+      const allowed = (from === "CONFIRMED" && to === "CHECKED_IN") ||
+        (from === "CHECKED_IN" && (to === "CHECKED_IN" || to === "COMPLETED")) ||
+        (from === "COMPLETED" && to === "COMPLETED");
+      assert.equal(canChangeAppointmentStatus("ASSISTANT", from, to), allowed, `${from} -> ${to}`);
+    }
+  }
+  assert.equal(canChangeAppointmentStatus("DENTIST", "CONFIRMED", "CANCELLED"), false);
+  assert.equal(canChangeAppointmentStatus("DENTIST", "PENDING", "CONFIRMED"), true);
+  assert.equal(canChangeAppointmentStatus("ADMIN", "CONFIRMED", "CANCELLED"), true);
+  assert.equal(canChangeAppointmentStatus("RECEPTIONIST", "CONFIRMED", "CANCELLED"), true);
+  assert.equal(canChangeAppointmentStatus("unknown", "CONFIRMED", "CHECKED_IN"), false);
 });
