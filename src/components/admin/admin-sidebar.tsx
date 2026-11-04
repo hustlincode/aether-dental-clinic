@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { staffRoleLabel } from "@/lib/staff-roles";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -28,6 +29,7 @@ const iconMap: Record<string, LucideIcon> = {
   Appointments: CalendarDays,
   Calendar: Calendar,
   Patients: Users,
+  Users,
   Dentists: Stethoscope,
   Services: BriefcaseMedical,
   Reports: FileBarChart2,
@@ -55,7 +57,7 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
-  const roleLabel = user.isDemo ? "Demo viewer" : user.role?.toLowerCase() ?? "staff";
+  const roleLabel = user.isDemo ? "Demo viewer" : staffRoleLabel(user.role);
 
   /* ─── Group nav items by their optional `group` label ─── */
   const navGroups = navItems.reduce<{ group: string; items: AdminNavItem[] }[]>(
