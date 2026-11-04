@@ -35,3 +35,14 @@ const transitions: Record<AppointmentStatus, AppointmentStatus[]> = {
 export function canTransition(from: AppointmentStatus, to: AppointmentStatus): boolean {
   return from === to || transitions[from].includes(to);
 }
+
+export function canChangeAppointmentStatus(role: string, from: AppointmentStatus, to: AppointmentStatus): boolean {
+  if (!canTransition(from, to)) return false;
+  if (role === "ADMIN" || role === "RECEPTIONIST") return true;
+  if (role === "DENTIST") return ["CONFIRMED", "CHECKED_IN", "COMPLETED", "NO_SHOW"].includes(to);
+  if (role === "ASSISTANT") {
+    return (to === "CHECKED_IN" && (from === "CONFIRMED" || from === to)) ||
+      (to === "COMPLETED" && (from === "CHECKED_IN" || from === to));
+  }
+  return false;
+}
