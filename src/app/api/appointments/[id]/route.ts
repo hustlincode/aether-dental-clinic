@@ -12,6 +12,7 @@ import { notifyAppointmentRescheduled } from "@/lib/notifications";
 // patient details. Staff only, role-scoped:
 //   - ADMIN / RECEPTIONIST: full editing including patient info + dentist assignment
 //   - DENTIST: only their own appointments, and only date/time/service/notes
+//   - ASSISTANT: appointment notes only
 //
 // The patient-facing reschedule email + in-app notification are sent only when
 // the schedule actually changes; failures never roll back the update.
@@ -36,7 +37,7 @@ const updateSchema = z.object({
       phone: z.string().trim().min(7, "Please provide a valid phone number.").max(30).optional(),
     })
     .optional(),
-});
+}).strict().refine((data) => Object.keys(data).length > 0, "At least one field is required.");
 
 function fmtTime(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
@@ -55,10 +56,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const { user, error } = await requireWriteAuth();
   if (error) return error;
+  if (!["ADMIN", "RECEPTIONIST", "DENTIST", "ASSISTANT"].includes(user.role)) {
+    return NextResponse.json({ success: false, message: "You do not have permission to edit appointments." }, { status: 403 });
+  }
 
   let body: z.infer<typeof updateSchema>;
   try {
     body = updateSchema.parse(await req.json());
+    if (user.role === "ASSISTANT" && Object.keys(body).some((key) => key !== "notes")) {
+      return NextResponse.json({ success: false, message: "Assistants may edit appointment notes only." }, { status: 403 });
+    }
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details: Record<string, string[]> = {};
@@ -82,7 +89,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       });
       if (!existing) throw new AppointmentError("Appointment not found.", 404);
       if (user.role === "DENTIST") {
-        const assigned = await tx.dentist.findFirst({ where: { email: user.email } });
+        const assigned = await tx.dentist.findFirst({ where: { userId: user.id } });
         if (!assigned || assigned.id !== existing.dentistId || body.dentistId || body.patient) {
           throw new AppointmentError("You do not have permission to edit this appointment.", 403);
         }
