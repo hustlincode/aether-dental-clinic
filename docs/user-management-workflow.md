@@ -77,3 +77,11 @@ Set an isolated loopback PostgreSQL `TEST_DATABASE_URL` whose database name ends
 - Inspected all 48 staged files for the requested per-file commits; no implementation changes were made during preparation.
 - Fresh verification passed: all 83 unit tests (`node --import tsx --test --test-concurrency=1 tests/unit/*.test.ts`), whole-project lint (`npm.cmd run lint`), typecheck (`npm.cmd run typecheck`), and staged whitespace checks (`git diff --cached --check`).
 - Database integration, browser tests, and production build were not rerun during commit preparation; earlier results above are historical. No database changes, deployment, or push were performed.
+
+## Dashboard E2E fixture repair (2026-11-04)
+
+- Reproduced both reported chart failures locally: the desktop/light and mobile/dark cases could not find the Completed legend button because their Dentist account had no linked clinical profile. Matching emails no longer establish dashboard ownership.
+- Added `userId: staffId` to the existing chart test's Dentist fixture. Application authorization and chart code remain unchanged.
+- Both focused chart cases passed after the change. The full `npm.cmd run test:e2e` then completed successfully: 48 passed, one demo-mode case skipped, zero failures (1.3 minutes). Verification used the existing production build and disposable loopback PostgreSQL test database; no application database was used.
+- Typecheck, ESLint for the changed test, and Git whitespace checks passed. Sandboxed Windows browser runs stalled during web-server teardown after reporting individual results; the full run outside the sandbox exited successfully.
+- Production build, database integration suite, demo-specific browser suite, and GitHub-hosted CI were not rerun for this fixture-only change. No deployment or push was performed.
