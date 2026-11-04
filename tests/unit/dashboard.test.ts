@@ -47,10 +47,11 @@ test("dashboard header and metrics do not await analytics or reminder work", asy
   assert.equal(callbacks.length, 1, "Demo navigation cannot schedule notification writes");
 
   user = { ...user, role: "DENTIST", isDemo: false };
-  mockPrismaMethod(t, prisma.dentist, "findFirst", async () => null);
+  const dentist = mockPrismaMethod(t, prisma.dentist, "findUnique", async () => null);
   const scopedTree = await Dashboard();
   await section(scopedTree, 1);
   const lastQueries = count.mock.calls.slice(-3).map((call) => call.arguments[0] as { where: { dentistId: unknown } });
   assert(lastQueries.every((query) => JSON.stringify(query.where.dentistId) === JSON.stringify({ in: [] })), "Unassigned dentists must not query clinic-wide appointments");
   assert.equal(callbacks.length, 1);
+  assert.deepEqual(dentist.mock.calls[0].arguments[0], { where: { userId: "staff" }, select: { id: true } });
 });
