@@ -16,6 +16,7 @@ datasource db {
 enum Role {
   ADMIN
   RECEPTIONIST
+  ASSISTANT
   DENTIST
 }
 
@@ -76,6 +77,7 @@ model User {
   passwordHash String   @map("password_hash")
   role         Role     @default(RECEPTIONIST)
   active       Boolean  @default(true)
+  sessionVersion Int    @default(0) @map("session_version")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -83,6 +85,7 @@ model User {
   createdAppointments Appointment[] @relation("created_appointments")
   notifications Notification[]
   confirmationEmailsSent ConfirmationEmail[] @relation("confirmation_emails_sent")
+  dentist Dentist?
 
   @@map("users")
 }
@@ -126,6 +129,8 @@ model Dentist {
   status        DentistStatus @default(ACTIVE)
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
+  userId        String?       @unique @map("user_id")
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   appointments Appointment[]
   availability Availability[]
