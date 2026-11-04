@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppointmentStatus } from "@prisma/client";
 import { AppointmentError, appointmentTransaction } from "@/lib/appointment-transaction";
-import { canTransition } from "@/lib/appointment-rules";
+import { canChangeAppointmentStatus, canTransition } from "@/lib/appointment-rules";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { requireWriteAuth } from "@/lib/api";
 import { sendAppointmentEmail } from "@/lib/email";
@@ -16,7 +16,7 @@ import {
 const statusSchema = z.object({
   status: z.nativeEnum(AppointmentStatus),
   notes: z.string().max(4000).optional(),
-});
+}).strict();
 
 // PATCH /api/appointments/[id]/status
 // Update the status of an appointment (staff only, role-scoped)
@@ -35,12 +35,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       });
       if (!existing) throw new AppointmentError("Appointment not found.", 404);
       if (user.role === "DENTIST") {
-        const assigned = await tx.dentist.findFirst({ where: { email: user.email } });
-        if (!assigned || assigned.id !== existing.dentistId || !["CHECKED_IN", "COMPLETED", "NO_SHOW", "CONFIRMED"].includes(status)) {
+        const assigned = await tx.dentist.findFirst({ where: { userId: user.id } });
+        if (!assigned || assigned.id !== existing.dentistId) {
           throw new AppointmentError("You do not have permission to perform this action.", 403);
         }
       }
       if (!canTransition(existing.status, status)) throw new AppointmentError("This appointment status transition is not allowed.");
+      if (!canChangeAppointmentStatus(user.role, existing.status, status)) {
+        throw new AppointmentError("You do not have permission to perform this action.", 403);
+      }
       // Retries repeat no side effects; notes-only edits use the appointment PATCH endpoint.
       if (existing.status === status) return { updated: existing, changed: false };
       if (status === "CONFIRMED") {
