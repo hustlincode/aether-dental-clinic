@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Plus, Pencil, ToggleLeft, ToggleRight, X, Stethoscope, MoreHorizontal } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -151,15 +151,16 @@ function ServiceModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
-        <div className="flex items-center justify-between mb-5">
+      <DialogContent showCloseButton={false} className="max-w-md rounded-card border-border-strong bg-surface sm:max-w-md">
+        <DialogHeader>
           <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
+          <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
-        </div>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="flex flex-col gap-4">
           {/* Name */}
           <div>
             <label className="mb-1 block text-sm font-medium text-text-secondary">
@@ -243,15 +244,15 @@ function ServiceModal({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" size="default" onClick={onClose}>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" size="default" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" size="default" disabled={saving}>
               {saving ? "Saving..." : initialData ? "Update Service" : "Create Service"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
