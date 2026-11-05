@@ -146,21 +146,91 @@ test.describe("drawer accessibility and responsive layouts", () => {
     await expect(page.getByText("Temporary synthetic failure", { exact: true })).toHaveCount(0);
   });
 
-  test("calendar appointment drawer scrolls long notes independently", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 667 });
+  for (const width of [1440, 390]) {
+    for (const theme of ["light", "dark"] as const) {
+      test(`calendar details stay compact with anchored actions: ${width}px ${theme}`, async ({ page }, testInfo) => {
+        await page.setViewportSize({ width, height: 844 });
+        await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+        await page.addInitScript(mode => localStorage.setItem("aether-theme", mode), theme);
+        let appointment = { ...history[0], status: "PENDING", referenceNumber: "APT-DRAWER", notes: "" };
+        await page.route("**/api/appointments?**", route => {
+          const date = new URL(route.request().url()).searchParams.get("from")!;
+          return route.fulfill({ json: { success: true, data: { items: [{ ...appointment, appointmentDate: `${date}T00:00:00Z` }], pagination: { page: 1, pageSize: 200, total: 1, totalPages: 1 } } } });
+        });
+        await page.goto("/admin/calendar");
+        await page.getByRole("button", { name: /, 1 appointments$/ }).click({ position: { x: 8, y: 8 } });
+        const trigger = page.getByRole("button", { name: /Alexandra Reyes.*Dental Cleaning/ });
+        await trigger.click();
+        const drawer = page.getByRole("dialog", { name: "Appointment Details", exact: true });
+        await expect(drawer).toBeVisible();
+        const header = drawer.locator('[data-slot="sheet-header"]');
+        const footer = drawer.locator('[data-slot="sheet-footer"]');
+        const body = drawer.locator('[data-slot="sheet-body"]');
+        await expect(header.getByText("APT-DRAWER", { exact: true })).toBeVisible();
+        await expect(header.getByText("PENDING", { exact: true })).toBeVisible();
+        await expect(body.getByText("Alexandra Reyes", { exact: true })).toBeVisible();
+        await expect(body.getByText(patient.phone, { exact: true })).toBeVisible();
+        await expect(drawer.getByText("Appointment overview", { exact: true })).toHaveCount(0);
+        await expect(footer.getByRole("button")).toHaveText(["Close", "Cancel", "Confirm"]);
+        const box = (await drawer.boundingBox())!;
+        const footerBox = (await footer.boundingBox())!;
+        expect(Math.abs(box.y + box.height - 844)).toBeLessThanOrEqual(1);
+        expect(Math.abs(footerBox.y + footerBox.height - 844)).toBeLessThanOrEqual(1);
+        expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+        expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+        if (width < 640) {
+          expect(box.x).toBe(0);
+          expect(box.width).toBe(width);
+          expect(box.height).toBeLessThan(844 * 0.9);
+          expect(await drawer.evaluate(node => Number.parseFloat(getComputedStyle(node).borderTopLeftRadius))).toBeGreaterThan(0);
+        } else {
+          expect(box.y).toBe(0);
+          expect(box.height).toBe(844);
+          expect(box.width).toBeLessThanOrEqual(512);
+        }
+        for (const button of await footer.getByRole("button").all()) await expect(button).toBeInViewport();
+        await drawer.screenshot({ path: testInfo.outputPath(`calendar-${width}-${theme}.png`) });
+        await footer.getByRole("button", { name: "Cancel", exact: true }).click();
+        const confirmation = page.getByRole("alertdialog", { name: "Cancel appointment", exact: true });
+        await expect(confirmation).toBeVisible();
+        await confirmation.getByRole("button", { name: "Keep appointment", exact: true }).click();
+        await expect(drawer).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(drawer).toHaveCount(0);
+        await expect(trigger).toBeFocused();
+
+        appointment = { ...appointment, status: "COMPLETED", notes: patient.notes };
+        await page.reload();
+        await page.getByRole("button", { name: /, 1 appointments$/ }).click({ position: { x: 8, y: 8 } });
+        await trigger.click();
+        await checkDrawer(page, drawer);
+        await expect(footer.getByRole("button")).toHaveText(["Close"]);
+        await page.keyboard.press("Escape");
+        await expect(drawer).toHaveCount(0);
+        await expect(trigger).toBeFocused();
+      });
+    }
+  }
+
+  test("short calendar drawer contains long names and missing phone without hiding actions", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 300 });
     await page.emulateMedia({ reducedMotion: "reduce" });
+    const longName = "Alexandra".repeat(12);
     await page.route("**/api/appointments?**", route => {
       const date = new URL(route.request().url()).searchParams.get("from")!;
-      return route.fulfill({ json: { success: true, data: { items: [{ ...history[0], appointmentDate: `${date}T00:00:00Z`, referenceNumber: "APT-DRAWER", notes: patient.notes }], pagination: { page: 1, pageSize: 200, total: 1, totalPages: 1 } } } });
+      return route.fulfill({ json: { success: true, data: { items: [{ ...history[0], patient: { ...patient, firstName: longName, phone: null }, appointmentDate: `${date}T00:00:00Z`, referenceNumber: "APT-SHORT", notes: patient.notes }], pagination: { page: 1, pageSize: 200, total: 1, totalPages: 1 } } } });
     });
     await page.goto("/admin/calendar");
-    await page.getByRole("button", { name: /, 1 appointments$/ }).click();
-    const trigger = page.getByRole("button", { name: /Alexandra Reyes.*Dental Cleaning/ });
-    await trigger.click();
+    await page.getByRole("button", { name: /, 1 appointments$/ }).click({ position: { x: 8, y: 8 } });
+    await page.getByRole("button", { name: new RegExp(`${longName} Reyes.*Dental Cleaning`) }).click();
     const drawer = page.getByRole("dialog", { name: "Appointment Details", exact: true });
     await checkDrawer(page, drawer);
-    await page.keyboard.press("Escape");
-    await expect(drawer).toHaveCount(0);
-    await expect(trigger).toBeFocused();
+    const box = (await drawer.boundingBox())!;
+    expect(box.height).toBeLessThanOrEqual(271);
+    expect(Math.abs(box.y + box.height - 300)).toBeLessThanOrEqual(1);
+    const footer = drawer.locator('[data-slot="sheet-footer"]');
+    await expect(footer.getByRole("button")).toHaveText(["Close"]);
+    await expect(footer.getByRole("button", { name: "Close", exact: true })).toBeInViewport();
+    await expect(drawer.locator('[data-slot="sheet-body"]').getByText(patient.phone, { exact: true })).toHaveCount(0);
   });
 });
