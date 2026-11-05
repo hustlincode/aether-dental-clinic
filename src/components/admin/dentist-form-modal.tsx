@@ -6,7 +6,7 @@ import { useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { dentistFormSchema, type DentistFormValues } from "@/lib/validations";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -132,16 +132,17 @@ export function DentistFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-full max-w-md gap-4 rounded-card border border-border-strong bg-surface p-6 shadow-xl sm:max-w-md">
-        <div className="flex items-center justify-between mb-5">
+      <DialogContent showCloseButton={false} className="max-w-md rounded-card border-border-strong bg-surface sm:max-w-md">
+        <DialogHeader>
           <DialogTitle className="text-lg font-bold text-text">{title}</DialogTitle>
-          <button onClick={onClose} aria-label="Close" className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
+          <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 flex size-10 shrink-0 items-center justify-center rounded-control text-text-muted transition hover:bg-surface-alt hover:text-text">
             <X size={18} />
           </button>
-        </div>
+        </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} noValidate className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} noValidate className="flex min-h-0 flex-1 flex-col">
+            <DialogBody className="flex flex-col gap-4">
             {/* Name */}
             <FormField
               control={form.control}
@@ -280,15 +281,15 @@ export function DentistFormModal({
               />
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="ghost" size="default" onClick={onClose}>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="default" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" variant="primary" size="default" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : initialData ? "Update Dentist" : "Add Dentist"}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </Form>
       </DialogContent>
