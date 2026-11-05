@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -227,11 +227,12 @@ function UserDialog({ action, onClose, onSaved, onReturnFocus }: { action: UserA
   }
 
   return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
-    <DialogContent showCloseButton={false} onCloseAutoFocus={event => { event.preventDefault(); onReturnFocus(); }} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+    <DialogContent showCloseButton={false} onCloseAutoFocus={event => { event.preventDefault(); onReturnFocus(); }}>
       <DialogHeader><DialogTitle>{passwordOnly ? "Reset password" : user ? "Edit user" : "Add user"}</DialogTitle>
         <DialogDescription>{passwordOnly ? `Set a new password for ${user!.name}. Share it outside this app. Resetting revokes existing sessions.` : "Manage login access independently of Dentist booking availability."}</DialogDescription>
       </DialogHeader>
-      <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+      <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+        <DialogBody className="flex flex-col gap-5">
         {error && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-control border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
         <FieldGroup>
           {!passwordOnly && <>
@@ -247,6 +248,7 @@ function UserDialog({ action, onClose, onSaved, onReturnFocus }: { action: UserA
           </>}
           {(passwordOnly || !user) && <Field data-invalid={!!errors.password}><FieldLabel htmlFor="user-password">{passwordOnly ? "New password" : "Password"}</FieldLabel><Input id="user-password" type="password" autoFocus={passwordOnly} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} minLength={12} required aria-invalid={!!errors.password} aria-describedby="user-password-help user-password-error" /><FieldDescription id="user-password-help">At least 12 characters, at most 72 UTF-8 bytes. Share credentials outside this app.</FieldDescription><FieldError id="user-password-error">{errors.password}</FieldError></Field>}
         </FieldGroup>
+        </DialogBody>
         <DialogFooter><Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="primary" disabled={saving || (!passwordOnly && role === "DENTIST" && (optionsLoading || !!optionsError))}>{saving ? "Saving..." : passwordOnly ? "Reset password" : user ? "Save changes" : "Create user"}</Button></DialogFooter>
       </form>
     </DialogContent>
