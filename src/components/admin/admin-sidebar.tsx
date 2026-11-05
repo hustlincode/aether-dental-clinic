@@ -122,7 +122,7 @@ export function AdminSidebar({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 py-3">
         {navGroups.map(({ group, items }) => (
           <div key={group} className="space-y-1">
             {!collapsed && (
@@ -203,7 +203,7 @@ export function AdminSidebar({
 
   return (
     <>
-      <aside className={`relative hidden h-screen shrink-0 flex-col border-r border-sidebar-border md:flex ${collapsed ? "w-16" : "w-64"}`}>
+      <aside className={`relative hidden h-full min-h-0 shrink-0 flex-col border-r border-sidebar-border md:flex ${collapsed ? "w-16" : "w-64"}`}>
         {sidebarContent(collapsed)}
       </aside>
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onCloseMobile(); }}>
