@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogBody,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -53,11 +54,12 @@ export function CancelAppointmentDialog({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base">Cancel appointment</AlertDialogTitle>
+        </AlertDialogHeader>
+        <AlertDialogBody className="flex flex-col gap-4">
           <AlertDialogDescription className="text-sm leading-relaxed">
             Are you sure you want to cancel {patientName}&apos;s appointment ({referenceNumber})? The patient will be
             notified by email.
           </AlertDialogDescription>
-        </AlertDialogHeader>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="cancel-remarks" className="text-sm font-medium text-text">
@@ -73,6 +75,7 @@ export function CancelAppointmentDialog({
           />
           <p className="text-xs text-text-muted">The remarks are saved to the appointment record.</p>
         </div>
+        </AlertDialogBody>
 
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onCancel}>Keep appointment</AlertDialogCancel>
