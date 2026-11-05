@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -11,6 +11,7 @@ import type { AppointmentStatus } from "@prisma/client";
 import { canChangeAppointmentStatus } from "@/lib/appointment-rules";
 import { Sheet, SheetBody, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -94,6 +95,11 @@ export function CalendarView({ role }: { role: string }) {
   const activeRequest = useRef<AbortController | null>(null);
   const viewRevision = useRef(0);
   const sheetRevision = useRef(0);
+
+  const closeSheet = useCallback(() => {
+    setSheetOpen(false);
+    sheetRevision.current++;
+  }, []);
 
   const cancelLoad = useCallback(() => {
     activeRequest.current?.abort();
@@ -505,34 +511,48 @@ export function CalendarView({ role }: { role: string }) {
       )}
 
       {/* ─── Event Detail Sheet ─── */}
-      <Sheet open={sheetOpen} onOpenChange={(open) => { setSheetOpen(open); if (!open) sheetRevision.current++; }}>
-        <SheetContent side="right" className="w-full bg-surface sm:max-w-lg">
-          <SheetHeader>
+      <Sheet open={sheetOpen} onOpenChange={(open) => { if (open) setSheetOpen(true); else closeSheet(); }}>
+        <SheetContent
+          mobileBottomSheet
+          onSwipeDismiss={closeSheet}
+          className="bg-surface"
+        >
+          <SheetHeader className="gap-2 px-4 py-3 pr-16 sm:px-5 sm:py-4 sm:pr-16">
             <SheetTitle>Appointment Details</SheetTitle>
-            <SheetDescription>
-              {patient ? `${patient.firstName} ${patient.lastName}` : "Loading..."}
-            </SheetDescription>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <SheetDescription className="min-w-0 break-all font-mono text-xs">
+                {selectedAppt?.referenceNumber ?? "Loading..."}
+              </SheetDescription>
+              {selectedAppt && <StatusBadge status={currentStatus} />}
+            </div>
           </SheetHeader>
 
-          {selectedAppt && (
-            <SheetBody className="flex flex-col gap-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-text">Appointment overview</h3>
-                <StatusBadge status={currentStatus} />
+          {selectedAppt && patient && (
+            <SheetBody className="flex flex-col gap-4 px-4 py-4 sm:px-5">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10" aria-hidden="true">
+                  <AvatarFallback>{patient.firstName.trim().charAt(0).toUpperCase()}{patient.lastName.trim().charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-text">{patient.firstName} {patient.lastName}</h3>
+                  {patient.phone && <p className="mt-1 text-sm text-text-muted">{patient.phone}</p>}
+                </div>
               </div>
 
-              {/* Patient info */}
-              <dl className="flex flex-col gap-4">
-                <DetailRow label="Patient" value={`${patient?.firstName} ${patient?.lastName}`} />
-                {patient?.phone && <DetailRow label="Phone" value={patient.phone} />}
+              <div className="flex flex-col gap-2 rounded-control bg-surface-alt p-3 text-sm text-text">
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="mt-0.5 size-4 shrink-0 text-text-muted" aria-hidden="true" />
+                  <span>{fmtLongDate(selectedAppt.appointmentDate)}</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="mt-0.5 size-4 shrink-0 text-text-muted" aria-hidden="true" />
+                  <span>{fmtTime(selectedAppt.startTime)} – {fmtTime(selectedAppt.endTime)}</span>
+                </div>
+              </div>
+
+              <dl className="flex flex-col gap-3">
                 <DetailRow label="Service" value={service?.name ?? "—"} />
                 <DetailRow label="Dentist" value={dentist?.name ?? "—"} />
-                <DetailRow label="Date" value={fmtLongDate(selectedAppt.appointmentDate)} />
-                <DetailRow
-                  label="Time"
-                  value={`${fmtTime(selectedAppt.startTime)} – ${fmtTime(selectedAppt.endTime)}`}
-                />
-                <DetailRow label="Reference" value={selectedAppt.referenceNumber} mono />
                 {selectedAppt.notes && (
                   <DetailRow label="Notes" value={selectedAppt.notes} />
                 )}
@@ -540,25 +560,21 @@ export function CalendarView({ role }: { role: string }) {
             </SheetBody>
           )}
 
-          <SheetFooter>
-            {nextActions.length > 0 && (
-              <div className="flex w-full flex-wrap gap-3">
-                {nextActions.map((ns) => (
+          <SheetFooter className="flex-row flex-wrap gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+            <SheetClose asChild>
+              <Button variant="outline" type="button" className="min-w-max flex-1">Close</Button>
+            </SheetClose>
+            {[...nextActions.filter((ns) => ns === "CANCELLED"), ...nextActions.filter((ns) => ns !== "CANCELLED")].map((ns) => (
                   <Button
                     key={ns}
                     onClick={() => (ns === "CANCELLED" ? setCancelOpen(true) : changeStatus(ns))}
                     disabled={actionLoading}
                     variant={ns === "CANCELLED" ? "destructive" : "primary"}
-                    className="min-w-28 flex-1"
+                    className="min-w-max flex-1"
                   >
                     {actionLoading ? "Updating..." : statusActionLabel(ns)}
                   </Button>
-                ))}
-              </div>
-            )}
-            <SheetClose asChild>
-              <Button variant="outline" type="button">Close</Button>
-            </SheetClose>
+            ))}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -579,11 +595,11 @@ export function CalendarView({ role }: { role: string }) {
 }
 
 /* ─── Small helper row ─── */
-function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-4 text-sm">
+    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-baseline gap-3 text-sm">
       <dt className="text-text-muted">{label}</dt>
-      <dd className={cn("min-w-0 whitespace-pre-wrap text-text", mono && "font-mono text-xs")}>{value}</dd>
+      <dd className="min-w-0 whitespace-pre-wrap text-text">{value}</dd>
     </div>
   );
 }

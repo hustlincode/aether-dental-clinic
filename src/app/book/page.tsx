@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ---------------------------------------------------------------------------
@@ -976,22 +976,22 @@ function PrivacyConsentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-card border border-border-accent bg-surface p-0 shadow-xl sm:max-w-lg"
+        className="max-w-lg rounded-card border-border-accent bg-surface sm:max-w-lg"
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <DialogHeader>
           <DialogTitle className="text-base font-bold text-text">
             Data Privacy Consent
           </DialogTitle>
           <button
             onClick={() => onOpenChange(false)}
-            className="flex size-10 items-center justify-center rounded-control text-text-muted transition-colors duration-(--dur-fast) hover:bg-background-alt hover:text-text"
+            className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-control text-text-muted transition-colors duration-(--dur-fast) hover:bg-background-alt hover:text-text"
             aria-label="Close"
           >
             ✕
           </button>
-        </div>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-text-secondary">
+        <DialogBody className="flex flex-col gap-4 text-sm leading-relaxed text-text-secondary">
           <p>
             Before completing your booking, please review how <span className="font-semibold text-text">Aether Dental Clinic</span>{" "}
             handles your personal information under the Philippine <strong>Data Privacy Act of 2012 (RA 10173)</strong>.
@@ -1093,25 +1093,23 @@ function PrivacyConsentModal({
               </p>
             )}
           </div>
-        </div>
+        </DialogBody>
 
-        <div className="flex gap-3 border-t border-border px-5 py-4">
+        <DialogFooter>
           <Button
             variant="outline"
             size="lg"
-            className="flex-1"
             onClick={() => onOpenChange(false)}
           >
             Not now
           </Button>
           <Button
             size="lg"
-            className="flex-1"
             onClick={handleAccept}
           >
             I agree
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

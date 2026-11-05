@@ -194,7 +194,7 @@ export function DentistDetails({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" showCloseButton={false} className="w-full gap-0 bg-surface p-0 sm:max-w-lg" onCloseAutoFocus={(event) => {
+      <SheetContent mobileBottomSheet onSwipeDismiss={onClose} showCloseButton={false} className="bg-surface" onCloseAutoFocus={(event) => {
         const trigger = returnFocusTo ? document.querySelector<HTMLElement>(returnFocusTo) : null;
         if (trigger) {
           event.preventDefault();
@@ -202,10 +202,10 @@ export function DentistDetails({
         }
       }}>
         {/* Header */}
-        <SheetHeader className="flex-row items-start justify-between gap-4 pr-6">
-          <div className="flex flex-col gap-1">
+        <SheetHeader className="flex-row items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 flex-col gap-1">
             <SheetTitle>Dentist Details</SheetTitle>
-            <SheetDescription>Profile, working hours, and upcoming appointments.</SheetDescription>
+            <SheetDescription>Profile and availability.</SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close dentist details"><X aria-hidden="true" /></Button>
@@ -213,7 +213,7 @@ export function DentistDetails({
         </SheetHeader>
 
         {/* Body */}
-        <SheetBody>
+        <SheetBody className="px-4 py-4 sm:px-5">
           {loading && !data ? (
             <div className="flex flex-col gap-4" aria-busy="true">
               <div className="flex items-center gap-3">
@@ -245,49 +245,49 @@ export function DentistDetails({
           ) : data && dentist && stats ? (
             <>
               {/* Dentist header */}
-              <div className="flex items-start gap-4">
-                <Avatar className="size-12 shrink-0 rounded-control border border-border">
+              <div className="flex flex-wrap items-center gap-3">
+                <Avatar className="size-10 shrink-0 rounded-control border border-border">
                   <AvatarImage src={dentist.profileImage || undefined} alt={dentist.name} />
                   <AvatarFallback className="rounded-control bg-accent-soft text-base font-semibold text-accent">
                     {initials(dentist.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-                  <h3 className="break-words text-xl font-semibold tracking-tight text-text">{dentist.name}</h3>
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                  <h3 className="break-words text-base font-semibold tracking-tight text-text">{dentist.name}</h3>
                   <p className="break-words text-sm text-text-secondary">{dentist.specialization}</p>
-                  <Badge variant="secondary" className={cn(dentist.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c")}>
-                    {dentist.status === "ACTIVE" ? "Active" : "Inactive"}
-                  </Badge>
                 </div>
+                <Badge variant="secondary" className={cn(dentist.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c")}>
+                  {dentist.status === "ACTIVE" ? "Active" : "Inactive"}
+                </Badge>
               </div>
 
-              <dl className="mt-6 flex flex-col gap-4 border-y border-border py-5 text-sm">
-                <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
-                  <dt className="flex items-center gap-2 text-text-muted"><Mail size={15} aria-hidden="true" />Email</dt>
-                  <dd className="break-words text-text">{dentist.email}</dd>
+              <dl className="mt-4 flex flex-col gap-2 text-sm">
+                <div>
+                  <dt className="sr-only">Email</dt>
+                  <dd className="flex min-w-0 items-start gap-2 text-text"><Mail className="mt-0.5 size-4 shrink-0 text-text-muted" aria-hidden="true" /><span className="min-w-0 break-words">{dentist.email}</span></dd>
                 </div>
                 {dentist.phone && (
-                  <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
-                    <dt className="flex items-center gap-2 text-text-muted"><Phone size={15} aria-hidden="true" />Phone</dt>
-                    <dd className="break-words text-text">{dentist.phone}</dd>
+                  <div>
+                    <dt className="sr-only">Phone</dt>
+                    <dd className="flex min-w-0 items-start gap-2 text-text"><Phone className="mt-0.5 size-4 shrink-0 text-text-muted" aria-hidden="true" /><span className="min-w-0 break-words">{dentist.phone}</span></dd>
                   </div>
                 )}
               </dl>
 
               {/* Stats grid */}
-              <div className="mt-6 grid grid-cols-2 gap-4 border-b border-border pb-5">
+              <div className="mt-4 grid grid-cols-2 divide-x divide-border rounded-control bg-surface-alt py-3">
                 <StatCard label="Total Appointments" value={String(stats.totalAppointments)} tone="neutral" />
                 <StatCard label="Upcoming" value={String(stats.upcomingCount)} tone="accent" />
               </div>
 
               {/* Weekly schedule */}
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-text">Weekly Schedule</h3>
-                <dl className="mt-3 divide-y divide-border">
+              <div className="mt-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-text"><CalendarClock className="size-4 shrink-0" aria-hidden="true" />Weekly Schedule</h3>
+                <dl className="mt-2 divide-y divide-border">
                   {schedule.map((row, index) => (
                     <div
                       key={DAY_ORDER[index]}
-                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm"
                     >
                       <dt className="font-medium text-text">{DAY_LABELS[DAY_ORDER[index]]}</dt>
                       <dd className="text-text-secondary tabular-nums">
@@ -301,16 +301,18 @@ export function DentistDetails({
               </div>
 
               {/* Upcoming appointments */}
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-text">Upcoming Appointments</h3>
+              <div className="mt-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-text"><CalendarClock className="size-4 shrink-0" aria-hidden="true" />Upcoming Appointments</h3>
+                  <Badge variant="secondary">{stats.upcomingCount}</Badge>
+                </div>
                 {data.upcoming.length === 0 ? (
-                  <div className="mt-3 flex flex-col items-center rounded-control border border-dashed border-border px-5 py-8 text-center">
-                    <CalendarX size={28} className="text-text-muted" />
-                    <p className="mt-3 text-sm text-text-secondary">No upcoming appointments</p>
-                    <p className="mt-1 text-xs text-text-muted">This dentist has no upcoming appointments.</p>
+                  <div className="mt-3 flex items-center gap-3 rounded-control bg-surface-alt p-3">
+                    <CalendarX className="size-5 shrink-0 text-text-muted" aria-hidden="true" />
+                    <p className="text-sm text-text-secondary">No upcoming appointments</p>
                   </div>
                 ) : (
-                  <div className="mt-3 overflow-hidden rounded-control border border-border">
+                  <div data-slot="dentist-appointments" className="mt-3 overflow-x-auto rounded-control border border-border">
                     <DataTable table={table} />
                   </div>
                 )}
@@ -321,10 +323,10 @@ export function DentistDetails({
             </>
           ) : null}
         </SheetBody>
-        <SheetFooter>
-          <SheetClose asChild><Button variant="outline">Close</Button></SheetClose>
+        <SheetFooter className="flex-row flex-wrap gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+          <SheetClose asChild><Button variant="outline" className="min-w-max flex-1">Close</Button></SheetClose>
           {dentist && (
-            <Button asChild variant="primary">
+            <Button asChild variant="primary" className="min-w-max flex-1">
               <Link href={`/admin/dentists/${dentist.id}`} onClick={onClose}>
                 <CalendarClock aria-hidden="true" />Manage Schedule
               </Link>
@@ -347,9 +349,9 @@ const STAT_TONE_STYLES: Record<StatTone, string> = {
 
 function StatCard({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: StatTone }) {
   return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium text-text-muted">{label}</p>
-      <p className={cn("mt-1 break-words text-lg font-semibold tabular-nums", STAT_TONE_STYLES[tone])}>{value}</p>
+    <div className="min-w-0 px-3">
+      <p className={cn("break-words text-lg font-semibold tabular-nums", STAT_TONE_STYLES[tone])}>{value}</p>
+      <p className="mt-1 text-xs font-medium text-text-muted">{label}</p>
       {sub && <p className="mt-1 break-words text-xs leading-relaxed text-text-muted">{sub}</p>}
     </div>
   );

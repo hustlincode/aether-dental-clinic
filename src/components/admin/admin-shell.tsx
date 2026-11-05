@@ -66,7 +66,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
 
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <AdminSidebar
         navItems={navItems}
         user={user}
@@ -77,7 +77,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
       />
 
       {/* Main area */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AdminHeader onToggleSidebar={toggleMobile} user={user} mobileOpen={mobileOpen} />
         {user.isDemo && (
           <div
@@ -91,7 +91,7 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
             </span>
           </div>
         )}
-        <main className="admin-canvas flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="admin-canvas relative min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

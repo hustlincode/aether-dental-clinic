@@ -21,6 +21,7 @@ import { DatePickerField } from "@/components/admin/date-picker-field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -388,7 +389,7 @@ export function AppointmentsList({ role, initialDateKey }: { role: string; initi
         ) : (
           <>
             <div
-              className={`max-h-[60vh] overflow-x-auto overflow-y-auto ${loading ? "opacity-60 transition-opacity" : ""}`}
+              className={`overflow-x-auto ${loading ? "opacity-60 transition-opacity" : ""}`}
               aria-busy={loading}
             >
               <DataTable columns={columns} data={appts} getRowId={(row) => row.id} />
@@ -718,13 +719,14 @@ function EditAppointmentDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{notesOnly ? "Edit appointment notes" : "Edit appointment"}</DialogTitle>
           <DialogDescription>
             {appointment.referenceNumber} · {appointment.patient.firstName} {appointment.patient.lastName}
           </DialogDescription>
         </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
 
         {error && (
           <div className="rounded-control border border-error/20 bg-error-bg px-4 py-3 text-sm text-error">{error}</div>
@@ -849,20 +851,21 @@ function EditAppointmentDialog({
           </div>
         </div>
 
+        </DialogBody>
         <DialogFooter>
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="inline-flex h-11 items-center rounded-control border border-border bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-background-alt hover:text-text"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex h-11 items-center rounded-control border border-foreground bg-foreground px-4 text-sm font-semibold text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save changes"}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
