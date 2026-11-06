@@ -71,6 +71,25 @@ test.describe("drawer accessibility and responsive layouts", () => {
           await trigger.click();
           const drawer = page.getByRole("dialog", { name: profile.title, exact: true });
           await checkDrawer(page, drawer);
+          if (profile.path === "patients") {
+            const box = (await drawer.boundingBox())!;
+            expect(Math.abs(box.y + box.height - 844)).toBeLessThanOrEqual(1);
+            if (width < 640) {
+              expect(box.x).toBe(0);
+              expect(box.width).toBe(width);
+              expect(box.height).toBeLessThanOrEqual(844 * 0.9 + 1);
+              await expect(drawer.locator('[data-slot="sheet-handle"]')).toBeVisible();
+            } else {
+              expect(box.y).toBe(0);
+              expect(box.height).toBe(844);
+              expect(box.x + box.width).toBe(width);
+            }
+            const records = drawer.getByRole("listitem");
+            await expect(records).toHaveCount(history.length);
+            for (const text of ["Oct 10, 2026", "9:00 AM", "Dental Cleaning", dentist.name, "COMPLETED"]) await expect(records.last()).toContainText(text);
+            await expect(records.last()).toBeInViewport();
+            await expect(drawer.getByRole("table")).toHaveCount(0);
+          }
           await drawer.locator('[data-slot="sheet-body"]').evaluate(node => { node.scrollTop = 0; });
           await drawer.screenshot({ path: `node_modules/.cache/aether-drawer-qa/drawer-${profile.path}-${width}-${theme}.png` });
           expect(await drawer.evaluate(node => Number.parseFloat(getComputedStyle(node).animationDuration))).toBeLessThanOrEqual(0.001);
@@ -144,6 +163,92 @@ test.describe("drawer accessibility and responsive layouts", () => {
     await trigger.click();
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Alexandra Reyes", exact: true })).toBeVisible();
     await expect(page.getByText("Temporary synthetic failure", { exact: true })).toHaveCount(0);
+  });
+
+  for (const width of [390, 1440]) {
+    test(`patient summary matches compact reference and preserves history: ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      const compactPatient = { ...patient, email: null, notes: null };
+      await page.route("**/api/patients/drawer-patient", route => route.fulfill({ json: { success: true, data: {
+        patient: compactPatient,
+        stats: { total: 13, completed: 4, cancelled: 3, nextAppointment: null, lastAppointment: history[0] },
+        history: history.slice(0, 3),
+      } } }));
+      await page.goto("/admin/patients");
+      const trigger = page.getByTitle("View patient details", { exact: true });
+      await trigger.click();
+      const drawer = page.getByRole("dialog", { name: "Patient Details", exact: true });
+      await expect(drawer.getByRole("heading", { name: "Alexandra Reyes", exact: true })).toBeVisible();
+      await expect(drawer.getByText("No email on file", { exact: true })).toBeVisible();
+      await expect(drawer.getByText("No upcoming visits", { exact: true })).toBeVisible();
+      await expect(drawer.getByText("Showing the 3 most recent appointments.", { exact: true })).toBeAttached();
+      const next = await drawer.getByRole("heading", { name: "Next appointment", exact: true }).boundingBox();
+      const last = await drawer.getByRole("heading", { name: "Last appointment", exact: true }).boundingBox();
+      if (width < 640) expect(last!.y).toBeGreaterThan(next!.y);
+      else expect(last!.y).toBe(next!.y);
+      await drawer.screenshot({ path: testInfo.outputPath(`patient-summary-${width}.png`) });
+      const body = drawer.locator('[data-slot="sheet-body"]');
+      await body.evaluate(node => { node.scrollTop = node.scrollHeight; });
+      await expect(drawer.getByRole("listitem").last()).toBeInViewport();
+      await expect(drawer.getByRole("listitem").last()).toContainText(dentist.name);
+      await drawer.locator('[data-slot="sheet-footer"]').getByRole("button", { name: "Close", exact: true }).click();
+      await expect(drawer).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+    });
+  }
+
+  test("short patient sheet contains long content and keeps Close visible", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 300 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.route("**/api/patients/drawer-patient", route => route.fulfill({ json: { success: true, data: {
+      patient: { ...patient, firstName: "Alexandra".repeat(12), phone: "09123456789".repeat(8) },
+      stats: { total: 30, completed: 30, cancelled: 0, nextAppointment: history[0], lastAppointment: history[0] }, history,
+    } } }));
+    await page.goto("/admin/patients");
+    await page.getByTitle("View patient details", { exact: true }).click();
+    const drawer = page.getByRole("dialog", { name: "Patient Details", exact: true });
+    await checkDrawer(page, drawer);
+    const box = (await drawer.boundingBox())!;
+    expect(box.height).toBeLessThanOrEqual(271);
+    expect(Math.abs(box.y + box.height - 300)).toBeLessThanOrEqual(1);
+    await expect(drawer.locator('[data-slot="sheet-footer"]').getByRole("button", { name: "Close", exact: true })).toBeInViewport();
+    await expect(drawer.getByText(patient.notes, { exact: true })).toBeAttached();
+    await expect(drawer.getByRole("listitem")).toHaveCount(30);
+  });
+
+  test("patient loading, error and retry preserve inactive empty summary", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let calls = 0;
+    await page.route("**/api/patients/drawer-patient", async route => {
+      if (calls++ === 0) {
+        await gate;
+        return route.fulfill({ status: 500, json: { message: "Temporary synthetic failure" } });
+      }
+      return route.fulfill({ json: { success: true, data: {
+        patient: { ...patient, status: "INACTIVE", email: null, notes: null },
+        stats: { total: 0, completed: 0, cancelled: 0, nextAppointment: null, lastAppointment: null }, history: [],
+      } } });
+    });
+    await page.goto("/admin/patients");
+    await page.getByTitle("View patient details", { exact: true }).click();
+    const drawer = page.getByRole("dialog", { name: "Patient Details", exact: true });
+    try {
+      await expect(drawer.locator('[aria-busy="true"]')).toBeVisible();
+      await expect(drawer.locator('[data-slot="sheet-footer"]').getByRole("button", { name: "Close", exact: true })).toBeInViewport();
+    } finally { release(); }
+    await expect(drawer.getByText("Temporary synthetic failure", { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "Try Again", exact: true }).click();
+    await expect(drawer.getByText("Inactive", { exact: true })).toBeVisible();
+    for (const text of ["No email on file", "No upcoming visits", "No past visits", "No appointments yet"]) {
+      await expect(drawer.getByText(text, { exact: true })).toBeAttached();
+    }
+    await expect(drawer.getByRole("listitem")).toHaveCount(0);
+    await expect(drawer.getByText("Temporary synthetic failure", { exact: true })).toHaveCount(0);
+    await expect(drawer.getByRole("heading", { name: "Patient notes", exact: true })).toHaveCount(0);
   });
 
   for (const width of [1440, 390]) {

@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, CalendarX, Mail, Phone, RefreshCw, X } from "lucide-react";
-import { createColumnHelper } from "@tanstack/react-table";
-import { DataTable, useDataTable, type FilterableDataTableFeatures } from "./data-table";
+import { AlertCircle, CalendarDays, CalendarX, Mail, Phone, RefreshCw, X } from "lucide-react";
 import { StatusBadge } from "./status-badge";
 import { Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -68,42 +66,6 @@ function initials(first: string, last: string): string {
   return `${(first[0] || "").toUpperCase()}${(last[0] || "").toUpperCase()}`;
 }
 
-// ─── Appointment History Columns ─────────────────────────────────────────────
-
-const columnHelper = createColumnHelper<FilterableDataTableFeatures, AppointmentRecord>();
-
-const columns = columnHelper.columns([
-  columnHelper.accessor((a) => a.appointmentDate, {
-    id: "date",
-    header: "Date",
-    cell: (info) => <span className="whitespace-nowrap text-text">{fmtDate(info.getValue())}</span>,
-  }),
-  columnHelper.accessor((a) => a.startTime, {
-    id: "time",
-    header: "Time",
-    cell: (info) => <span className="whitespace-nowrap text-text-secondary">{fmtTime(info.getValue())}</span>,
-  }),
-  columnHelper.accessor((a) => a.service?.name ?? "", {
-    id: "service",
-    header: "Service",
-    meta: { cellClassName: "hidden sm:table-cell" },
-    cell: (info) => <span className="text-text-secondary">{info.row.original.service.name}</span>,
-  }),
-  columnHelper.accessor((a) => a.dentist?.name ?? "", {
-    id: "dentist",
-    header: "Dentist",
-    meta: { cellClassName: "hidden sm:table-cell" },
-    cell: (info) => <span className="text-text-secondary">{info.row.original.dentist.name}</span>,
-  }),
-  columnHelper.accessor((a) => a.status, {
-    id: "status",
-    header: "Status",
-    cell: (info) => <StatusBadge status={info.getValue()} />,
-  }),
-]);
-
-// ─── Patient Details Drawer ──────────────────────────────────────────────────
-
 export function PatientDetails({
   open,
   patientId,
@@ -119,13 +81,6 @@ export function PatientDetails({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const table = useDataTable({
-    columns,
-    data: data?.history ?? [],
-    getRowId: (row, index) => `${row.appointmentDate}-${row.startTime}-${index}`,
-    options: { initialState: { pagination: { pageIndex: 0, pageSize: 100000 } } },
-  });
 
   // Keep the last loaded profile visible while refreshing the same patient.
   useEffect(() => {
@@ -167,7 +122,7 @@ export function PatientDetails({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" showCloseButton={false} className="w-full gap-0 bg-surface p-0 sm:max-w-lg" onCloseAutoFocus={(event) => {
+      <SheetContent mobileBottomSheet onSwipeDismiss={onClose} showCloseButton={false} className="bg-surface" onCloseAutoFocus={(event) => {
         const trigger = returnFocusTo ? document.querySelector<HTMLElement>(returnFocusTo) : null;
         if (trigger) {
           event.preventDefault();
@@ -175,10 +130,10 @@ export function PatientDetails({
         }
       }}>
         {/* Header */}
-        <SheetHeader className="flex-row items-start justify-between gap-4 pr-6">
+        <SheetHeader className="flex-row items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
           <div className="flex flex-col gap-1">
             <SheetTitle>Patient Details</SheetTitle>
-            <SheetDescription>Contact information and appointment history.</SheetDescription>
+            <SheetDescription>Contact and appointment history.</SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close patient details"><X aria-hidden="true" /></Button>
@@ -186,7 +141,7 @@ export function PatientDetails({
         </SheetHeader>
 
         {/* Body */}
-        <SheetBody>
+        <SheetBody className="px-4 py-4 sm:px-5">
           {loading && !data ? (
             <div className="flex flex-col gap-4" aria-busy="true">
               <div className="flex items-center gap-3">
@@ -218,61 +173,54 @@ export function PatientDetails({
           ) : data && patient && stats ? (
             <>
               {/* Patient header */}
-              <div className="flex items-start gap-4">
-                <Avatar aria-hidden="true" className="size-12 rounded-control border border-border">
+              <div className="flex flex-wrap items-center gap-3">
+                <Avatar aria-hidden="true" className="size-12 shrink-0 rounded-control border border-border">
                   <AvatarFallback className="rounded-control bg-accent-soft text-base font-semibold text-accent">{initials(patient.firstName, patient.lastName)}</AvatarFallback>
                 </Avatar>
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-                  <h3 className="break-words text-xl font-semibold tracking-tight text-text">
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words text-base font-semibold tracking-tight text-text">
                     {patient.firstName} {patient.lastName}
                   </h3>
-                  <Badge variant="secondary" className={cn(patient.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c")}>
-                    {patient.status === "ACTIVE" ? "Active" : "Inactive"}
-                  </Badge>
                 </div>
+                <Badge variant="secondary" className={cn(patient.status === "ACTIVE" ? "bg-success-bg text-success" : "bg-neutral-bg text-neutral-c")}>
+                  {patient.status === "ACTIVE" ? "Active" : "Inactive"}
+                </Badge>
               </div>
 
-              <dl className="mt-6 flex flex-col gap-4 border-y border-border py-5 text-sm">
-                <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
+              <dl className="mt-4 divide-y divide-border border-y border-border text-sm">
+                <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 py-3">
                   <dt className="flex items-center gap-2 text-text-muted"><Mail size={15} aria-hidden="true" />Email</dt>
                   <dd className="break-words text-text">{patient.email || "No email on file"}</dd>
                 </div>
-                <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
+                <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 py-3">
                   <dt className="flex items-center gap-2 text-text-muted"><Phone size={15} aria-hidden="true" />Phone</dt>
                   <dd className="break-words text-text">{patient.phone}</dd>
                 </div>
               </dl>
 
               {patient.notes && (
-                <section className="mt-6">
+                <section className="mt-4">
                   <h3 className="text-sm font-semibold text-text">Patient notes</h3>
                   <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{patient.notes}</p>
                 </section>
               )}
 
               {/* Stats grid */}
-              <div className="mt-6 grid grid-cols-3 gap-4 border-b border-border pb-5">
+              <div className="mt-4 grid grid-cols-3 divide-x divide-border rounded-control bg-surface-alt py-3">
                 <StatCard label="Total" value={String(stats.total)} tone="neutral" />
                 <StatCard label="Completed" value={String(stats.completed)} tone="success" />
                 <StatCard label="Cancelled" value={String(stats.cancelled)} tone="error" />
               </div>
-              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <StatCard
-                  label="Next Appointment"
-                  value={stats.nextAppointment ? fmtDate(stats.nextAppointment.appointmentDate) : "—"}
-                  sub={stats.nextAppointment ? `${fmtTime(stats.nextAppointment.startTime)} · ${stats.nextAppointment.service.name}` : "No upcoming visits"}
-                  tone="accent"
-                />
-                <StatCard
-                  label="Last Appointment"
-                  value={stats.lastAppointment ? fmtDate(stats.lastAppointment.appointmentDate) : "—"}
-                  sub={stats.lastAppointment ? `${fmtTime(stats.lastAppointment.startTime)} · ${stats.lastAppointment.service.name}` : "No past visits"}
-                  tone="neutral"
-                />
-              </div>
+              <section className="mt-4">
+                <h3 className="text-sm font-semibold text-text sm:sr-only">Appointments</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-0 sm:grid-cols-2">
+                  <AppointmentCard label="Next appointment" appointment={stats.nextAppointment} empty="No upcoming visits" />
+                  <AppointmentCard label="Last appointment" appointment={stats.lastAppointment} empty="No past visits" />
+                </div>
+              </section>
 
               {/* Appointment history */}
-              <div className="mt-6">
+              <div className="mt-4">
                 <h3 className="text-sm font-semibold text-text">Appointment History</h3>
                 {data.history.length === 0 ? (
                   <div className="mt-3 flex flex-col items-center rounded-control border border-dashed border-border px-5 py-8 text-center">
@@ -281,9 +229,24 @@ export function PatientDetails({
                     <p className="mt-1 text-xs text-text-muted">This patient has no appointment history.</p>
                   </div>
                 ) : (
-                  <div className="mt-3 overflow-hidden rounded-control border border-border">
-                    <DataTable table={table} />
-                  </div>
+                  <ul className="mt-3 divide-y divide-border rounded-control border border-border">
+                    {data.history.map((appointment, index) => (
+                      <li key={`${appointment.appointmentDate}-${appointment.startTime}-${index}`} className="flex items-start gap-3 p-3">
+                        <CalendarDays className="mt-0.5 size-4 shrink-0 text-text-muted" aria-hidden="true" />
+                        <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+                          <div className="min-w-0 sm:border-r sm:border-border sm:pr-3">
+                            <p className="break-words text-sm font-semibold text-text">{fmtDate(appointment.appointmentDate)}</p>
+                            <p className="mt-1 text-xs text-text-secondary">{fmtTime(appointment.startTime)}</p>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold text-text">{appointment.service.name}</p>
+                            <p className="mt-1 break-words text-xs text-text-secondary">{appointment.dentist.name}</p>
+                            <div className="mt-2"><StatusBadge status={appointment.status} /></div>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 {data.history.length > 0 && (
                   <p className="mt-2 text-xs text-text-muted">Showing the {data.history.length} most recent appointments.</p>
@@ -292,7 +255,7 @@ export function PatientDetails({
             </>
           ) : null}
         </SheetBody>
-        <SheetFooter>
+        <SheetFooter className="flex-row justify-end px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
           <SheetClose asChild><Button variant="outline">Close</Button></SheetClose>
         </SheetFooter>
       </SheetContent>
@@ -309,12 +272,24 @@ const STAT_TONE_STYLES: Record<StatTone, string> = {
   neutral: "text-text",
 };
 
-function StatCard({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: StatTone }) {
+function StatCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: StatTone }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 px-3">
       <p className="text-xs font-medium text-text-muted">{label}</p>
       <p className={cn("mt-1 break-words text-lg font-semibold tabular-nums", STAT_TONE_STYLES[tone])}>{value}</p>
-      {sub && <p className="mt-1 break-words text-xs leading-relaxed text-text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+function AppointmentCard({ label, appointment, empty }: { label: string; appointment: AppointmentRecord | null; empty: string }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3 rounded-control border border-border p-3">
+      <CalendarDays className="size-5 shrink-0 text-text-muted" aria-hidden="true" />
+      <div className="min-w-0 border-l border-border pl-3">
+        <h4 className="text-sm font-medium text-text-secondary">{label}</h4>
+        <p className="mt-1 break-words text-sm font-semibold text-text">{appointment ? fmtDate(appointment.appointmentDate) : empty}</p>
+        {appointment && <p className="mt-1 break-words text-xs text-text-secondary">{fmtTime(appointment.startTime)} · {appointment.service.name}</p>}
+      </div>
     </div>
   );
 }

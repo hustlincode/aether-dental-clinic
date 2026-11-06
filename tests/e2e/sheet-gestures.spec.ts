@@ -3,7 +3,12 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { encode } from "next-auth/jwt";
 
-type Details = "dentist" | "calendar";
+type Details = "patient" | "dentist" | "calendar";
+const patient = {
+  id: "gesture-patient", firstName: "Gesture", lastName: "Patient", email: null, phone: "09123456789",
+  notes: "Synthetic gesture note. ".repeat(180), status: "ACTIVE",
+  createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", _count: { appointments: 30 }, appointments: [],
+};
 const dentist = {
   id: "gesture-dentist", name: "Dr. Gesture Test", email: "gesture@example.test", phone: "09123456789",
   specialization: "General Dentistry", profileImage: null, status: "ACTIVE",
@@ -12,7 +17,7 @@ const dentist = {
 const appointment = {
   id: "gesture-appointment", referenceNumber: "APT-GESTURE", appointmentDate: "2027-01-05T00:00:00Z",
   startTime: "09:00", endTime: "09:30", status: "PENDING", notes: "Synthetic gesture note. ".repeat(180),
-  patient: { firstName: "Gesture", lastName: "Patient", phone: "09123456789" }, dentist, service: { name: "Cleaning" },
+  patient, dentist, service: { name: "Cleaning" },
 };
 
 async function drag(page: Page, target: Locator, dx: number, dy: number, duration: number, finish: "touchEnd" | "touchCancel" | null = "touchEnd") {
@@ -36,17 +41,17 @@ async function drag(page: Page, target: Locator, dx: number, dy: number, duratio
 }
 
 async function openDetails(page: Page, kind: Details) {
-  if (kind === "dentist") {
-    await page.goto("/admin/dentists");
+  if (kind !== "calendar") {
+    await page.goto(`/admin/${kind}s`);
   } else {
     await page.goto("/admin/calendar");
     await page.getByRole("button", { name: /, 1 appointments$/ }).click({ position: { x: 8, y: 8 } });
   }
-  const trigger = kind === "dentist"
-    ? page.getByTitle("View dentist details", { exact: true })
+  const trigger = kind !== "calendar"
+    ? page.getByTitle(`View ${kind} details`, { exact: true })
     : page.getByRole("button", { name: /Gesture Patient.*Cleaning/ });
   await trigger.click();
-  const drawer = page.getByRole("dialog", { name: kind === "dentist" ? "Dentist Details" : "Appointment Details", exact: true });
+  const drawer = page.getByRole("dialog", { name: kind === "calendar" ? "Appointment Details" : kind === "patient" ? "Patient Details" : "Dentist Details", exact: true });
   await expect(drawer).toBeVisible();
   await expect(drawer.locator('[data-slot="sheet-body"]').getByText(kind === "dentist" ? dentist.name : "Gesture Patient", { exact: true })).toBeVisible();
   await drawer.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished.catch(() => {}))));
@@ -84,6 +89,13 @@ test.describe("mobile details gestures", () => {
     const value = await encode({ token: { id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
     await context.addCookies([{ name, value, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
+    await page.route("**/api/patients?**", route => route.fulfill({ json: { success: true, data: {
+      patients: [patient], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    } } }));
+    await page.route("**/api/patients/gesture-patient", route => route.fulfill({ json: { success: true, data: {
+      patient, stats: { total: 30, completed: 30, cancelled: 0, nextAppointment: null, lastAppointment: appointment },
+      history: Array.from({ length: 30 }, (_, index) => ({ ...appointment, id: `history-${index}`, status: "COMPLETED" })),
+    } } }));
     await page.route("**/api/dentists?**", route => route.fulfill({ json: { success: true, data: [dentist] } }));
     await page.route("**/api/dentists/gesture-dentist", route => route.fulfill({ json: { success: true, data: {
       dentist, stats: { totalAppointments: 46, upcomingCount: 30 },
@@ -94,7 +106,7 @@ test.describe("mobile details gestures", () => {
     } } }));
   });
 
-  for (const kind of ["dentist", "calendar"] as const) {
+  for (const kind of ["patient", "dentist", "calendar"] as const) {
     test(`${kind}: short and cancelled drags return; horizontal and upward gestures do not dismiss`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: "no-preference" });
       const { drawer } = await openDetails(page, kind);
@@ -136,7 +148,7 @@ test.describe("mobile details gestures", () => {
       await expect.poll(() => body.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
       await atRest(drawer, y);
       expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(mainTop);
-      const close = kind === "dentist" ? drawer.getByRole("button", { name: "Close dentist details", exact: true }) : drawer.locator('button[aria-label="Close"]');
+      const close = kind !== "calendar" ? drawer.getByRole("button", { name: `Close ${kind} details`, exact: true }) : drawer.locator('button[aria-label="Close"]');
       await close.click();
       await expect(drawer).toHaveCount(0);
       await expect(trigger).toBeFocused();
