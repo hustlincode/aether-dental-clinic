@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClinicName } from "@/components/brand/tenant-brand";
 import { staffRoleLabel } from "@/lib/staff-roles";
 import {
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   FileBarChart2,
   Bell,
   Settings,
+  CreditCard,
   PanelLeftClose,
   type LucideIcon,
 } from "lucide-react";
@@ -35,6 +37,7 @@ const iconMap: Record<string, LucideIcon> = {
   Reports: FileBarChart2,
   Notifications: Bell,
   Configuration: Settings,
+  Subscription: CreditCard,
 };
 
 /* ─── Props ─── */
@@ -56,6 +59,7 @@ export function AdminSidebar({
   onCloseMobile,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const clinicName = useClinicName();
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
   const roleLabel = user.isDemo ? "Demo viewer" : staffRoleLabel(user.role);
 
@@ -88,7 +92,7 @@ export function AdminSidebar({
         <Link
           href="/admin"
           prefetch={pathname === "/admin" ? false : undefined}
-          aria-label="Aether Dental admin home"
+          aria-label={`${clinicName} admin home`}
           className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}
         >
           <Image
@@ -100,7 +104,7 @@ export function AdminSidebar({
           />
           {!collapsed && (
             <span className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold text-sidebar-text">Aether Dental</span>
+              <span className="text-sm font-semibold text-sidebar-text">{clinicName}</span>
               <span className="text-xs text-sidebar-text-muted">Clinic Management</span>
             </span>
           )}
