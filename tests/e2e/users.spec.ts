@@ -1,3 +1,4 @@
+import { clinicRequest } from "../helpers/clinic-request";
 import { randomUUID } from "node:crypto";
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { PrismaClient, type Role } from "@prisma/client";
@@ -12,8 +13,8 @@ test.describe("staff user management", () => {
 
   async function authenticate(context: BrowserContext, role: Role) {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: accounts.get(role), role, sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: accounts.get(role), role, sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
   }
 
   async function select(page: Page, label: string, option: string) {
@@ -27,10 +28,10 @@ test.describe("staff user management", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     for (const role of ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"] as Role[]) {
-      const user = await prisma.user.create({ data: { name: `Browser ${role}`, email: `${marker}-${role.toLowerCase()}@example.test`, role, passwordHash: "not-a-login" } });
+      const user = await prisma.user.create({ data: { tenantId: "aether", name: `Browser ${role}`, email: `${marker}-${role.toLowerCase()}@example.test`, role, passwordHash: "not-a-login" } });
       accounts.set(role, user.id);
     }
-    dentistId = (await prisma.dentist.create({ data: { name: `Dr Browser ${marker}`, email: `${marker}-profile@example.test`, specialization: "General Dentistry" } })).id;
+    dentistId = (await prisma.dentist.create({ data: { tenantId: "aether", name: `Dr Browser ${marker}`, email: `${marker}-profile@example.test`, specialization: "General Dentistry" } })).id;
   });
 
   test.afterAll(async () => {
@@ -85,7 +86,7 @@ test.describe("staff user management", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(row).toContainText(`Dr Browser ${marker}`);
-    const managed = await prisma.user.findUniqueOrThrow({ where: { email } });
+    const managed = await prisma.user.findFirstOrThrow({ where: { tenantId: "aether", email } });
     expect((await prisma.dentist.findUniqueOrThrow({ where: { id: dentistId } })).userId).toBe(managed.id);
 
     await row.getByRole("button", { name: `Actions for ${name}` }).click();
@@ -98,7 +99,7 @@ test.describe("staff user management", () => {
     await dialog.getByLabel("New password", { exact: true }).fill("Replacement passphrase 2026!");
     await dialog.getByRole("button", { name: "Reset password", exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    expect((await prisma.user.findUniqueOrThrow({ where: { email } })).sessionVersion).toBeGreaterThan(managed.sessionVersion);
+    expect((await prisma.user.findFirstOrThrow({ where: { tenantId: "aether", email } })).sessionVersion).toBeGreaterThan(managed.sessionVersion);
 
     await page.setViewportSize({ width: 390, height: 844 });
     row = page.getByRole("row").filter({ hasText: email });
@@ -122,8 +123,8 @@ test.describe("staff user management", () => {
     await expect(row.getByRole("button")).toHaveCount(0);
     for (const role of ["RECEPTIONIST", "ASSISTANT", "DENTIST"] as Role[]) {
       await authenticate(context, role);
-      expect((await context.request.get("/api/admin/users")).status()).toBe(403);
-      expect((await context.request.post("/api/admin/users", { data: {} })).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/admin/users")).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/admin/users", { method: "POST", data: {} })).status()).toBe(403);
       await page.goto("/admin/users");
       await expect(page).toHaveURL(/\/admin$/);
       await expect(page.getByRole("link", { name: "Users", exact: true })).toHaveCount(0);
@@ -133,7 +134,7 @@ test.describe("staff user management", () => {
   test("password reset and deactivate/reactivate revoke saved sessions while the new password works", async ({ context, browser }) => {
     await authenticate(context, "ADMIN");
     const email = `${marker}-session@example.test`;
-    const created = await context.request.post("/api/admin/users", { data: {
+    const created = await clinicRequest(context, "/api/admin/users", { method: "POST", data: {
       name: "Session browser test", email, role: "ASSISTANT", password: "Original browser password!",
     } });
     expect(created.status()).toBe(201);
@@ -141,11 +142,11 @@ test.describe("staff user management", () => {
     const staff = await browser.newContext();
     try {
       const name = "authjs.session-token";
-      const value = await encode({ token: { id: account.id, role: "ASSISTANT", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-      await staff.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
-      expect((await staff.request.get("/api/notifications/unread-count")).status()).toBe(200);
-      expect((await context.request.post(`/api/admin/users/${account.id}/password`, { data: { password: "Replacement browser password!" } })).status()).toBe(200);
-      expect((await staff.request.get("/api/notifications/unread-count")).status()).toBe(401);
+      const value = await encode({ token: { tenantId: "aether", id: account.id, role: "ASSISTANT", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+      await staff.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
+      expect((await clinicRequest(staff, "/api/notifications/unread-count")).status()).toBe(200);
+      expect((await clinicRequest(context, `/api/admin/users/${account.id}/password`, { method: "POST", data: { password: "Replacement browser password!" } })).status()).toBe(200);
+      expect((await clinicRequest(staff, "/api/notifications/unread-count")).status()).toBe(401);
       await staff.clearCookies();
       const page = await staff.newPage();
       await page.goto("/login");
@@ -157,11 +158,11 @@ test.describe("staff user management", () => {
       await page.getByRole("button", { name: /^Sign in$/i }).click();
       await expect(page).toHaveURL(/\/admin$/);
       const saved = await staff.cookies();
-      expect((await context.request.patch(`/api/admin/users/${account.id}`, { data: { active: false } })).status()).toBe(200);
-      expect((await staff.request.get("/api/notifications/unread-count")).status()).toBe(401);
-      expect((await context.request.patch(`/api/admin/users/${account.id}`, { data: { active: true } })).status()).toBe(200);
+      expect((await clinicRequest(context, `/api/admin/users/${account.id}`, { method: "PATCH", data: { active: false } })).status()).toBe(200);
+      expect((await clinicRequest(staff, "/api/notifications/unread-count")).status()).toBe(401);
+      expect((await clinicRequest(context, `/api/admin/users/${account.id}`, { method: "PATCH", data: { active: true } })).status()).toBe(200);
       await staff.addCookies(saved);
-      expect((await staff.request.get("/api/notifications/unread-count")).status()).toBe(401);
+      expect((await clinicRequest(staff, "/api/notifications/unread-count")).status()).toBe(401);
     } finally { await staff.close(); }
   });
 
