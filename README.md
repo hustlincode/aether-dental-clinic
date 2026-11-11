@@ -19,13 +19,12 @@ It opens a **passwordless, read-only** session: every page and report is
 browsable, but every mutating API route — including notification read state —
 rejects demo sessions, so the seeded clinic data stays intact.
 
-- Disabled by default. Set `DEMO_MODE="true"` to enable the button and provider,
-  including in production. Disabling it also rejects existing demo sessions.
-- The demo session is backed by the dedicated `demo@aetherdental.ph` account
-  created by the seed (override with `DEMO_EMAIL`). On older databases without
-  that account it falls back to the seeded admin, still read-only.
-- **Before this deployment ever holds real patient data, set
-  `DEMO_MODE="false"`.**
+- Disabled by default. Enable `DEMO_MODE="true"` only with an explicit
+  `DEMO_TENANT_SLUG` identifying a synthetic showcase clinic.
+- A dedicated demo account must exist in that clinic (`DEMO_EMAIL`, default
+  `demo@aetherdental.ph`). Missing demo accounts never fall back to administrators.
+- Never enable passwordless demo access on a clinic containing real patient data.
+  Disabling it rejects existing demo sessions.
 
 Staff sign in with the credentials printed by the seed (see below). No staff
 password is shipped in this repository.
@@ -61,7 +60,7 @@ password is shipped in this repository.
 
 ### 1. Prerequisites
 - Node.js 22+ (CI uses Node.js 22)
-- A Supabase project (free tier)
+- PostgreSQL: a disposable loopback database ending in `_test` for seeding/tests; a separately managed database for real clinics.
 
 ### 2. Set up environment variables
 Create a `.env` file based on the values below (or use the existing `.env`):
@@ -75,6 +74,10 @@ DIRECT_URL="postgresql://<user>.<project-ref>:<password>@aws-0-<region>.pooler.s
 
 NEXTAUTH_SECRET="<generate a strong random secret>"
 
+# Required in production; clinic URLs are <slug>.<platform-domain>.
+TENANT_BASE_DOMAIN="localhost"
+TRUST_PROXY_HOST="false"
+
 # Email (optional). Leave SMTP_* blank to use preview mode (logs emails to database).
 SMTP_HOST=""
 SMTP_PORT="587"
@@ -85,6 +88,7 @@ EMAIL_PREVIEW_MODE="true"
 
 # Read-only showcase demo; enable only on deployments containing demo data.
 DEMO_MODE="false"
+# DEMO_TENANT_SLUG="synthetic-showcase"
 
 # Optional: dedicated demo account (created by the seed).
 # DEMO_EMAIL="demo@aetherdental.ph"
@@ -105,6 +109,10 @@ npm install
 ```
 
 ### 4. Initialize a new development database and seed
+Point both database URLs at a new loopback PostgreSQL database ending in `_test`.
+The destructive seed refuses hosted and application databases. Use the tenant
+provisioning command below when creating real clinics.
+
 ```bash
 npx prisma migrate deploy
 npx prisma db seed
@@ -123,12 +131,12 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000):
 - Book an appointment at `/book`
 - Staff login at `/login` → admin dashboard at `/admin`
-- Enable `DEMO_MODE="true"` for read-only dashboard access, including production
+- Use the isolated showcase configuration above for optional demo access.
 
 ## Going Live (Security Checklist)
 - [ ] Set `DEMO_MODE="false"` if the database will hold real patient data.
 - [ ] Rotate any passwords from an older seeding:
-      `npm run security:rotate-passwords` (prints new passwords once).
+      `npm run security:rotate-passwords -- <clinic-subdomain>` (prints new passwords once).
 - [ ] Replace `NEXTAUTH_SECRET` with a fresh, strong random value per environment.
 - [ ] Keep `.env` out of version control (already git-ignored).
 - [ ] Configure real SMTP credentials; leave `EMAIL_PREVIEW_MODE="true"` to avoid
@@ -155,27 +163,14 @@ their own temporary staff account in the isolated database and never reuse an
 existing app server. See [deployment and verification notes](docs/production-hardening.md).
 
 ## Caching
-The public homepage (`/`) is an Incremental Static Regeneration route
-(`export const revalidate = 300`). It is prerendered at build time and served
-from the Full Route Cache, so a client-side navigation to it does not re-query
-the database on every visit.
-
-Two consequences to be aware of:
-
-- **`npm run build` needs `DATABASE_URL` to be reachable.** The homepage is
-  prerendered during the build, so the build fails if the database is not
-  reachable from the build machine. Previously only runtime needed the database.
-- **Content changes are picked up immediately, not after 5 minutes.** Every API
-  route that mutates homepage-visible data (services, dentists, patients,
-  appointments) calls `revalidateHomepage()` from `src/lib/home-cache.ts`,
-  which invalidates the cached page. The 5-minute window is only a safety net
-  for changes made outside the app.
-
-`/login` remains dynamic and `/book` static. `/privacy-policy` uses the same
-5-minute revalidation and is invalidated after clinic configuration saves.
+Public pages, booking, login and staff pages render with request-specific tenant
+context. Clinic responses use `private, no-store` so shared caches cannot mix
+subdomains. Static framework assets remain cacheable. Existing mutation
+invalidation is retained for already visited routes. Tenant-aware cache keys and
+selective cache invalidation can be introduced after measuring the pilot.
 
 ## Database
-Models: `User`, `Patient`, `Dentist`, `Service`, `Appointment`, `Availability`, `BlockedDate`, `ClinicSetting`, `Activity`, `EmailLog`.
+Models: `Tenant`, `User`, `Patient`, `Dentist`, `Service`, `Appointment`, `ConfirmationEmail`, `Availability`, `BlockedDate`, `ClinicSetting`, `Notification`, `Activity`, `EmailLog`.
 
 Appointments enforce double-booking prevention at both the application layer and within a transaction.
 
@@ -198,7 +193,7 @@ newly invalidate live appointments are rejected with affected references for
 staff follow-up; no appointments are moved or cancelled automatically. Contact
 and hours forms save separately, reject stale updates, and record changes in
 the activity log. Public contact changes invalidate the homepage and privacy
-page; the dedicated privacy email remains independent.
+page; privacy contact links use the current clinic email and disappear when it is cleared.
 
 Deploy migrations before enabling the module. The clinic-closure migration
 adds a partial unique index for clinic-wide dates. If duplicate dates already
@@ -288,3 +283,111 @@ The first observed count, preview and history requests took 128.4, 47.7 and
 dashboard request, one initial count, one preview and one history request. These
 measurements validate local behavior; production network, dataset size, function
 placement and cold starts still require measurement after deployment.
+
+### Multi-tenant clinic pilot
+
+The application uses clinic subdomains with one clinic per staff account and a
+shared PostgreSQL database. Managed trials and manual subscriptions are available;
+self-service signup and automatic payment collection are not included. Each clinic owns its patients, schedules, services, users, audit records,
+notifications and email history. Shared query filtering covers APIs and server
+pages; SQL composite foreign keys reject cross-clinic record relationships.
+This is application-level read isolation, not PostgreSQL row-level security.
+
+Set `TENANT_BASE_DOMAIN` to the platform domain without a scheme or port. A clinic
+with slug `aether` opens at `aether.<platform-domain>`. Configure wildcard DNS and
+TLS on the hosting platform and keep authentication cookies host-only. Production
+rejects the apex, unknown and suspended clinics. In development, the default is
+`localhost`: `aether.localhost` identifies Aether, and direct `localhost`/`127.0.0.1`
+requests resolve to Aether for existing local tooling. Never use a development
+server as the public production server.
+
+`TRUST_PROXY_HOST` defaults to false. Enable it only if the trusted ingress removes
+client-supplied forwarded headers and replaces them with the verified original
+host. Do not set a global `AUTH_URL`/`NEXTAUTH_URL` to a single clinic host: each
+clinic signs in on its own host. Existing sessions without tenant identity are
+revoked by this release. Passwordless showcase access additionally requires an
+explicit `DEMO_TENANT_SLUG` and a dedicated demo account; never point it at a clinic
+containing real patient data. There is no administrator-account demo fallback.
+
+Public clinic pages are dynamic and clinic responses disable shared caches. Email
+uses shared platform SMTP, clinic-specific display identity and reply-to contact.
+SMTP credentials remain deployment configuration, never clinic records.
+
+Provision a clinic with `npm run tenant:provision -- <slug> <clinic-name>
+<admin-email> <admin-name>` and supply the initial administrator password through
+stdin from a secure input source. Do not put passwords in command arguments or
+shell history. Provisioning creates the clinic, settings and administrator in one
+transaction and rejects duplicate slugs. Configure services and dentists through
+the clinic administrator after onboarding. The development seed is destructive;
+it is explicitly guarded and must never be used for onboarding.
+
+Before release, inspect the actual database and migration history, take and test a
+restorable backup, and rehearse all migrations on a disposable database. The new
+migration preserves existing records under tenant `aether`, including historical
+email logs; it replaces global identity/closure indexes with tenant-aware indexes.
+Historical deployments may have had targeted SQL applied without Prisma migration
+history: reconcile that state before running migration deployment. Never execute
+the existing-schema baseline against an already populated database.
+
+Use actual migrations, not `db push`: normalized-email indexes, partial closure
+uniqueness and composite tenant foreign keys include SQL-only constraints. The
+runtime client intentionally rejects nested writes; use separately scoped flat
+writes in the same transaction. Raw clients are reserved for tenant resolution,
+reviewed provisioning/migrations and guarded test fixtures.
+
+`npm run test:integration` requires a separate loopback `TEST_DATABASE_URL` ending
+in `_test`; it refuses the configured application database. It tests preservation,
+SQL constraints, two-clinic isolation, scheduling races and user-management
+regressions. Browser fixtures also require a disposable migrated database. Do not
+run write-based tests against an application database.
+
+Deploy tenant-aware code and migration together during a maintenance window,
+with old writers stopped. After more than one clinic writes data, rolling back to
+the original single-clinic code is unsafe. Verify clinic login, cookies, booking,
+email identity, tenant suspension and cache behavior on the actual hosting ingress
+before onboarding customers. Pushing `main` can trigger Vercel deployment; local
+verification does not authorize a production push or deployment.
+
+
+### Managed trials and subscriptions
+
+New clinics receive a 30-day trial when provisioned. Administrators can view
+`/admin/subscription`; all staff see trial/expiry notices. Pricing is not displayed
+until the business price is agreed. No checkout, automatic charges, invoices or
+payment-provider integration is included.
+
+Apply `202611080001_managed_subscriptions` through the reviewed migration process.
+It preserves the original `aether` tenant as INTERNAL with no billing expiry;
+other existing pilot clinics receive a 30-day trial. Trial/paid deadlines are
+absolute timestamps displayed in Philippine time. Missing or invalid subscription
+metadata denies writes rather than granting unlimited access.
+
+After expiry, staff can still sign in and read retained records. Clinical changes,
+new public bookings, notification acknowledgements and reminder/email writes are
+blocked with HTTP 403 and code `SUBSCRIPTION_READ_ONLY`. Public booking displays a
+generic unavailable notice without exposing subscription details. Tenant.active
+remains a separate suspension control: renewing does not undo suspension.
+
+Only the platform operator can manage subscriptions using the database-backed CLI:
+
+```bash
+npm run tenant:subscription -- status north-clinic
+npm run tenant:subscription -- renew north-clinic 1
+npm run tenant:subscription -- expire north-clinic
+```
+
+`renew` grants 1..12 calendar months from the later of now or the current deadline,
+retaining any unused trial/paid period. UTC month-end dates clamp to the last day
+of the target month. Run renewal once per agreed extension: repeating the command
+adds another period. Renewal and expiry are transactionally audited; they do not
+collect or verify a payment. INTERNAL clinic subscriptions cannot be changed by
+these commands. Staff APIs cannot modify subscription fields or invoke this CLI.
+
+No scheduler is required to expire a term: access is checked on requests and
+writes. Background reminder batches refresh tenant entitlement before starting;
+email helpers recheck immediately before sending. An external delivery already
+in progress at the deadline may still complete. Expiry never deletes clinic data.
+
+Before pitching real clinics, validate the chosen domain/HTTPS, production
+migration history, backup recovery and SMTP setup in staging. Run the guarded
+integration suite and the subscription browser checks against disposable data.
