@@ -1,24 +1,27 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { prisma } from "@/lib/db";
+import { getRequestTenant } from "@/lib/tenant";
+import { Logo } from "@/components/brand/logo";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
-// Policy text and dedicated privacy contact stay independent of public clinic details.
-export const metadata = {
-  title: "Privacy Policy | Aether Dental Clinic",
-  description:
-    "How Aether Dental Clinic collects, uses, and protects your personal information in compliance with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).",
-};
+export async function generateMetadata() {
+  const tenant = await getRequestTenant();
+  return {
+    title: `Privacy Policy | ${tenant.name}`,
+    description: `How ${tenant.name} collects, uses, and protects your personal information.`,
+  };
+}
 
-const sections = [
+function policySections(clinicName: string, privacyEmail: string | null) {
+  return [
   {
     id: "who-we-are",
     title: "Who we are",
     body: (
       <p>
-        Aether Dental Clinic (<span className="font-semibold text-text">“the Clinic,” “we,” “us”</span>) is the
+        {clinicName} (<span className="font-semibold text-text">“the Clinic,” “we,” “us”</span>) is the
         personal information controller for personal data collected through this website and its booking system. We
         are committed to protecting your privacy in accordance with Republic Act No. 10173, otherwise known as the{" "}
         <em>Data Privacy Act of 2012 (DPA)</em>, its Implementing Rules and Regulations, and other applicable issuances
@@ -132,9 +135,9 @@ const sections = [
         </ul>
         <p className="mt-3">
           To exercise any of these rights, contact our Data Protection Officer at{" "}
-          <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
-            privacy@aetherdental.ph
-          </a>
+          {privacyEmail ? (
+            <a href={`mailto:${privacyEmail}`} className="font-medium text-accent transition-colors hover:text-accent-hover">{privacyEmail}</a>
+          ) : "the clinic using the contact details below"}
           . We will respond within a reasonable time, as provided under the DPA and its IRR.
         </p>
       </>
@@ -163,21 +166,22 @@ const sections = [
     ),
   },
 ];
+}
 
 export default async function PrivacyPolicyPage() {
-  const clinic = await prisma.clinicSetting.findUnique({
-    where: { id: "singleton" },
-    select: { address: true, phone: true, email: true },
+  const tenant = await getRequestTenant();
+  const clinic = await prisma.clinicSetting.findFirst({
+    where: {},
+    select: { name: true, address: true, phone: true, email: true },
   });
+  const clinicName = clinic?.name ?? tenant.name;
+  const sections = policySections(clinicName, clinic?.email ?? null);
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-surface border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
-            <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
-            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
-          </Link>
+          <Logo href="/" priority wordmarkClassName="text-xl" markClassName="h-8 w-8" />
           <div className="flex items-center gap-3">
             <Link href="/book" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
               Book an appointment
@@ -192,7 +196,7 @@ export default async function PrivacyPolicyPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-10">
         <div className="rounded-card border border-border bg-surface p-6 shadow-sm">
-          <p className="text-xs font-semibold tracking-wide text-accent uppercase">Aether Dental Clinic</p>
+          <p className="text-xs font-semibold tracking-wide text-accent uppercase">{clinicName}</p>
           <h1 className="mt-1 text-2xl font-bold text-text">Privacy Policy</h1>
           <p className="mt-1 text-sm text-text-muted">
             Data Privacy Act of 2012 (Republic Act No. 10173) • Last updated: September 11, 2026
@@ -208,7 +212,7 @@ export default async function PrivacyPolicyPage() {
           </div>
 
           <div className="mt-4 rounded-control border border-border-accent bg-accent-soft p-4 text-sm text-text-secondary">
-            <div className="font-semibold text-text">Aether Dental Clinic</div>
+            <div className="font-semibold text-text">{clinicName}</div>
             <p className="mt-1">{clinic?.address || "Clinic address available on request."}</p>
             {clinic?.phone && (
               <p><a href={`tel:${clinic.phone.replace(/[\s()-]/g, "")}`} className="underline-offset-2 hover:underline">{clinic.phone}</a></p>
@@ -218,9 +222,9 @@ export default async function PrivacyPolicyPage() {
             )}
             <p className="mt-1">
               Data Protection Officer:{" "}
-              <a href="mailto:privacy@aetherdental.ph" className="font-medium text-accent transition-colors hover:text-accent-hover">
-                privacy@aetherdental.ph
-              </a>
+              {clinic?.email ? (
+                <a href={`mailto:${clinic.email}`} className="font-medium text-accent transition-colors hover:text-accent-hover">{clinic.email}</a>
+              ) : "Ask the clinic using the contact details above."}
             </p>
             <p className="mt-2">
               You may also file a complaint with the{" "}
@@ -255,14 +259,8 @@ export default async function PrivacyPolicyPage() {
 
       <footer className="border-t border-border bg-surface">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-text-muted sm:flex-row">
-          <div className="flex items-center gap-2 font-bold">
-            <Image src="/logo.svg" alt="" width={24} height={24} className="h-6 w-6" />
-            <span>
-              <span className="text-text">Aether </span>
-              <span className="text-accent">Dental</span>
-            </span>
-          </div>
-          <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
+          <Logo href="/" wordmarkClassName="text-sm" markClassName="h-6 w-6" />
+          <div>© {new Date().getFullYear()} {clinicName}. All rights reserved.</div>
         </div>
       </footer>
     </div>
