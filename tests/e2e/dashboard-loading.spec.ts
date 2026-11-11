@@ -19,11 +19,11 @@ test.describe("deferred dashboard charts", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     const email = `${randomUUID()}@example.test`;
-    staffId = (await prisma.user.create({ data: { name: "Chart Test", email, passwordHash: "not-a-login", role: "DENTIST" } })).id;
-    dentistId = (await prisma.dentist.create({ data: { name: "Chart Test", email, specialization: "General", userId: staffId } })).id;
-    serviceId = (await prisma.service.create({ data: { name: "Chart Test", durationMin: 30, price: 500 } })).id;
-    patientId = (await prisma.patient.create({ data: { firstName: "Chart", lastName: "Test", phone: "09123456789" } })).id;
-    appointmentId = (await prisma.appointment.create({ data: {
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Chart Test", email, passwordHash: "not-a-login", role: "DENTIST" } })).id;
+    dentistId = (await prisma.dentist.create({ data: { tenantId: "aether", name: "Chart Test", email, specialization: "General", userId: staffId } })).id;
+    serviceId = (await prisma.service.create({ data: { tenantId: "aether", name: "Chart Test", durationMin: 30, price: 500 } })).id;
+    patientId = (await prisma.patient.create({ data: { tenantId: "aether", firstName: "Chart", lastName: "Test", phone: "09123456789" } })).id;
+    appointmentId = (await prisma.appointment.create({ data: { tenantId: "aether",
       referenceNumber: `APT-${randomUUID()}`, dentistId, serviceId, patientId,
       appointmentDate: dateKeyToUtc(clinicDateKey()), startTime: "09:00", endTime: "09:30", status: "COMPLETED",
     } })).id;
@@ -58,8 +58,8 @@ test.describe("deferred dashboard charts", () => {
         };
       }, theme);
       const name = "authjs.session-token";
-      const value = await encode({ token: { id: staffId, role: "DENTIST" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-      await context.addCookies([{ name, value, url: baseURL || "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+      const value = await encode({ token: { tenantId: "aether", id: staffId, role: "DENTIST" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+      await context.addCookies([{ name, value, url: baseURL || "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
       await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { count: 0 } } }));
       const errors: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
