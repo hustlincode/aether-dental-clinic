@@ -71,9 +71,12 @@ enum NotificationType {
 // ---------------------------------------------------------------------------
 
 model User {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id           String   @id @default(cuid())
   name         String
-  email        String   @unique
+  email        String
   passwordHash String   @map("password_hash")
   role         Role     @default(RECEPTIONIST)
   active       Boolean  @default(true)
@@ -88,6 +91,8 @@ model User {
   dentist Dentist?
 
   @@map("users")
+  @@unique([tenantId, id])
+  @@unique([tenantId, email])
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +100,9 @@ model User {
 // ---------------------------------------------------------------------------
 
 model Patient {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id             String   @id @default(cuid())
   firstName      String   @map("first_name")
   lastName       String   @map("last_name")
@@ -108,11 +116,12 @@ model Patient {
   appointments Appointment[]
   confirmationEmails ConfirmationEmail[]
 
-  @@index([lastName, firstName])
-  @@index([status])
+  @@index([tenantId, lastName, firstName])
+  @@index([tenantId, status])
   // Public requests stay separate until staff verify patient identity.
-  @@index([email])
+  @@index([tenantId, email])
   @@map("patients")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -120,9 +129,12 @@ model Patient {
 // ---------------------------------------------------------------------------
 
 model Dentist {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id            String        @id @default(cuid())
   name          String
-  email         String        @unique
+  email         String
   phone         String?
   specialization String
   profileImage  String?       @map("profile_image")
@@ -136,8 +148,10 @@ model Dentist {
   availability Availability[]
   blockedDates  BlockedDate[]
 
-  @@index([status])
+  @@index([tenantId, status])
   @@map("dentists")
+  @@unique([tenantId, id])
+  @@unique([tenantId, email])
 }
 
 // ---------------------------------------------------------------------------
@@ -145,8 +159,11 @@ model Dentist {
 // ---------------------------------------------------------------------------
 
 model Service {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id          String        @id @default(cuid())
-  name        String        @unique
+  name        String
   description String?
   durationMin Int           @map("duration_min")
   price       Decimal       @db.Decimal(10, 2)
@@ -157,6 +174,8 @@ model Service {
   appointments Appointment[]
 
   @@map("services")
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +183,9 @@ model Service {
 // ---------------------------------------------------------------------------
 
 model Appointment {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id              String            @id @default(cuid())
   referenceNumber String            @unique @map("reference_number")
   appointmentDate DateTime          @map("appointment_date") @db.Date
@@ -196,12 +218,13 @@ model Appointment {
   activities Activity[] @relation("appointment_activity")
   confirmationEmails ConfirmationEmail[]
 
-  @@index([appointmentDate])
-  @@index([dentistId, appointmentDate])
-  @@index([patientId])
-  @@index([status])
-  @@index([serviceId])
+  @@index([tenantId, appointmentDate])
+  @@index([tenantId, dentistId, appointmentDate])
+  @@index([tenantId, patientId])
+  @@index([tenantId, status])
+  @@index([tenantId, serviceId])
   @@map("appointments")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +239,9 @@ enum ConfirmationEmailStatus {
 }
 
 model ConfirmationEmail {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id            String                  @id @default(cuid())
   appointmentId String                  @map("appointment_id")
   patientId     String                  @map("patient_id")
@@ -230,9 +256,10 @@ model ConfirmationEmail {
   patient     Patient     @relation(fields: [patientId], references: [id])
   sentBy      User?       @relation("confirmation_emails_sent", fields: [sentById], references: [id])
 
-  @@index([appointmentId, createdAt])
-  @@index([patientId])
+  @@index([tenantId, appointmentId, createdAt])
+  @@index([tenantId, patientId])
   @@map("confirmation_emails")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +267,9 @@ model ConfirmationEmail {
 // ---------------------------------------------------------------------------
 
 model Availability {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id            String    @id @default(cuid())
   dayOfWeek     DayOfWeek @map("day_of_week")
   startTime     String    @map("start_time") // "HH:mm" 24h
@@ -253,8 +283,9 @@ model Availability {
   dentist   Dentist @relation(fields: [dentistId], references: [id])
   dentistId String  @map("dentist_id")
 
-  @@unique([dentistId, dayOfWeek])
+  @@unique([tenantId, dentistId, dayOfWeek])
   @@map("availability")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +293,9 @@ model Availability {
 // ---------------------------------------------------------------------------
 
 model BlockedDate {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id        String   @id @default(cuid())
   date      DateTime @db.Date
   reason    String?
@@ -270,9 +304,10 @@ model BlockedDate {
   dentist   Dentist? @relation(fields: [dentistId], references: [id])
   dentistId String?  @map("dentist_id")
 
-  @@unique([date, dentistId])
-  @@index([date])
+  @@unique([tenantId, date, dentistId])
+  @@index([tenantId, date])
   @@map("blocked_dates")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -280,7 +315,10 @@ model BlockedDate {
 // ---------------------------------------------------------------------------
 
 model ClinicSetting {
-  id              String @id @default("singleton")
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id              String @id @default(cuid())
   name            String
   address         String?
   phone           String?
@@ -294,6 +332,8 @@ model ClinicSetting {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("clinic_settings")
+  @@unique([tenantId, id])
+  @@unique([tenantId])
 }
 
 // ---------------------------------------------------------------------------
@@ -301,6 +341,9 @@ model ClinicSetting {
 // ---------------------------------------------------------------------------
 
 model Notification {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id         String           @id @default(cuid())
   userId     String           @map("user_id")
   type       NotificationType
@@ -314,9 +357,10 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id])
 
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
+  @@index([tenantId, userId, isRead])
+  @@index([tenantId, userId, createdAt])
   @@map("notifications")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -324,6 +368,9 @@ model Notification {
 // ---------------------------------------------------------------------------
 
 model Activity {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id        String   @id @default(cuid())
   action    String
   entity    String
@@ -336,9 +383,10 @@ model Activity {
   appointment Appointment? @relation("appointment_activity", fields: [appointmentId], references: [id])
   appointmentId String? @map("appointment_id")
 
-  @@index([createdAt])
-  @@index([entity, entityId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entity, entityId])
   @@map("activities")
+  @@unique([tenantId, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +394,9 @@ model Activity {
 // ---------------------------------------------------------------------------
 
 model EmailLog {
+  // Trusted tenant context is injected by the runtime client; SQL has no owner default.
+  tenantId String @default(dbgenerated()) @map("tenant_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   id        String   @id @default(cuid())
   to        String
   subject   String
@@ -354,6 +405,40 @@ model EmailLog {
   error     String?
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([createdAt])
+  @@index([tenantId, createdAt])
   @@map("email_logs")
+  @@unique([tenantId, id])
+}
+
+// Same-tenant foreign keys and normalized/partial uniqueness are also enforced
+// by the multitenancy SQL migration. Apply migrations rather than db push.
+enum SubscriptionMode {
+  INTERNAL
+  TRIAL
+  PAID
+}
+
+model Tenant {
+  id String @id @default(cuid())
+  slug String @unique
+  name String
+  active Boolean @default(true)
+  subscriptionMode SubscriptionMode @default(TRIAL) @map("subscription_mode")
+  subscriptionEndsAt DateTime? @default(dbgenerated("(CURRENT_TIMESTAMP + '30 days'::interval)")) @map("subscription_ends_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  users User[]
+  patients Patient[]
+  dentists Dentist[]
+  services Service[]
+  appointments Appointment[]
+  confirmationEmails ConfirmationEmail[]
+  availability Availability[]
+  blockedDates BlockedDate[]
+  clinicSettings ClinicSetting[]
+  notifications Notification[]
+  activities Activity[]
+  emailLogs EmailLog[]
+
+  @@map("tenants")
 }
