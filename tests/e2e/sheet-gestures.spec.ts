@@ -72,7 +72,7 @@ test.describe("mobile details gestures", () => {
     expect(url.pathname.endsWith("_test")).toBe(true);
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
-    staffId = (await prisma.user.create({ data: { name: "Gesture QA", email: `${randomUUID()}@example.test`, role: "ADMIN", passwordHash: "not-a-login" } })).id;
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Gesture QA", email: `${randomUUID()}@example.test`, role: "ADMIN", passwordHash: "not-a-login" } })).id;
   });
 
   test.afterAll(async () => {
@@ -86,7 +86,7 @@ test.describe("mobile details gestures", () => {
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
     await page.clock.setFixedTime(new Date("2027-01-01T00:00:00Z"));
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
     await context.addCookies([{ name, value, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
     await page.route("**/api/patients?**", route => route.fulfill({ json: { success: true, data: {
