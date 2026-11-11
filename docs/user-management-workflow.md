@@ -126,3 +126,96 @@ Set an isolated loopback PostgreSQL `TEST_DATABASE_URL` whose database name ends
 - Refreshed the existing allowlisted Graphify AST approach into ignored `node_modules/.cache/aether-patient-drawer-20261106-final/`: seven source files, 157 nodes, 351 edges. Final source hashes match and prior graph artifacts were preserved. Structural maps supplement source review and tests; they are not runtime evidence.
 - Obsidian MCP was unavailable. Updated and read back `D:/Grimoire/01-Projects/Aether-Dental/Drawers.md` and created/read back `Conversation Changes 2026-11-06.md` using the authorized filesystem fallback. Original drawer notes remain intact. The linked record covers earlier Users work, dashboard fixture and currency-label fixes, dialog standards, calendar/dentist sheets, admin scrolling, prior per-file commits/PR text, and this patient update, separating historical checks from newly executed verification. No secrets or patient data were recorded.
 - The four changed repository files are committed individually under the standing instruction. No push, deployment, or PR publication is authorized by this update. Real mobile devices, Firefox/Safari, separate integration/demo-specific suites, and GitHub-hosted CI were not run for this layout change.
+
+## Multi-tenant pilot (2026-11-08)
+
+Authorized: independent clinics, one clinic per staff account, manual onboarding,
+subdomain routing, shared PostgreSQL. No application-database migration, production
+push or deployment is authorized. User asked whether production push is safe;
+reported that implementation and release verification are still incomplete.
+
+- Initial diff was clean. Obsidian Configuration/Performance/history notes and
+  existing Graphify maps were consulted during assessment and source verified.
+- Schema/provisioning, host/auth, and public/email work delegated with disjoint
+  ownership; main agent owns tenant query isolation, integration, and verification.
+- Required ownership and SQL tenant relationship constraints prepared; legacy rows
+  backfill to `aether`. Runtime Prisma rejects raw SQL, owner changes and nested
+  writes, and scopes flat queries including transactions. No production DB touched.
+- Background reminders capture tenant context before `after`; public pages are
+  dynamic and responses disable shared caching. Auth tokens lacking tenant ID
+  intentionally expire; production requires an explicit platform domain.
+- Verification in progress. Earlier baseline was 83 unit tests and typecheck.
+  First updated full serial unit run: 90 passed, 3 failed from missing tenant auth
+  fixtures; fixing these fixtures before final verification. Prisma validate and
+  client generation passed; generation preserved a byte-identical Windows engine
+  DLL because another process holds the existing library open.
+
+### Multi-tenant final verification
+
+- Final application build PASSED with test-only local configuration; whole-project
+  TypeScript and ESLint PASSED. Unit suite: 98 passed, zero failures.
+- All five migrations deployed successfully to three disposable local PostgreSQL
+  databases. Full guarded integration runner PASSED all six suites; final expanded
+  isolation rerun: six passed (including parent), covering foreign IDs/deletes,
+  tenant constraints, raw/nested-write rejection, booking races, clinic closures,
+  captured background reminders, notification recipients, and email history.
+- Full Chromium run: 81 passed, three failed, one demo-disabled check skipped.
+  The three failures were test APIRequest DNS transport on Windows and outdated
+  privacy-email assertions. Fixed the test harness/assertions; affected admin and
+  configuration rerun: seven passed, zero failures. Live subdomain isolation tests
+  passed in the full run. Separate demo-enabled run: one passed, three normal staff
+  cases intentionally skipped. Product source did not change after final build.
+- Independent security review found no additional concrete blocking issue after
+  forwarded-origin, proxy matcher, background-context and SMTP identity fixes.
+- Refreshed and queried ignored source AST graph at
+  node_modules/.cache/aether-tenant-20261108/graphify-out/graph.json (1091 nodes,
+  3631 edges, 35 communities). No model API calls; Prisma/CSS verified from source.
+- Obsidian implementation/verification note created under existing project folder:
+  Multi-tenant Pilot 2026-11-08. No credentials or patient records copied.
+- No application database migration, push or deployment performed. Production
+  release still requires migration-history reconciliation, tested backup/recovery,
+  coordinated schema/code rollout, wildcard DNS/TLS, ingress/cookie checks and real
+  SMTP verification. Single-clinic rollback is unsafe once multiple clinics write.
+
+## Managed subscription phase (2026-11-08)
+
+User selected managed trials/manual subscriptions for pitching and testing with
+clinics: 30-day trial, read-only records and no new public bookings after expiry,
+records retained, monthly price not set. No payment gateway, automatic charges,
+self-service signup, production migration or deployment authorized.
+
+Implementation in progress: shared subscription policy + runtime write guard,
+subscription schema/operator tooling, request/API/delivery guards, and admin
+Subscription page/expiry notice. Existing Aether owner clinic remains INTERNAL
+without a billing deadline. Clinic admins cannot renew their own access.
+
+### Managed subscriptions — final verification
+
+- Implemented 30-day trials, INTERNAL/TRIAL/PAID modes and timestamped deadlines,
+  operator-only status/renew/expire with transactional audits, ADMIN Subscription
+  screen, staff expiry/trial notices, public booking unavailable notice, and write
+  gates across proxy/API/runtime DB/background reminders/SMTP. Price remains unset;
+  no gateway, automatic charges, invoices or self-service signup were introduced.
+- Final full unit suite: 107 passed, zero failures. Complete integration runner:
+  all eight suites passed on disposable loopback PostgreSQL, including preservation,
+  expiry retention/write denial, manual renewal restoration and operator atomicity.
+- Final production build, whole-project TypeScript, ESLint and diff whitespace
+  checks passed. Full Chromium: 86 passed, zero failures, one demo-only case skipped.
+- Final independent read-only subscription review found no concrete blocker.
+- Updated source Graphify: 1102 nodes, 3727 edges, 31 communities; no LLM calls.
+  Created Obsidian Managed Subscriptions 2026-11-08 note in the existing project folder.
+- Migration applied only to disposable databases. No application DB access, push
+  or deployment. Existing-domain hostname mapping remains a separate unimplemented
+  option; current production routing requires configured clinic subdomains.
+
+- Separate demo-enabled Chromium check passed: one test, three normal staff cases
+  intentionally skipped. Disposable local test services stopped after verification.
+
+## Branch-only commit checkpoint (2026-11-11)
+
+User authorized committing all current SaaS changes on `multi_tenant_module`, one
+changed file per commit with aligned messages. No branch switch, push, deployment
+or application-database migration is authorized by this commit request. The
+implementation verification results above describe earlier executed runs; tests
+are not rerun solely for this Git operation. Git whitespace checks and per-commit
+file ownership are verified during the commit process.
