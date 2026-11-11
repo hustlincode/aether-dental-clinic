@@ -3,8 +3,11 @@ import test from "node:test";
 import { mockModuleExports } from "../helpers/mock-module";
 
 test("real configuration authorization allows demo reads and rejects all demo mutations", async (t) => {
+  mockModuleExports(t, require.resolve("../../src/lib/tenant"), {
+    getRequestTenant: async () => ({ id: "aether", slug: "aether", name: "Aether Dental", active: true, subscriptionMode: "INTERNAL", subscriptionEndsAt: null }),
+  });
   mockModuleExports(t, require.resolve("../../src/auth"), {
-    auth: async () => ({ user: { id: "demo", name: "Demo", role: "ADMIN", isDemo: true } }),
+    auth: async () => ({ user: { id: "demo", tenantId: "aether", name: "Demo", role: "ADMIN", isDemo: true } }),
   });
   mockModuleExports(t, require.resolve("../../src/lib/clinic-configuration"), {
     getClinicConfiguration: async () => ({ address: null }),
