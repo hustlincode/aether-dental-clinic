@@ -6,7 +6,7 @@ import { mockPrismaMethod } from "../helpers/mock-prisma";
 
 test("assistants edit only notes and advance clinical statuses without repeated side effects", async (t) => {
   let user = { id: "assistant", name: "Assistant", role: "ASSISTANT", email: "assistant@example.test", isDemo: false };
-  mockModuleExports(t, require.resolve("../../src/lib/api"), {
+  mockModuleExports(t, require.resolve("../../src/lib/api"), { requireTenantWrite: async () => null,
     requireWriteAuth: async () => ({ user, error: null }),
     getSessionUser: async () => user,
   });
