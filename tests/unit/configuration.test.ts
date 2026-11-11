@@ -10,7 +10,7 @@ import {
 
 const now = new Date("2026-10-23T02:00:00Z"); // 10:00 Manila
 const current: ClinicSetting = {
-  id: "singleton", name: "Aether Dental", address: "Address", phone: null, email: null,
+  id: "singleton", tenantId: "aether", name: "Aether Dental", address: "Address", phone: null, email: null,
   openingTime: "09:00", closingTime: "17:00", lunchBreakStart: "12:00", lunchBreakEnd: "13:00",
   defaultDurationMin: 30, createdAt: now, updatedAt: now,
 };
@@ -43,7 +43,7 @@ test("contact saves ignore legacy invalid hours, use conditional monotonic versi
     assert.equal(options.isolationLevel, "Serializable");
     return work(prisma);
   });
-  mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => ({ ...current, openingTime: "invalid" }));
+  mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => ({ ...current, openingTime: "invalid" }));
   const update = mockPrismaMethod(t, prisma.clinicSetting, "updateMany", async () => ({ count: 1 }));
   const audit = mockPrismaMethod(t, prisma.activity, "create", async () => ({}));
   const appointments = mockPrismaMethod(t, prisma.appointment, "findMany", async () => { throw new Error("contact must not query appointments"); });
@@ -62,7 +62,7 @@ test("contact saves ignore legacy invalid hours, use conditional monotonic versi
 
 test("hours protect newly invalidated future, ongoing and overdue checked-in appointments without patient data", async (t) => {
   mockPrismaMethod(t, prisma, "$transaction", async (work: (tx: Prisma.TransactionClient) => Promise<unknown>) => work(prisma));
-  mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => current);
+  mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => current);
   const appointment = (id: string, startTime: string, endTime: string, status = "CONFIRMED") => ({
     id, referenceNumber: `REF-${id}`, appointmentDate: new Date("2026-10-23T00:00:00Z"), startTime, endTime, status,
   });
