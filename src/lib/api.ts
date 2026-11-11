@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { Prisma, type Role } from "@prisma/client";
 import { ZodError } from "zod";
+import { getRequestTenant } from "@/lib/tenant";
+import { assertSubscriptionWrite, SubscriptionReadOnlyError } from "@/lib/subscription";
 
 export type ApiRole = Role;
 
 export interface ApiSessionUser {
   id: string;
+  tenantId: string;
   name: string;
   email: string;
   role: string;
@@ -21,6 +24,8 @@ export async function getSessionUser() {
   const session = await auth();
   const user = session?.user;
   if (!user?.id) return null;
+  const tenant = await getRequestTenant();
+  if (user.tenantId !== tenant.id) return null;
   return user as ApiSessionUser;
 }
 
@@ -29,6 +34,20 @@ const DEMO_READ_ONLY_MESSAGE =
 
 function demoReadOnlyError() {
   return NextResponse.json({ success: false, message: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
+}
+
+/** Public booking and staff write guards share the same subscription boundary. */
+export async function requireTenantWrite(): Promise<NextResponse | null> {
+  try {
+    assertSubscriptionWrite(await getRequestTenant());
+    return null;
+  } catch (error) {
+    if (!(error instanceof SubscriptionReadOnlyError)) throw error;
+    return NextResponse.json(
+      { success: false, code: "SUBSCRIPTION_READ_ONLY", message: error.message },
+      { status: 403 },
+    );
+  }
 }
 
 /**
@@ -76,6 +95,8 @@ export async function requireWriteAuth() {
   const { user, error } = await requireAuth();
   if (error) return { user: null, error };
   if (user!.isDemo) return { user: null, error: demoReadOnlyError() };
+  const subscriptionError = await requireTenantWrite();
+  if (subscriptionError) return { user: null, error: subscriptionError };
   return { user, error: null };
 }
 
@@ -86,6 +107,8 @@ export async function requireWriteRole(...roles: ApiRole[]) {
   const { user, error } = await requireRole(...roles);
   if (error) return { user: null, error };
   if (user!.isDemo) return { user: null, error: demoReadOnlyError() };
+  const subscriptionError = await requireTenantWrite();
+  if (subscriptionError) return { user: null, error: subscriptionError };
   return { user, error: null };
 }
 
