@@ -56,7 +56,7 @@ export function configurationData(row: ClinicSetting) {
 }
 
 export async function getClinicConfiguration() {
-  const row = await prisma.clinicSetting.findUnique({ where: { id: "singleton" } });
+  const row = await prisma.clinicSetting.findFirst({ where: {} });
   if (!row) throw new ConfigurationError("Clinic configuration is missing. Complete clinic setup before editing settings.", 404);
   return configurationData(row);
 }
@@ -102,7 +102,7 @@ function rejectConflicts(rows: Awaited<ReturnType<typeof liveAppointments>>) {
 export async function updateClinicConfiguration(input: unknown, userId: string, now = new Date()) {
   const body = configurationUpdateSchema.parse(input);
   return appointmentTransaction(async (tx) => {
-    const current = await tx.clinicSetting.findUnique({ where: { id: "singleton" } });
+    const current = await tx.clinicSetting.findFirst({ where: {} });
     if (!current) throw new ConfigurationError("Clinic configuration is missing. Complete clinic setup before editing settings.", 404);
     if (current.updatedAt.getTime() !== new Date(body.updatedAt).getTime()) {
       throw new ConfigurationError("Configuration changed since you loaded it. Reload before saving.");
