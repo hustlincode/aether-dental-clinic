@@ -15,8 +15,8 @@ test.describe("admin page scroll ownership", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     const marker = randomUUID();
-    staffId = (await prisma.user.create({ data: { name: "Scroll test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
-    dentistId = (await prisma.dentist.create({ data: { name: "Dr Scroll Test", email: `${marker}-dentist@example.test`, specialization: "General" } })).id;
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Scroll test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
+    dentistId = (await prisma.dentist.create({ data: { tenantId: "aether", name: "Dr Scroll Test", email: `${marker}-dentist@example.test`, specialization: "General" } })).id;
   });
 
   test.afterAll(async () => {
@@ -31,7 +31,7 @@ test.describe("admin page scroll ownership", () => {
 
   test.beforeEach(async ({ context, page, baseURL }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
     await context.addCookies([{ name, value, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0, page: 1, pageSize: 20, total: 0, totalPages: 0 } } }));
