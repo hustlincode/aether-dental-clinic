@@ -36,7 +36,7 @@ test("appointment delivery runs independent post-commit work together and awaits
     await delivery.releaseNotification.promise;
     if (delivery.notificationFails) throw new Error("Notification unavailable");
   });
-  mockModuleExports(t, require.resolve("../../src/lib/api"), {
+  mockModuleExports(t, require.resolve("../../src/lib/api"), { requireTenantWrite: async () => null,
     getSessionUser: async () => null,
     requireWriteAuth: async () => ({ user: { id: "staff", name: "Staff", role: "ADMIN" }, error: null }),
   });
