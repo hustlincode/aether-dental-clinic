@@ -5,7 +5,7 @@ import { mockPrismaMethod } from "../helpers/mock-prisma";
 import { mockModuleExports } from "../helpers/mock-module";
 
 test("public booking creates an isolated patient and never returns a matching existing contact", async (t) => {
-  mockModuleExports(t, require.resolve("../../src/lib/api"), { getSessionUser: async () => null });
+  mockModuleExports(t, require.resolve("../../src/lib/api"), { requireTenantWrite: async () => null, getSessionUser: async () => null });
   mockModuleExports(t, require.resolve("../../src/lib/email"), { sendAppointmentEmail: async () => ({ ok: false, status: "FAILED" }) });
   mockModuleExports(t, require.resolve("../../src/lib/notifications"), { notifyAppointmentCreated: async () => undefined });
   mockModuleExports(t, require.resolve("../../src/lib/home-cache"), { revalidateHomepage: () => undefined });
@@ -17,7 +17,7 @@ test("public booking creates an isolated patient and never returns a matching ex
   const createPatient = mockPrismaMethod(t, prisma.patient, "create", async () => patient);
   mockPrismaMethod(t, prisma.service, "findUnique", async () => service);
   mockPrismaMethod(t, prisma.dentist, "findUnique", async () => dentist);
-  mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => ({ openingTime: "09:00", closingTime: "17:00", lunchBreakStart: null, lunchBreakEnd: null }));
+  mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => ({ openingTime: "09:00", closingTime: "17:00", lunchBreakStart: null, lunchBreakEnd: null }));
   mockPrismaMethod(t, prisma.blockedDate, "findFirst", async () => null);
   mockPrismaMethod(t, prisma.appointment, "findMany", async () => []);
   mockPrismaMethod(t, prisma.appointment, "create", async (...args: never[]) => {
