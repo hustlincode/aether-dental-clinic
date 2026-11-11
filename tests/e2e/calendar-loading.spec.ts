@@ -32,7 +32,7 @@ test.describe("calendar loading", () => {
     expect(url.pathname.endsWith("_test")).toBe(true);
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
-    staffId = (await prisma.user.create({ data: { name: "Calendar browser test", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Calendar browser test", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
   });
 
   test.afterAll(async () => {
@@ -43,8 +43,8 @@ test.describe("calendar loading", () => {
 
   test.beforeEach(async ({ context, page, baseURL }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: baseURL || "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: baseURL || "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
     await page.clock.setFixedTime(new Date("2027-01-01T00:00:00Z"));
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
   });
