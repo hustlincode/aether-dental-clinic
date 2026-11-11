@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClinicName, useClinicBookingAllowed } from "@/components/brand/tenant-brand";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,6 +77,8 @@ const formatLongDate = (iso: string) => {
 // ---------------------------------------------------------------------------
 
 export default function BookPage() {
+  const clinicName = useClinicName();
+  const bookingAllowed = useClinicBookingAllowed();
 
   const [step, setStep] = useState<Step>("service");
   const [loadingServices, setLoadingServices] = useState(true);
@@ -341,14 +344,21 @@ export default function BookPage() {
   };
 
   // ------------------------- RENDER -------------------------
+  if (!bookingAllowed) return (
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12">
+      <h1 className="text-2xl font-bold text-text">Online booking is currently unavailable</h1>
+      <p className="text-text-secondary">Contact {clinicName} directly to arrange an appointment.</p>
+      <Link href="/" className="text-accent underline">View clinic contact details</Link>
+    </main>
+  );
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-surface border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" aria-label="Aether Dental home" className="flex items-center gap-2.5">
+          <Link href="/" aria-label={`${clinicName} home`} className="flex items-center gap-2.5">
             <Image src="/logo.svg" alt="" width={32} height={32} priority className="h-8 w-8" />
-            <span className="gradient-gold-text text-xl font-bold">Aether Dental</span>
+            <span className="gradient-gold-text text-xl font-bold">{clinicName}</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/privacy-policy" className="py-1.5 text-sm font-medium text-text-secondary transition-colors duration-(--dur-fast) hover:text-accent">
@@ -955,6 +965,7 @@ function PrivacyConsentModal({
   onOpenChange: (open: boolean) => void;
   onAccept: (signature: string) => void;
 }) {
+  const clinicName = useClinicName();
   const [checked, setChecked] = useState(false);
   const [signature, setSignature] = useState("");
   const [attempted, setAttempted] = useState(false);
@@ -993,7 +1004,7 @@ function PrivacyConsentModal({
 
         <DialogBody className="flex flex-col gap-4 text-sm leading-relaxed text-text-secondary">
           <p>
-            Before completing your booking, please review how <span className="font-semibold text-text">Aether Dental Clinic</span>{" "}
+            Before completing your booking, please review how <span className="font-semibold text-text">{clinicName}</span>{" "}
             handles your personal information under the Philippine <strong>Data Privacy Act of 2012 (RA 10173)</strong>.
           </p>
 
