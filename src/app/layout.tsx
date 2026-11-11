@@ -5,6 +5,9 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getRequestTenant } from "@/lib/tenant";
+import { TenantBrandProvider } from "@/components/brand/tenant-brand";
+import { subscriptionAccess } from "@/lib/subscription";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,38 +19,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://aetherdental.ph"),
-  title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
-  description:
-    "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. See clear service prices, choose a dentist, and receive confirmation from clinic staff.",
-  openGraph: {
-    type: "website",
-    locale: "en_PH",
-    siteName: "Aether Dental",
-    title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
-    description:
-      "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, confirmation from clinic staff.",
-    url: "/",
-    images: [
-      {
-        url: "/og.svg",
-        width: 1200,
-        height: 630,
-        alt: "Aether Dental — Book your dental appointment online",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Aether Dental — Book Your Dental Appointment Online | Taguig, Metro Manila",
-    description:
-      "Request your dental appointment online at Aether Dental in Taguig, Metro Manila. Clear prices, real availability, confirmation from clinic staff.",
-    images: ["/og.svg"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getRequestTenant();
+  const title = `${tenant.name} - Book Your Dental Appointment Online`;
+  const description = `Request your dental appointment online at ${tenant.name}. See service prices, choose a dentist, and receive confirmation from clinic staff.`;
+  return {
+    title,
+    description,
+    openGraph: { type: "website", locale: "en_PH", siteName: tenant.name, title, description },
+    twitter: { card: "summary", title, description },
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const tenant = await getRequestTenant();
   return (
     <html
       lang="en"
@@ -58,12 +43,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* External (not inline) so React never renders a script element.
             beforeInteractive injects it before hydration to avoid a theme flash. */}
         <Script id="theme-script" src="/theme-init.js" strategy="beforeInteractive" />
-        <ThemeProvider>
-          <TooltipProvider delayDuration={0}>
-            {children}
-          </TooltipProvider>
-          <Toaster position="bottom-right" richColors />
-        </ThemeProvider>
+        <TenantBrandProvider name={tenant.name} bookingAllowed={subscriptionAccess(tenant).canWrite}>
+          <ThemeProvider>
+            <TooltipProvider delayDuration={0}>
+              {children}
+            </TooltipProvider>
+            <Toaster position="bottom-right" richColors />
+          </ThemeProvider>
+        </TenantBrandProvider>
       </body>
     </html>
   );
