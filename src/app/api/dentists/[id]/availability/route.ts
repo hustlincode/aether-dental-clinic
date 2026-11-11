@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { getRequestTenant } from "@/lib/tenant";
 import { requireRole, requireWriteRole, ok, fail } from "@/lib/api";
 
 // ─── Zod schema for the weekly availability editor ───────────────────────────
@@ -116,10 +117,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const dentist = await prisma.dentist.findUnique({ where: { id } });
     if (!dentist) return fail("Dentist not found.", 404);
 
+    const tenant = await getRequestTenant();
     await prisma.$transaction(
       body.availability.map((entry) =>
         prisma.availability.upsert({
-          where: { dentistId_dayOfWeek: { dentistId: id, dayOfWeek: entry.dayOfWeek } },
+          where: { tenantId_dentistId_dayOfWeek: { tenantId: tenant.id, dentistId: id, dayOfWeek: entry.dayOfWeek } },
           create: {
             dentistId: id,
             dayOfWeek: entry.dayOfWeek,
