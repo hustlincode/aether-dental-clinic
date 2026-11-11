@@ -6,7 +6,7 @@ import { mockPrismaMethod } from "../helpers/mock-prisma";
 test("public clinic reads select only public details and handle missing configuration", async (t) => {
   const publicFields = ["name", "address", "phone", "email", "openingTime", "closingTime", "lunchBreakStart", "lunchBreakEnd"];
   const clinic = Object.fromEntries(publicFields.map(field => [field, null]));
-  const read = mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => clinic);
+  const read = mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => clinic);
   const { GET } = await import("../../src/app/api/clinic/route");
   const response = await GET();
   assert.equal(response.status, 200);
