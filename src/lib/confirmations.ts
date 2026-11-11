@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendAppointmentEmail, type AppointmentEmailData } from "@/lib/email";
+import { getRequestTenant } from "@/lib/tenant";
+import { assertSubscriptionWrite } from "@/lib/subscription";
 
 // ---------------------------------------------------------------------------
 // Confirmation emails
@@ -64,6 +66,7 @@ export async function sendConfirmationEmail(
   appointmentId: string,
   sentById: string | null,
 ): Promise<ConfirmationSendOutcome> {
+  assertSubscriptionWrite(await getRequestTenant());
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
     include: { patient: true, service: true, dentist: true },
