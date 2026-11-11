@@ -7,7 +7,7 @@
  * prints them once. The passwordless demo account is skipped — it can only be
  * reached through the read-only demo provider.
  *
- * Usage: npm run security:rotate-passwords
+ * Usage: npm run security:rotate-passwords -- <clinic-subdomain>
  * Requires DATABASE_URL in .env (loaded below).
  */
 import "dotenv/config";
@@ -18,9 +18,13 @@ import { randomBytes } from "crypto";
 const prisma = new PrismaClient();
 
 async function main() {
+  const [slug, ...extra] = process.argv.slice(2);
+  if (!slug || extra.length) throw new Error("Supply exactly one clinic subdomain; global password rotation is disabled.");
+  const tenant = await prisma.tenant.findUnique({ where: { slug } });
+  if (!tenant) throw new Error("Clinic not found.");
   const demoEmail = (process.env.DEMO_EMAIL || "demo@aetherdental.ph").toLowerCase();
 
-  const users = await prisma.user.findMany({ orderBy: { email: "asc" } });
+  const users = await prisma.user.findMany({ where: { tenantId: tenant.id }, orderBy: { email: "asc" } });
   const rotated: { email: string; role: string; password: string }[] = [];
   const skipped: string[] = [];
 
@@ -31,14 +35,14 @@ async function main() {
     }
     const password = randomBytes(12).toString("base64url");
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: user.id, tenantId: tenant.id },
       data: { passwordHash: bcrypt.hashSync(password, 10), sessionVersion: { increment: 1 } },
     });
     rotated.push({ email: user.email, role: user.role, password });
   }
 
   if (rotated.length === 0) {
-    console.log("No staff accounts found. Run `npx prisma db seed` first.");
+    console.log("No staff accounts found for this clinic.");
     return;
   }
 
@@ -49,7 +53,7 @@ async function main() {
   if (skipped.length > 0) {
     console.log(`\nSkipped demo account(s) (passwordless read-only access): ${skipped.join(", ")}`);
   }
-  console.log("\nExisting staff sessions have been revoked.");
+  console.log(`\nExisting staff sessions for ${tenant.slug} have been revoked.`);
 }
 
 main()
