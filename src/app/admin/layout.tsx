@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/server-session";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { NotificationsProvider } from "@/components/admin/notifications-provider";
+import { getRequestTenant } from "@/lib/tenant";
+import { subscriptionAccess } from "@/lib/subscription";
 
-export const metadata = { title: "Aether Dental — Admin" };
+export const metadata = { title: "Clinic administration" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
@@ -19,6 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const role = (user.role || "RECEPTIONIST") as string;
   const name = user.name || "Staff";
   const isDemo = user.isDemo === true;
+  const access = subscriptionAccess(await getRequestTenant());
 
   const navItems = [
     { href: "/admin", label: "Dashboard", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Overview" },
@@ -29,13 +32,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/services", label: "Services", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/users", label: "Users", roles: ["ADMIN"], group: "Clinic" },
     { href: "/admin/configuration", label: "Configuration", roles: ["ADMIN"], group: "Clinic" },
+    { href: "/admin/subscription", label: "Subscription", roles: ["ADMIN"], group: "Account" },
     { href: "/admin/reports", label: "Reports", roles: ["ADMIN"], group: "Insights" },
     { href: "/admin/notifications", label: "Notifications", roles: ["ADMIN", "RECEPTIONIST", "ASSISTANT", "DENTIST"], group: "Insights" },
   ].filter((n) => n.roles.includes(role));
 
   return (
     <NotificationsProvider key={user.id} isDemo={isDemo}>
-      <AdminShell navItems={navItems} user={{ name, role, isDemo }}>
+      <AdminShell navItems={navItems} user={{ name, role, isDemo }} subscription={{ ...access, endsAt: access.endsAt?.toISOString() ?? null }}>
         {children}
       </AdminShell>
     </NotificationsProvider>
