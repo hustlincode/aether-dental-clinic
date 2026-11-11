@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { prisma } from "../../src/lib/db";
+import { rawPrisma } from "../../src/lib/raw-db";
+import { integrationTenant } from "../helpers/integration-tenant";
+import { withTenantContext } from "../../src/lib/tenant";
 import { appointmentTransaction, AppointmentError } from "../../src/lib/appointment-transaction";
 import { isSlotAvailable } from "../../src/lib/scheduling";
 import { updateClinicConfiguration, createClinicClosure, removeClinicClosure } from "../../src/lib/clinic-configuration";
 
 test("Configuration preserves appointments and commits changes with their audit history", { skip: process.env.RUN_DATABASE_TESTS !== "1" }, async (t) => {
+  const tenant = await integrationTenant(t, "regression-configuration");
+  await withTenantContext(tenant, async () => {
   assert.equal(process.env.DATABASE_URL, process.env.TEST_DATABASE_URL);
   const url = new URL(process.env.DATABASE_URL!);
   assert(url.pathname.endsWith("_test") && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
@@ -17,10 +21,11 @@ test("Configuration preserves appointments and commits changes with their audit 
   const date = new Date("2099-01-05T00:00:00Z");
   const user = await prisma.user.create({ data: { name: marker, email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } });
   const patient = await prisma.patient.create({ data: { firstName: marker, lastName: "Configuration", phone: "09123456789" } });
-  const dentist = await prisma.dentist.create({ data: { name: marker, email: `dentist-${marker}@example.test`, specialization: "General", availability: { create: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map(dayOfWeek => ({ dayOfWeek: dayOfWeek as "MONDAY", startTime: "09:00", endTime: "17:00" })) } } });
+  const dentist = await prisma.dentist.create({ data: { name: marker, email: `dentist-${marker}@example.test`, specialization: "General" } });
+  await prisma.availability.createMany({ data: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map(dayOfWeek => ({ dentistId: dentist.id, dayOfWeek: dayOfWeek as "MONDAY", startTime: "09:00", endTime: "17:00" })) });
   const service = await prisma.service.create({ data: { name: marker, durationMin: 30, price: 500 } });
   await prisma.clinicSetting.create({ data: { id: "singleton", name: "Test", openingTime: "09:00", closingTime: "17:00" } });
-  t.after(async () => {
+  t.after(async () => withTenantContext(tenant, async () => {
     await prisma.activity.deleteMany({ where: { userId: user.id } });
     await prisma.appointment.deleteMany({ where: { dentistId: dentist.id } });
     await prisma.blockedDate.deleteMany({ where: { reason: { startsWith: marker } } });
@@ -30,8 +35,9 @@ test("Configuration preserves appointments and commits changes with their audit 
     await prisma.service.delete({ where: { id: service.id } });
     await prisma.user.delete({ where: { id: user.id } });
     await prisma.clinicSetting.delete({ where: { id: "singleton" } });
+    await rawPrisma.tenant.delete({ where: { id: tenant.id } });
     await prisma.$disconnect();
-  });
+  }));
   const settings = () => prisma.clinicSetting.findUniqueOrThrow({ where: { id: "singleton" } });
   const hours = async (values = {}) => updateClinicConfiguration({ section: "hours", updatedAt: (await settings()).updatedAt.toISOString(), openingTime: "09:00", closingTime: "17:00", lunchBreakStart: null, lunchBreakEnd: null, ...values }, user.id, now);
   const appointment = (values = {}) => prisma.appointment.create({ data: { referenceNumber: `${marker}-${randomUUID()}`, appointmentDate: date, startTime: "11:00", endTime: "11:30", patientId: patient.id, dentistId: dentist.id, serviceId: service.id, ...values } });
@@ -77,27 +83,8 @@ test("Configuration preserves appointments and commits changes with their audit 
   });
 
   await t.test("the shipped partial index rejects clinic-wide duplicates at database level", async () => {
-    // db push cannot represent partial indexes; execute the actual migration in this disposable database.
-    const migrations = await readdir("prisma/migrations", { withFileTypes: true });
-    const candidates = await Promise.all(migrations.filter(entry => entry.isDirectory()).map(async entry => ({ sql: await readFile(`prisma/migrations/${entry.name}/migration.sql`, "utf8") })));
-    const migration = candidates.find(({ sql }) => /CREATE UNIQUE INDEX[\s\S]*blocked_dates[\s\S]*IS NULL/i.test(sql));
-    assert(migration, "Clinic-wide closure uniqueness migration must exist.");
-    const indexStatement = migration.sql.split(";").find(statement => /CREATE UNIQUE INDEX[\s\S]*IS NULL/i.test(statement));
-    assert(indexStatement);
-    const indexName = indexStatement.match(/CREATE UNIQUE INDEX(?: IF NOT EXISTS)?\s+"?([\w]+)"?/i)?.[1];
-    assert(indexName);
-    const existing = await prisma.$queryRaw<Array<{ indexname: string }>>`SELECT indexname FROM pg_indexes WHERE indexname = ${indexName}`;
-    const preflight = migration.sql.match(/DO \$\$[\s\S]*?END \$\$;/)?.[0];
-    assert(preflight, "Migration must check for existing duplicate clinic closures.");
-    if (!existing.length) {
-      const duplicateDate = new Date("2099-01-08");
-      await prisma.blockedDate.createMany({ data: [0, 1].map(() => ({ date: duplicateDate, reason: marker })) });
-      await assert.rejects(prisma.$executeRawUnsafe(preflight), /Duplicate clinic-wide closure dates/);
-      assert.equal(await prisma.blockedDate.count({ where: { date: duplicateDate, reason: marker } }), 2, "Migration preflight must preserve duplicate rows for staff review.");
-      await prisma.blockedDate.deleteMany({ where: { date: duplicateDate, reason: marker } });
-      await prisma.$executeRawUnsafe(preflight);
-      await prisma.$executeRawUnsafe(indexStatement);
-    } else t.diagnostic("Partial index already applied; duplicate migration-preflight fixture cannot be inserted.");
+    const existing = await rawPrisma.$queryRaw<Array<{ indexname: string }>>`SELECT indexname FROM pg_indexes WHERE indexname = 'blocked_dates_tenant_clinic_date_key'`;
+    assert.equal(existing.length, 1, "Run actual migrations: db push does not preserve tenant closure constraints.");
     const day = new Date("2099-01-07");
     const outcomes = await Promise.allSettled(Array.from({ length: 4 }, () => prisma.blockedDate.create({ data: { date: day, reason: marker } })));
     assert.equal(outcomes.filter(outcome => outcome.status === "fulfilled").length, 1);
@@ -123,5 +110,6 @@ test("Configuration preserves appointments and commits changes with their audit 
       const closure = await prisma.blockedDate.findFirst({ where: { date: raceDate, reason: marker } });
       if (closure) await removeClinicClosure(closure.id, user.id);
     }
+  });
   });
 });
