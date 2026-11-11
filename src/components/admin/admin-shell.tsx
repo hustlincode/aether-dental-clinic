@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
+import Link from "next/link";
+import { Clock, LockKeyhole } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const STORAGE_KEY = "aether-sidebar-collapsed";
 
@@ -17,10 +20,11 @@ export interface AdminNavItem {
 export interface AdminShellProps {
   navItems: AdminNavItem[];
   user: { name: string; role: string; isDemo?: boolean };
+  subscription?: { status: "INTERNAL" | "TRIAL" | "ACTIVE" | "EXPIRED"; canWrite: boolean; endsAt: string | null };
   children: ReactNode;
 }
 
-export function AdminShell({ navItems, user, children }: AdminShellProps) {
+export function AdminShell({ navItems, user, subscription, children }: AdminShellProps) {
   /* ─── Sidebar collapse state (desktop) ───
      The toggle lives inside the sidebar itself — the header has no burger in
      web view. Start expanded so SSR and the first client render agree, then
@@ -91,7 +95,25 @@ export function AdminShell({ navItems, user, children }: AdminShellProps) {
             </span>
           </div>
         )}
-        <main className="admin-canvas relative min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="admin-canvas relative min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          {subscription && (subscription.status === "EXPIRED" || subscription.status === "TRIAL") && (
+            <Alert role="status" variant={subscription.canWrite ? "default" : "destructive"} className="mb-6">
+              {subscription.canWrite ? <Clock aria-hidden /> : <LockKeyhole aria-hidden />}
+              <AlertTitle>{subscription.canWrite ? "30-day trial" : "Subscription expired"}</AlertTitle>
+              <AlertDescription>
+                <p>
+                  {subscription.canWrite
+                    ? `Your trial ends ${subscription.endsAt ? new Intl.DateTimeFormat("en-PH", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Manila" }).format(new Date(subscription.endsAt)) : "soon"} (Philippine time).`
+                    : "This clinic is read-only. Existing records remain available. Contact your service provider to renew access."}
+                </p>
+                {user.role === "ADMIN" ? (
+                  <Link href="/admin/subscription" className="underline underline-offset-4">View subscription</Link>
+                ) : !subscription.canWrite && <p>Ask your clinic administrator to arrange renewal.</p>}
+              </AlertDescription>
+            </Alert>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );
