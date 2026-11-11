@@ -41,7 +41,7 @@ test.describe("drawer accessibility and responsive layouts", () => {
     expect(url.pathname.endsWith("_test")).toBe(true);
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
-    staffId = (await prisma.user.create({ data: { name: "Drawer QA", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Drawer QA", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
   });
   test.afterAll(async () => {
     if (!prisma) return;
@@ -50,8 +50,8 @@ test.describe("drawer accessibility and responsive layouts", () => {
   });
   test.beforeEach(async ({ context, page }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
     await page.route("**/api/patients?**", route => route.fulfill({ json: { success: true, data: { patients: [patient], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } } } }));
     await page.route("**/api/patients/drawer-patient", route => route.fulfill({ json: { success: true, data: { patient, stats: { total: 30, completed: 30, cancelled: 0, nextAppointment: null, lastAppointment: history[0] }, history } } }));
