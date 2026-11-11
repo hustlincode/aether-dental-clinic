@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { prisma } from "../../src/lib/db";
+import { rawPrisma } from "../../src/lib/raw-db";
 import { mockPrismaMethod } from "../helpers/mock-prisma";
 import { mockModuleExports } from "../helpers/mock-module";
 
@@ -15,7 +16,10 @@ function section(tree: ReactElement<{ children?: ReactNode }>, index: number) {
 test("dashboard header and metrics do not await analytics or reminder work", async (t) => {
   const callbacks: (() => Promise<void>)[] = [];
   let reminderCalls = 0;
-  let user = { id: "staff", role: "ADMIN", name: "Staff", email: "staff@example.test", isDemo: false };
+  let user = { id: "staff", tenantId: "aether", role: "ADMIN", name: "Staff", email: "staff@example.test", isDemo: false };
+  let tenant = { id: "aether", slug: "aether", name: "Aether Dental", active: true, subscriptionMode: "INTERNAL", subscriptionEndsAt: null as Date | null };
+  mockModuleExports(t, require.resolve("../../src/lib/tenant"), { getRequestTenant: async () => tenant });
+  mockPrismaMethod(t, rawPrisma.tenant, "findUnique", async () => tenant);
   mockModuleExports(t, require.resolve("../../src/auth"), { auth: async () => ({ user }) });
   mockModuleExports(t, require.resolve("next/server"), { after: (callback: () => Promise<void>) => callbacks.push(callback) });
   mockModuleExports(t, require.resolve("../../src/lib/notifications"), { processUpcomingAppointmentReminders: async () => { reminderCalls++; } });
@@ -41,6 +45,13 @@ test("dashboard header and metrics do not await analytics or reminder work", asy
   await analytics;
   await callbacks[0]();
   assert.equal(reminderCalls, 1);
+
+  tenant = { ...tenant, subscriptionMode: "TRIAL", subscriptionEndsAt: new Date(0) };
+  await Dashboard();
+  assert.equal(callbacks.length, 1, "Expired clinics cannot schedule reminder writes");
+  await callbacks[0]();
+  assert.equal(reminderCalls, 1, "A batch rechecks subscription access before starting");
+  tenant = { ...tenant, subscriptionMode: "INTERNAL", subscriptionEndsAt: null };
 
   user = { ...user, isDemo: true };
   await Dashboard();
