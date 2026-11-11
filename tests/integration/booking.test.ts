@@ -2,20 +2,26 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { prisma } from "../../src/lib/db";
+import { rawPrisma } from "../../src/lib/raw-db";
+import { integrationTenant } from "../helpers/integration-tenant";
+import { withTenantContext } from "../../src/lib/tenant";
 import { mockModuleExports } from "../helpers/mock-module";
 
 test("PostgreSQL prevents concurrent overlapping bookings, preserves identity and rolls back failed audit writes", { skip: process.env.RUN_DATABASE_TESTS !== "1" }, async (t) => {
+  const tenant = await integrationTenant(t, "regression-booking");
+  await withTenantContext(tenant, async () => {
   assert.equal(process.env.DATABASE_URL, process.env.TEST_DATABASE_URL);
   assert(new URL(process.env.DATABASE_URL!).pathname.endsWith("_test"));
   assert.equal(await prisma.clinicSetting.count(), 0, "Use an empty disposable database; existing clinic data must never be replaced.");
   const marker = randomUUID();
   const date = "2099-01-05";
   const staff = await prisma.user.create({ data: { name: marker, email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } });
-  const dentist = await prisma.dentist.create({ data: { name: marker, email: `dentist-${marker}@example.test`, specialization: "General", availability: { create: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map(dayOfWeek => ({ dayOfWeek: dayOfWeek as "MONDAY", startTime: "09:00", endTime: "17:00" })) } } });
+  const dentist = await prisma.dentist.create({ data: { name: marker, email: `dentist-${marker}@example.test`, specialization: "General" } });
+  await prisma.availability.createMany({ data: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map(dayOfWeek => ({ dentistId: dentist.id, dayOfWeek: dayOfWeek as "MONDAY", startTime: "09:00", endTime: "17:00" })) });
   const service = await prisma.service.create({ data: { name: marker, durationMin: 30, price: 500 } });
   await prisma.clinicSetting.create({ data: { id: "singleton", name: "Test", openingTime: "09:00", closingTime: "17:00" } });
   const victim = await prisma.patient.create({ data: { firstName: marker, lastName: "Existing", email: "private@example.test", phone: "09123456789" } });
-  t.after(async () => {
+  t.after(async () => withTenantContext(tenant, async () => {
     const appointments = await prisma.appointment.findMany({ where: { dentistId: dentist.id }, select: { id: true } });
     await prisma.activity.deleteMany({ where: { entityId: { in: appointments.map(a => a.id) } } });
     const patients = await prisma.patient.findMany({ where: { firstName: marker }, select: { id: true } });
@@ -27,8 +33,9 @@ test("PostgreSQL prevents concurrent overlapping bookings, preserves identity an
     await prisma.service.delete({ where: { id: service.id } });
     await prisma.user.delete({ where: { id: staff.id } });
     await prisma.clinicSetting.delete({ where: { id: "singleton" } });
+    await rawPrisma.tenant.delete({ where: { id: tenant.id } });
     await prisma.$disconnect();
-  });
+  }));
   let authenticatedId = staff.id;
   mockModuleExports(t, require.resolve("../../src/lib/api"), {
     getSessionUser: async () => null,
@@ -93,4 +100,5 @@ test("PostgreSQL prevents concurrent overlapping bookings, preserves identity an
   assert.equal((await changeStatus("CANCELLED")).status, 200);
   assert.equal(await prisma.activity.count({ where: { entityId: active[0].id } }), count);
   assert.equal((await changeStatus("CONFIRMED")).status, 409);
+  });
 });
