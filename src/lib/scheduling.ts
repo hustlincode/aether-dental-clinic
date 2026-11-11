@@ -81,7 +81,7 @@ async function getContext(dentistId: string, date: Date, client: ScheduleClient)
       where: { id: dentistId },
       select: dentistScheduleSelect,
     }),
-    client.clinicSetting.findUnique({ where: { id: "singleton" }, select: clinicHoursSelect }),
+    client.clinicSetting.findFirst({ where: {}, select: clinicHoursSelect }),
   ]);
 
   if (!dentist || dentist.status !== "ACTIVE") return null;
@@ -227,7 +227,7 @@ export async function getAvailableDates(
 
   const [dentist, clinic, blockedRows, apptRows] = await Promise.all([
     prisma.dentist.findUnique({ where: { id: dentistId }, select: dentistScheduleSelect }),
-    prisma.clinicSetting.findUnique({ where: { id: "singleton" }, select: clinicHoursSelect }),
+    prisma.clinicSetting.findFirst({ where: {}, select: clinicHoursSelect }),
     prisma.blockedDate.findMany({
       where: { date: { gte: startDate, lte: endDate }, OR: [{ dentistId }, { dentistId: null }] },
       select: { date: true },
