@@ -32,7 +32,7 @@ test.describe("authentication navigation", () => {
     for (let i = 0; i < (demoEnabled ? 1 : 2); i++) {
       const password = randomUUID();
       const email = demoEnabled ? demoEmail : `${randomUUID()}@example.test`;
-      const user = await prisma.user.create({ data: {
+      const user = await prisma.user.create({ data: { tenantId: "aether",
         name: demoEnabled ? "Notification Demo Test" : `Navigation ${i}`,
         email,
         passwordHash: await bcrypt.hash(password, 10),
@@ -41,7 +41,7 @@ test.describe("authentication navigation", () => {
       users.push({ id: user.id, email, password });
       const prefix = demoEnabled ? "Owned Demo" : i === 0 ? "Owned A" : "Owned B";
       await prisma.notification.createMany({ data: Array.from({ length: demoEnabled ? 3 : i === 0 ? 2 : 5 }, (_, index) => ({
-        userId: user.id,
+        tenantId: "aether", userId: user.id,
         type: "APPOINTMENT_CREATED" as const,
         title: "Navigation test",
         message: `${prefix} notification ${index + 1}`,
