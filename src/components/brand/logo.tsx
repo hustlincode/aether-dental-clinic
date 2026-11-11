@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { useClinicName } from "@/components/brand/tenant-brand";
 
 type LogoVariant = "inline" | "stacked";
 
@@ -33,6 +36,7 @@ export function Logo({
   wordmarkClassName,
   taglineClassName,
 }: LogoProps) {
+  const clinicName = useClinicName();
   const content = (
     <span
       className={cn(
@@ -51,8 +55,7 @@ export function Logo({
       />
       <span className={cn("flex flex-col leading-tight", variant === "stacked" && "items-center")}>
         <span className={cn("text-lg font-semibold", wordmarkClassName)}>
-          <span>Aether </span>
-          <span className="text-accent">Dental</span>
+          <span>{clinicName}</span>
         </span>
         {showTagline && (
           <span className={cn("mt-0.5 text-xs text-text-muted", taglineClassName)}>
@@ -66,7 +69,7 @@ export function Logo({
   if (!href) return content;
 
   return (
-    <Link href={href} aria-label="Aether Dental home" className="inline-flex shrink-0 rounded-control">
+    <Link href={href} aria-label={`${clinicName} home`} className="inline-flex shrink-0 rounded-control">
       {content}
     </Link>
   );
