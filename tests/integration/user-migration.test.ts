@@ -5,7 +5,7 @@ import { readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { prisma } from "../../src/lib/db";
+import { rawPrisma as prisma } from "../../src/lib/raw-db";
 
 test("shipped User Management migration preserves legacy data and refuses ambiguous emails", { skip: process.env.RUN_DATABASE_TESTS !== "1" }, async t => {
   const target = process.env.TEST_DATABASE_URL;
