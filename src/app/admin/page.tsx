@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/db";
+import { getRequestTenant, withTenantContext } from "@/lib/tenant";
+import { rawPrisma } from "@/lib/raw-db";
+import { subscriptionAccess } from "@/lib/subscription";
 import { getServerSession } from "@/lib/server-session";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -45,10 +48,13 @@ export default async function AdminDashboard() {
 
   // In-app appointment reminders for tomorrow. This is separate from Needs
   // Confirmation, which is an explicit on-demand check triggered by staff.
-  if (canManage && !user.isDemo) {
+  const tenant = await getRequestTenant();
+  if (canManage && !user.isDemo && subscriptionAccess(tenant).canWrite) {
     after(async () => {
       try {
-        await processUpcomingAppointmentReminders();
+        const current = await rawPrisma.tenant.findUnique({ where: { id: tenant.id } });
+        if (!current?.active || !subscriptionAccess(current).canWrite) return;
+        await withTenantContext(current, () => processUpcomingAppointmentReminders());
       } catch (err) {
         console.error("Background reminder processing failed:", err);
       }
