@@ -137,12 +137,12 @@ export function ConfigurationManager({ readOnly }: { readOnly: boolean }) {
   if (loading) return <div role="status" aria-label="Loading configuration"><AdminLoading /></div>;
 
   return <PageContainer>
-    <PageHeader title="Configuration" description="Manage Aether Dental contact details, operating hours, and clinic closures." />
+    <PageHeader title="Configuration" description="Manage clinic contact details, operating hours, and closures." />
     {readOnly && <p role="note" className="rounded-control border border-border bg-surface-alt p-4 text-sm text-text-secondary">This is a read-only demo. Sign in with a staff account to make changes.</p>}
     {loadError ? <ErrorState title="Unable to load configuration" message={loadError} onRetry={reload} />
       : draft && configuration && <>
         <div className="grid items-start gap-6 lg:grid-cols-2">
-          {(["contact", "hours"] as const).map((section) => <SectionCard key={section} title={section === "contact" ? "Contact details" : "Operating hours"} description={section === "contact" ? "Aether Dental branding stays fixed. Empty optional contact fields are hidden publicly." : "Changes take effect immediately in Manila time. Dentist schedules still apply. Conflicting appointments must be resolved first."}>
+          {(["contact", "hours"] as const).map((section) => <SectionCard key={section} title={section === "contact" ? "Contact details" : "Operating hours"} description={section === "contact" ? "Empty optional contact fields are hidden publicly." : "Changes take effect immediately in Manila time. Dentist schedules still apply. Conflicting appointments must be resolved first."}>
             <form onSubmit={(event) => void save(event, section)} className="space-y-4">
               <fieldset disabled={readOnly || saving !== null} className="space-y-4">
                 {(section === "contact" ? contactFields : hoursFields).map((field) => (
