@@ -5,7 +5,12 @@ import { mockModuleExports } from "../helpers/mock-module";
 import { createUserSchema, UserManagementError } from "../../src/lib/user-management";
 
 test("Users routes enforce real Admin/demo guards before work and preserve response conventions", async t => {
-  let session: null | { user: { id: string; role: string; isDemo?: boolean } } = null;
+  let session: null | { user: { id: string; tenantId: string; role: string; isDemo?: boolean } } = null;
+  const tenant = { id: "aether", slug: "aether", name: "Aether Dental", active: true,
+    subscriptionMode: "INTERNAL" as "INTERNAL" | "TRIAL" | "PAID", subscriptionEndsAt: null as Date | null };
+  mockModuleExports(t, require.resolve("../../src/lib/tenant"), {
+    getRequestTenant: async () => tenant,
+  });
   mockModuleExports(t, require.resolve("../../src/auth"), { auth: async () => session });
   const list = mock.fn(async () => ({ users: [], total: 0 }));
   const options = mock.fn(async () => []);
@@ -23,7 +28,7 @@ test("Users routes enforce real Admin/demo guards before work and preserve respo
   const context = { params: Promise.resolve({ id: "staff" }) };
   const request = (method = "POST", body: unknown = {}) => new Request("http://localhost/api/admin/users", { method, body: JSON.stringify(body) });
   for (const role of [null, "RECEPTIONIST", "ASSISTANT", "DENTIST"]) {
-    session = role ? { user: { id: "staff", role } } : null;
+    session = role ? { user: { id: "staff", tenantId: "aether", role } } : null;
     const status = role ? 403 : 401;
     assert.equal((await users.GET(new Request("http://localhost/api/admin/users"))).status, status);
     assert.equal((await dentists.GET(new Request("http://localhost/api/admin/users/dentist-options"))).status, status);
@@ -35,13 +40,24 @@ test("Users routes enforce real Admin/demo guards before work and preserve respo
   assert.equal(create.mock.callCount(), 0);
   assert.equal(update.mock.callCount(), 0);
   assert.equal(reset.mock.callCount(), 0);
-  session = { user: { id: "demo", role: "ADMIN", isDemo: true } };
+  session = { user: { id: "demo", tenantId: "aether", role: "ADMIN", isDemo: true } };
   assert.equal((await users.GET(new Request("http://localhost/api/admin/users"))).status, 200);
   assert.equal((await users.POST(request())).status, 403);
   assert.equal((await user.PATCH(request("PATCH"), context)).status, 403);
   assert.equal((await password.POST(request(), context)).status, 403);
   assert.equal(create.mock.callCount(), 0);
-  session = { user: { id: "admin", role: "ADMIN" } };
+  session = { user: { id: "admin", tenantId: "aether", role: "ADMIN" } };
+  tenant.subscriptionMode = "TRIAL";
+  tenant.subscriptionEndsAt = new Date(0);
+  assert.equal((await users.GET(new Request("http://localhost/api/admin/users"))).status, 200);
+  assert.equal((await users.POST(request())).status, 403);
+  assert.equal((await user.PATCH(request("PATCH"), context)).status, 403);
+  assert.equal((await password.POST(request(), context)).status, 403);
+  assert.equal(create.mock.callCount(), 0);
+  assert.equal(update.mock.callCount(), 0);
+  assert.equal(reset.mock.callCount(), 0);
+  tenant.subscriptionMode = "INTERNAL";
+  tenant.subscriptionEndsAt = null;
   const created = await users.POST(request("POST", { name: "Test Staff", email: "staff@example.test", role: "ASSISTANT", password: "long-staff-password" }));
   assert.equal(created.status, 201);
   assert.deepEqual(await created.json(), { success: true, data: { id: "staff" } });
