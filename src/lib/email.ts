@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
+import addressparser from "nodemailer/lib/addressparser";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { getRequestTenant } from "@/lib/tenant";
+import { assertSubscriptionWrite, SubscriptionReadOnlyError } from "@/lib/subscription";
 
 // ---------------------------------------------------------------------------
 // Email service abstraction
@@ -44,8 +48,12 @@ function getTransporter() {
 
 const PREVIEW_MODE = process.env.EMAIL_PREVIEW_MODE === "true";
 
-function clinicName() {
-  return process.env.NEXT_PUBLIC_APP_NAME || "Aether Dental";
+type TemplateData = AppointmentEmailData & { clinicName: string };
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]!);
 }
 
 // ---------------------------------------------------------------------------
@@ -57,13 +65,13 @@ function clinicName() {
  * with a matching plain-text alternative are scored as less spammy by mail
  * providers than bare fragments.
  */
-function layout(contentHtml: string): string {
+function layout(contentHtml: string, clinicName: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${clinicName()}</title>
+  <title>${clinicName}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f2ef;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f2ef;padding:24px 0;">
@@ -72,7 +80,7 @@ function layout(contentHtml: string): string {
         <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
           <tr>
             <td style="background-color:#0E0F10;padding:24px 32px;">
-              <span style="color:#ffffff;font-size:18px;font-weight:700;font-family:Arial,Helvetica,sans-serif;">${clinicName()}</span>
+              <span style="color:#ffffff;font-size:18px;font-weight:700;font-family:Arial,Helvetica,sans-serif;">${clinicName}</span>
             </td>
           </tr>
           <tr>
@@ -82,7 +90,7 @@ function layout(contentHtml: string): string {
           </tr>
           <tr>
             <td style="padding:16px 32px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;font-family:Arial,Helvetica,sans-serif;">
-              ${clinicName()}<br />This is an automated message. Please contact the clinic for any questions.
+              ${clinicName}<br />This is an automated message. Please contact the clinic for any questions.
             </td>
           </tr>
         </table>
@@ -119,7 +127,7 @@ function textDetails(d: AppointmentEmailData): string {
   ].join("\n");
 }
 
-const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmailData) => string; text: (d: AppointmentEmailData) => string }> = {
+const templates: Record<EmailEvent, { subject: string; html: (d: TemplateData) => string; text: (d: TemplateData) => string }> = {
   appointment_pending: {
     subject: "Appointment Request Received",
     html: (d) =>
@@ -130,10 +138,10 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
           ${detailRows(d)}
         </table>
         <p>Your request is <strong>pending confirmation</strong>. We will notify you as soon as the clinic confirms your appointment.</p>
-        <p style="margin-top:24px;">Thank you for choosing ${clinicName()}!</p>
-      `),
+        <p style="margin-top:24px;">Thank you for choosing ${d.clinicName}!</p>
+      `, d.clinicName),
     text: (d) =>
-      `Hello ${d.patientName},\n\nWe have received your appointment request:\n\n${textDetails(d)}\n\nYour request is pending confirmation. We will notify you as soon as the clinic confirms your appointment.\n\nThank you for choosing ${clinicName()}!`,
+      `Hello ${d.patientName},\n\nWe have received your appointment request:\n\n${textDetails(d)}\n\nYour request is pending confirmation. We will notify you as soon as the clinic confirms your appointment.\n\nThank you for choosing ${d.clinicName}!`,
   },
   appointment_confirmation: {
     subject: "Appointment Confirmed",
@@ -146,7 +154,7 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
         </table>
         <p>If you need to reschedule or cancel, please contact us at your earliest convenience.</p>
         <p style="margin-top:24px;">We look forward to seeing you!</p>
-      `),
+      `, d.clinicName),
     text: (d) =>
       `Hello ${d.patientName},\n\nYour dental appointment has been confirmed:\n\n${textDetails(d)}\n\nIf you need to reschedule or cancel, please contact us at your earliest convenience.\n\nWe look forward to seeing you!`,
   },
@@ -166,7 +174,7 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
         </table>
         <p>If this change does not work for you, please contact the clinic so we can find a better time.</p>
         <p style="margin-top:24px;">We look forward to seeing you!</p>
-      `),
+      `, d.clinicName),
     text: (d) =>
       `Hello ${d.patientName},\n\nYour dental appointment has been rescheduled. Here are your updated details:\n\n${
         d.previousDate && d.previousTime ? `Previous schedule: ${d.previousDate} at ${d.previousTime}\n` : ""
@@ -182,7 +190,7 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
           <tr><td style="padding:8px 0;color:#6b7280;width:180px;vertical-align:top;">Appointment Reference:</td><td style="padding:8px 0;font-weight:600;color:#111827;">${d.referenceNumber}</td></tr>
         </table>
         <p>If this was unexpected, please contact the clinic to reschedule.</p>
-      `),
+      `, d.clinicName),
     text: (d) =>
       `Hello ${d.patientName},\n\nYour dental appointment has been cancelled. Appointment Reference: ${d.referenceNumber}.\n\nIf this was unexpected, please contact the clinic to reschedule.`,
   },
@@ -196,10 +204,10 @@ const templates: Record<EmailEvent, { subject: string; html: (d: AppointmentEmai
           ${detailRows(d)}
         </table>
         <p>If you can no longer make this time, please let us know and we will help you find another.</p>
-        <p style="margin-top:24px;">Thank you for choosing ${clinicName()}!</p>
-      `),
+        <p style="margin-top:24px;">Thank you for choosing ${d.clinicName}!</p>
+      `, d.clinicName),
     text: (d) =>
-      `Hello ${d.patientName},\n\nThis is a friendly reminder that your appointment is still pending confirmation. Please confirm it with the clinic so we can hold your slot:\n\n${textDetails(d)}\n\nIf you can no longer make this time, please let us know and we will help you find another.\n\nThank you for choosing ${clinicName()}!`,
+      `Hello ${d.patientName},\n\nThis is a friendly reminder that your appointment is still pending confirmation. Please confirm it with the clinic so we can hold your slot:\n\n${textDetails(d)}\n\nIf you can no longer make this time, please let us know and we will help you find another.\n\nThank you for choosing ${d.clinicName}!`,
   },
 };
 
@@ -217,12 +225,22 @@ export async function sendAppointmentEmail(
   to: string,
   data: AppointmentEmailData
 ): Promise<{ ok: boolean; status: string; error?: string }> {
+  // Check before SMTP; denying a later log insert cannot undo a sent message.
+  const tenant = await getRequestTenant();
+  assertSubscriptionWrite(tenant);
   const template = templates[event];
   const subject = template.subject;
-  const html = template.html(data);
-  const text = template.text(data);
-
   try {
+    const clinic = await prisma.clinicSetting.findFirst({ where: {}, select: { name: true, email: true } });
+    if (!clinic) throw new Error("Clinic email configuration is unavailable.");
+    const templateData: TemplateData = { ...data, clinicName: clinic.name };
+    const escaped: TemplateData = { ...templateData };
+    for (const key of Object.keys(escaped) as Array<keyof TemplateData>) {
+      const value = escaped[key];
+      if (value !== undefined) escaped[key] = escapeHtml(value);
+    }
+    const html = template.html(escaped);
+    const text = template.text(templateData);
     // Preview mode: skip SMTP, log as SKIPPED (for local/demo without SMTP)
     if (PREVIEW_MODE || !getTransporter()) {
       await prisma.emailLog.create({
@@ -234,7 +252,7 @@ export async function sendAppointmentEmail(
           error: PREVIEW_MODE ? "Email preview mode enabled (no SMTP)." : "SMTP not configured.",
         },
       });
-      console.log(`[email:${PREVIEW_MODE ? "SKIPPED" : "FAILED"}] ${event} -> ${to} (${subject})`);
+      console.log(`[email:${PREVIEW_MODE ? "SKIPPED" : "FAILED"}] ${event}`);
       return {
         ok: PREVIEW_MODE,
         status: PREVIEW_MODE ? "SKIPPED" : "FAILED",
@@ -242,8 +260,17 @@ export async function sendAppointmentEmail(
       };
     }
 
+    const configuredFrom = process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST}`;
+    const senders = addressparser(configuredFrom);
+    const sender = senders[0];
+    if (senders.length !== 1 || !sender || !("address" in sender) ||
+      /[\r\n]/.test(configuredFrom) || !z.string().email().safeParse(sender.address).success) {
+      throw new Error("Configure one valid platform SMTP sender address.");
+    }
+    assertSubscriptionWrite(tenant);
     await getTransporter()!.sendMail({
-      from: process.env.SMTP_FROM || `${clinicName()} <no-reply@${process.env.SMTP_HOST || "aetherdental.local"}>`,
+      from: { name: clinic.name, address: sender.address },
+      replyTo: clinic.email ?? undefined,
       to,
       subject,
       html,
@@ -253,9 +280,10 @@ export async function sendAppointmentEmail(
     await prisma.emailLog.create({
       data: { to, subject, template: event, status: "SENT" },
     });
-    console.log(`[email:SENT] ${event} -> ${to} (${subject})`);
+    console.log(`[email:SENT] ${event}`);
     return { ok: true, status: "SENT" };
   } catch (err) {
+    if (err instanceof SubscriptionReadOnlyError) throw err;
     console.error("[email] send failed:", err);
     try {
       await prisma.emailLog.create({
