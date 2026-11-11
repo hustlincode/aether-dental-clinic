@@ -27,7 +27,7 @@ test.describe("notification request ownership", () => {
     expect(url.pathname.endsWith("_test")).toBe(true);
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
-    staffId = (await prisma.user.create({ data: { name: "Notification browser test", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "DENTIST" } })).id;
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Notification browser test", email: `${randomUUID()}@example.test`, passwordHash: "not-a-login", role: "DENTIST" } })).id;
   });
 
   test.afterAll(async () => {
@@ -38,8 +38,8 @@ test.describe("notification request ownership", () => {
 
   test.beforeEach(async ({ context, page, baseURL }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "DENTIST" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: baseURL || "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "DENTIST" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: baseURL || "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/appointments?**", route => route.fulfill({ json: { success: true, data: { items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } } } }));
   });
 
