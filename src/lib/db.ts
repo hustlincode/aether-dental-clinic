@@ -1,11 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { rawPrisma } from "@/lib/raw-db";
+import { createTenantClient } from "@/lib/tenant-db";
+import { getRequestTenant } from "@/lib/tenant";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = createTenantClient(rawPrisma, () => getRequestTenant());
