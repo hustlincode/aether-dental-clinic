@@ -5,6 +5,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      tenantId: string;
       role: string;
       /** True for the public read-only showcase session (see src/auth.ts). */
       isDemo?: boolean;
@@ -13,6 +14,7 @@ declare module "next-auth" {
 
   interface User {
     id: string;
+    tenantId: string;
     role: string;
     isDemo?: boolean;
     sessionVersion: number;
@@ -22,6 +24,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
+    tenantId?: string;
     role?: string;
     isDemo?: boolean;
     sessionVersion?: number;
