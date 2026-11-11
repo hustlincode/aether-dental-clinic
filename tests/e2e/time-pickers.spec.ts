@@ -38,9 +38,9 @@ test.describe("admin time pickers", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     expect(await prisma.clinicSetting.count(), "Use an empty disposable database.").toBe(0);
-    staffId = (await prisma.user.create({ data: { name: "Time picker QA", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
-    dentistId = (await prisma.dentist.create({ data: { name: "Dr. Time Picker", email: `${marker}-dentist@example.test`, specialization: "General Dentistry" } })).id;
-    await prisma.clinicSetting.create({ data: { id: "singleton", name: "Aether Dental", address: "Synthetic time picker QA", openingTime: "09:07", closingTime: "17:53" } });
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Time picker QA", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
+    dentistId = (await prisma.dentist.create({ data: { tenantId: "aether", name: "Dr. Time Picker", email: `${marker}-dentist@example.test`, specialization: "General Dentistry" } })).id;
+    await prisma.clinicSetting.create({ data: { tenantId: "aether", id: "singleton", name: "Aether Dental", address: "Synthetic time picker QA", openingTime: "09:07", closingTime: "17:53" } });
   });
   test.afterAll(async () => {
     if (!prisma) return;
@@ -57,8 +57,8 @@ test.describe("admin time pickers", () => {
   });
   test.beforeEach(async ({ context, page }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
   });
 
@@ -138,7 +138,7 @@ test.describe("admin time pickers", () => {
     const saved = await response;
     expect(saved.status()).toBe(200);
     expect(saved.request().postDataJSON().availability).toContainEqual({ dayOfWeek: "MONDAY", isWorking: true, startTime: "09:07", endTime: "17:53", breakStart: null, breakEnd: null });
-    expect(await prisma.availability.findUniqueOrThrow({ where: { dentistId_dayOfWeek: { dentistId, dayOfWeek: "MONDAY" } } })).toMatchObject({ startTime: "09:07", endTime: "17:53", breakStart: null, breakEnd: null });
+    expect(await prisma.availability.findUniqueOrThrow({ where: { tenantId_dentistId_dayOfWeek: { tenantId: "aether", dentistId, dayOfWeek: "MONDAY" } } })).toMatchObject({ startTime: "09:07", endTime: "17:53", breakStart: null, breakEnd: null });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 });
