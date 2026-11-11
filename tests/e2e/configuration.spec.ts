@@ -1,3 +1,4 @@
+import { clinicRequest } from "../helpers/clinic-request";
 import { randomUUID } from "node:crypto";
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
@@ -20,8 +21,8 @@ test.describe("clinic configuration", () => {
   const marker = randomUUID();
   async function authenticate(context: BrowserContext) {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
   }
   test.beforeAll(async () => {
     const url = new URL(process.env.TEST_DATABASE_URL!);
@@ -29,8 +30,8 @@ test.describe("clinic configuration", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     expect(await prisma.clinicSetting.count(), "Use an empty disposable database; never replace existing settings.").toBe(0);
-    staffId = (await prisma.user.create({ data: { name: "Configuration browser test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
-    await prisma.clinicSetting.create({ data: { id: "singleton", name: "Aether Dental", address: "Original address", openingTime: "09:00", closingTime: "17:00" } });
+    staffId = (await prisma.user.create({ data: { tenantId: "aether", name: "Configuration browser test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } })).id;
+    await prisma.clinicSetting.create({ data: { tenantId: "aether", id: "singleton", name: "Aether Dental", address: "Original address", openingTime: "09:00", closingTime: "17:00" } });
   });
   test.afterAll(async () => {
     if (!prisma) return;
@@ -75,13 +76,13 @@ test.describe("clinic configuration", () => {
 
     await page.goto("/");
     await expect(page.getByText("Browser test clinic address", { exact: true })).toBeVisible();
-    await expect(page.locator('a[href="mailto:browser-clinic@example.test"]')).toBeVisible();
+    await expect(page.locator('a[href="mailto:browser-clinic@example.test"]').first()).toBeVisible();
     const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
     expect(structured.join(" ")).not.toContain("Mo-Fr");
     await page.goto("/privacy-policy");
     await expect(page.getByText("Browser test clinic address", { exact: true })).toBeVisible();
-    await expect(page.locator('a[href="mailto:browser-clinic@example.test"]')).toBeVisible();
-    await expect(page.locator('a[href="mailto:privacy@aetherdental.ph"]').first()).toBeVisible();
+    await expect(page.locator('a[href="mailto:browser-clinic@example.test"]').first()).toBeVisible();
+    await expect(page.locator('a[href="mailto:privacy@aetherdental.ph"]')).toHaveCount(0);
 
     await page.goto("/admin/configuration");
     await page.getByLabel("Address", { exact: true }).fill("");
@@ -96,7 +97,7 @@ test.describe("clinic configuration", () => {
       await expect(page.locator('a[href="mailto:browser-clinic@example.test"]')).toHaveCount(0);
       await expect(page.locator('a[href="tel:09123456789"]')).toHaveCount(0);
     }
-    await expect(page.locator('a[href="mailto:privacy@aetherdental.ph"]').first()).toBeVisible();
+    await expect(page.locator('a[href="mailto:privacy@aetherdental.ph"]')).toHaveCount(0);
   });
 
   test("stale saves preserve drafts until the administrator explicitly reloads", async ({ page }) => {
@@ -124,11 +125,11 @@ test.describe("clinic configuration", () => {
     try {
       await prisma.user.update({ where: { id: staffId }, data: { role: "RECEPTIONIST" } });
       for (const path of ["/api/admin/configuration", "/api/admin/clinic-closures"]) {
-        expect((await context.request.get(path)).status()).toBe(403);
+        expect((await clinicRequest(context, path)).status()).toBe(403);
       }
-      expect((await context.request.patch("/api/admin/configuration", { data: {} })).status()).toBe(403);
-      expect((await context.request.post("/api/admin/clinic-closures", { data: {} })).status()).toBe(403);
-      expect((await context.request.delete("/api/admin/clinic-closures/not-a-closure")).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/admin/configuration", { method: "PATCH", data: {} })).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/admin/clinic-closures", { method: "POST", data: {} })).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/admin/clinic-closures/not-a-closure", { method: "DELETE" })).status()).toBe(403);
       await page.goto("/admin/configuration");
       await expect(page).not.toHaveURL(/\/admin\/configuration$/);
     } finally {
