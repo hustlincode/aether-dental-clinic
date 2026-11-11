@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 
 const prisma = new PrismaClient();
+const tenantId = "aether";
 
 type Slot = { start: string; end: string };
 
@@ -51,24 +52,30 @@ function daySlots(daySchedule: NonNullable<(typeof schedule)[string]>): Slot[] {
 }
 
 async function main() {
-  console.log("Seeding Aether Dental...");
+  const target = new URL(process.env.DATABASE_URL || "invalid:");
+  if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1", "[::1]"].includes(target.hostname) || !target.pathname.endsWith("_test")) {
+    throw new Error("Destructive demo seeding is restricted to loopback databases ending in _test. Use provision-tenant for clinics.");
+  }
+  await prisma.tenant.upsert({ where: { id: tenantId }, create: { id: tenantId, slug: "aether", name: "Aether Dental" }, update: {} });
+  console.log("Seeding disposable Aether Dental fixtures...");
 
   // --- Clean existing data (idempotent re-run) ---
-  await prisma.emailLog.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.activity.deleteMany();
-  await prisma.blockedDate.deleteMany();
-  await prisma.appointment.deleteMany();
-  await prisma.availability.deleteMany();
-  await prisma.dentist.deleteMany();
-  await prisma.service.deleteMany();
-  await prisma.patient.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.clinicSetting.deleteMany();
+  await prisma.confirmationEmail.deleteMany({ where: { tenantId } });
+  await prisma.emailLog.deleteMany({ where: { tenantId } });
+  await prisma.notification.deleteMany({ where: { tenantId } });
+  await prisma.activity.deleteMany({ where: { tenantId } });
+  await prisma.blockedDate.deleteMany({ where: { tenantId } });
+  await prisma.appointment.deleteMany({ where: { tenantId } });
+  await prisma.availability.deleteMany({ where: { tenantId } });
+  await prisma.dentist.deleteMany({ where: { tenantId } });
+  await prisma.service.deleteMany({ where: { tenantId } });
+  await prisma.patient.deleteMany({ where: { tenantId } });
+  await prisma.user.deleteMany({ where: { tenantId } });
+  await prisma.clinicSetting.deleteMany({ where: { tenantId } });
 
   // --- Clinic settings ---
   await prisma.clinicSetting.create({
-    data: {
+    data: { tenantId,
       id: "singleton",
       name: "Aether Dental Clinic",
       address: "123 Aether Ave., Bonifacio Global City, Taguig, Metro Manila",
@@ -95,7 +102,7 @@ async function main() {
   ];
 
   for (const s of services) {
-    await prisma.service.create({ data: { ...s, status: ServiceStatus.ACTIVE } });
+    await prisma.service.create({ data: { tenantId, ...s, status: ServiceStatus.ACTIVE } });
   }
   console.log(`Created ${services.length} services`);
 
@@ -114,12 +121,12 @@ async function main() {
 
   const adminPassword = staffPassword("SEED_ADMIN_PASSWORD");
   const adminUser = await prisma.user.create({
-    data: { name: "Alex Ramos", email: "admin@aetherdental.ph", passwordHash: hash(adminPassword.password), role: Role.ADMIN },
+    data: { tenantId, name: "Alex Ramos", email: "admin@aetherdental.ph", passwordHash: hash(adminPassword.password), role: Role.ADMIN },
   });
 
   const receptionistPassword = staffPassword("SEED_RECEPTIONIST_PASSWORD");
   const receptionistUser = await prisma.user.create({
-    data: { name: "Mia Cruz", email: "reception@aetherdental.ph", passwordHash: hash(receptionistPassword.password), role: Role.RECEPTIONIST },
+    data: { tenantId, name: "Mia Cruz", email: "reception@aetherdental.ph", passwordHash: hash(receptionistPassword.password), role: Role.RECEPTIONIST },
   });
 
   // Dedicated account backing the public read-only demo session. Its password is
@@ -127,7 +134,7 @@ async function main() {
   // provider (see src/auth.ts), which always flags the session read-only.
   const demoEmail = (process.env.DEMO_EMAIL || "demo@aetherdental.ph").toLowerCase();
   await prisma.user.create({
-    data: {
+    data: { tenantId,
       name: "Demo Visitor",
       email: demoEmail,
       passwordHash: hash(randomBytes(32).toString("hex")),
@@ -153,7 +160,7 @@ async function main() {
   const dentistLogins: { email: string; password: string; generated: boolean }[] = [];
   for (const d of dentistDefs) {
     const dentist = await prisma.dentist.create({
-      data: { ...d, status: DentistStatus.ACTIVE },
+      data: { tenantId, ...d, status: DentistStatus.ACTIVE },
     });
     dentists.push(dentist.id);
 
@@ -161,12 +168,12 @@ async function main() {
     for (const [day, sched] of Object.entries(schedule)) {
       if (!sched) {
         await prisma.availability.create({
-          data: { dentistId: dentist.id, dayOfWeek: day as DayOfWeek, startTime: "00:00", endTime: "00:00", isWorking: false },
+          data: { tenantId, dentistId: dentist.id, dayOfWeek: day as DayOfWeek, startTime: "00:00", endTime: "00:00", isWorking: false },
         });
         continue;
       }
       await prisma.availability.create({
-        data: {
+        data: { tenantId,
           dentistId: dentist.id,
           dayOfWeek: day as DayOfWeek,
           startTime: sched.start,
@@ -183,7 +190,7 @@ async function main() {
     const dentUser = `dentist.${d.name.replace(/[^a-z]/gi, "").toLowerCase().replace(/dr/g, "")}@aetherdental.ph`;
     const dentPassword = staffPassword("SEED_DENTIST_PASSWORD");
     await prisma.user.create({
-      data: {
+      data: { tenantId,
         name: d.name,
         email: dentUser,
         passwordHash: hash(dentPassword.password),
@@ -217,7 +224,7 @@ async function main() {
     // NOTE: patients are seeded WITHOUT an email address so no real-looking
     // addresses ever exist in the database and no emails can be sent to them.
     const patient = await prisma.patient.create({
-      data: {
+      data: { tenantId,
         firstName: fn,
         lastName: ln,
         email: null,
@@ -238,7 +245,7 @@ async function main() {
 
   for (const ep of extraPatients) {
     const patient = await prisma.patient.create({
-      data: {
+      data: { tenantId,
         firstName: ep.firstName,
         lastName: ep.lastName,
         email: null,
@@ -253,7 +260,7 @@ async function main() {
 
   // --- Appointments ---
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
-  const allServices = await prisma.service.findMany();
+  const allServices = await prisma.service.findMany({ where: { tenantId } });
   let aptCount = 0;
   let aptNo = 0;
   // Only assign appointments to the first 25 patients (indices 0-24)
@@ -307,7 +314,7 @@ async function main() {
       const year = date.getFullYear();
       aptCount += 1;
       await prisma.appointment.create({
-        data: {
+        data: { tenantId,
           referenceNumber: `APT-${year}-${String(aptNo).padStart(4, "0")}`,
           appointmentDate: date,
           startTime: slot.start,
@@ -329,6 +336,7 @@ async function main() {
   // Staff-facing only (Admin + Receptionist); created_at is spread over recent
   // days so the relative-timestamp UI has something to show.
   const demoAppts = await prisma.appointment.findMany({
+    where: { tenantId },
     include: { patient: true, dentist: true, service: true },
     orderBy: { createdAt: "desc" },
     take: 6,
@@ -433,12 +441,12 @@ async function main() {
 
     // A few already-read rows so the read/unread distinction is visible.
     for (const def of notificationDefs) {
-      await prisma.notification.create({ data: def });
+      await prisma.notification.create({ data: { tenantId, ...def } });
       notifCount++;
     }
     for (const def of notificationDefs.slice(0, 3)) {
       await prisma.notification.updateMany({
-        where: { userId: def.userId, entityId: def.entityId, type: def.type },
+        where: { tenantId, userId: def.userId, entityId: def.entityId, type: def.type },
         data: { isRead: true, readAt: minutesAgo(5) },
       });
     }
@@ -448,8 +456,8 @@ async function main() {
   // --- Blocked dates (a couple of future dates) ---
   await prisma.blockedDate.createMany({
     data: [
-      { date: addDays(20), reason: "Clinic staff training" },
-      { date: addDays(35), reason: "Public holiday (planned)" },
+      { tenantId, date: addDays(20), reason: "Clinic staff training" },
+      { tenantId, date: addDays(35), reason: "Public holiday (planned)" },
     ],
   });
 
