@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma, AppointmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireAuth, getSessionUser } from "@/lib/api";
+import { requireAuth, getSessionUser, requireTenantWrite } from "@/lib/api";
 import { generateAppointmentReference } from "@/lib/reference";
 import { isSlotAvailable } from "@/lib/scheduling";
 import { sendAppointmentEmail } from "@/lib/email";
@@ -49,6 +49,8 @@ function parsePositiveInt(raw: string | null, fallback: number, max = Number.MAX
 // POST /api/appointments
 // Handles public self-booking. Server-side double-booking prevention is enforced here.
 export async function POST(req: Request) {
+  const subscriptionError = await requireTenantWrite();
+  if (subscriptionError) return subscriptionError;
   // Auth is optional: public users may book without logging in.
   const sessionUser = await getSessionUser();
   if (sessionUser?.isDemo || sessionUser?.role === "ASSISTANT") {
