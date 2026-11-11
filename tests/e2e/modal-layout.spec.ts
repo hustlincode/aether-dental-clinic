@@ -50,7 +50,7 @@ test.describe("standard admin dialogs", () => {
     expect(url.pathname.endsWith("_test")).toBe(true);
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
-    staffId = (await prisma.user.create({ data: {
+    staffId = (await prisma.user.create({ data: { tenantId: "aether",
       name: "Modal layout test", email: `${randomUUID()}@example.test`, role: "ADMIN", passwordHash: "not-a-login",
     } })).id;
   });
@@ -63,7 +63,7 @@ test.describe("standard admin dialogs", () => {
 
   test.beforeEach(async ({ context, page, baseURL }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN", sessionVersion: 0 }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
     await context.addCookies([{ name, value, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
     await page.route("**/api/dentists?all=true", route => route.fulfill({ json: { success: true, data: [] } }));
