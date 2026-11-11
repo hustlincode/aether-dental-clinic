@@ -11,7 +11,7 @@ test("submission applies clinic hours, both breaks, overlaps, working days and b
   const dayOfWeek = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" }).format(date).toUpperCase();
   const dentist = { status: "ACTIVE", availability: [{ dayOfWeek, startTime: "08:00", endTime: "18:00", breakStart: "14:00", breakEnd: "14:30", isWorking: true }] };
   const dentistQuery = mockPrismaMethod(t, prisma.dentist, "findUnique", async () => dentist as never);
-  mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => ({ openingTime: "09:00", closingTime: "17:00", lunchBreakStart: "12:00", lunchBreakEnd: "13:00" }) as never);
+  mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => ({ openingTime: "09:00", closingTime: "17:00", lunchBreakStart: "12:00", lunchBreakEnd: "13:00" }) as never);
   const blocked = mockPrismaMethod(t, prisma.blockedDate, "findFirst", async () => null);
   const occupied = mockPrismaMethod(t, prisma.appointment, "findMany", async () => [{ startTime: "10:00", endTime: "11:00" }] as never);
   const available = (start: string, end: string) => isSlotAvailable("dentist", start, end, date);
@@ -41,7 +41,7 @@ test("date availability starts range reads together and excludes blocked, full a
     dayOfWeek, startTime: "08:00", endTime: "18:00", breakStart: "14:00", breakEnd: "14:30", isWorking: dayOfWeek !== dayName("2099-01-07"),
   })) };
   const dentistQuery = mockPrismaMethod(t, prisma.dentist, "findUnique", async () => { started.push("dentist"); await dentistReady; return dentist; });
-  const clinicQuery = mockPrismaMethod(t, prisma.clinicSetting, "findUnique", async () => {
+  const clinicQuery = mockPrismaMethod(t, prisma.clinicSetting, "findFirst", async () => {
     started.push("clinic"); return { openingTime: "09:00", closingTime: "17:00", lunchBreakStart: "12:00", lunchBreakEnd: "13:00" };
   });
   const blocked = mockPrismaMethod(t, prisma.blockedDate, "findMany", async () => {
@@ -80,7 +80,7 @@ test("slot reads start together on the supplied transaction client and retain ex
       started.push("dentist"); await dentistReady;
       return { status: "ACTIVE", availability: [{ dayOfWeek, startTime: "09:00", endTime: "10:00", breakStart: null, breakEnd: null, isWorking: true }] };
     } },
-    clinicSetting: { findUnique: async () => { started.push("clinic"); return { openingTime: "09:00", closingTime: "17:00", lunchBreakStart: null, lunchBreakEnd: null }; } },
+    clinicSetting: { findFirst: async () => { started.push("clinic"); return { openingTime: "09:00", closingTime: "17:00", lunchBreakStart: null, lunchBreakEnd: null }; } },
     blockedDate: { findFirst: async () => { started.push("blocked"); return null; } },
     appointment: { findMany: async (query: unknown) => { started.push("appointments"); appointmentQuery = query; return [{ startTime: "09:00", endTime: "09:30" }]; } },
   } as unknown as Prisma.TransactionClient;
