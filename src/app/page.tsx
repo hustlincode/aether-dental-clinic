@@ -28,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getRequestTenant } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/logo";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -40,26 +41,8 @@ import { frauncesDisplay } from "@/components/home/home-fonts";
 import { Reveal } from "@/components/home/reveal";
 import { SpotlightArea } from "@/components/home/spotlight-card";
 
-/**
- * The homepage is public marketing content: services, dentists, clinic details
- * and public counters. None of it is per-visitor, so it is rendered on the
- * server at build time and revalidated in the background every 5 minutes
- * instead of on every request.
- *
- * Why this matters: with `force-dynamic` the route was re-rendered on every
- * client-side navigation — 7 Prisma round-trips to a remote Postgres plus a
- * full React render. Measured with Playwright against a production build, the
- * "sign in -> click 'Back to home'" navigation took ~500-535 ms to paint,
- * of which ~370-540 ms was the server generating a 78 KB RSC flight. As a
- * cached route the server answers from the Full Route Cache and the navigation
- * is served from the client Router Cache, which brought the same measurement
- * down to ~90-130 ms.
- *
- * Admin mutations revalidate this path explicitly (see `revalidateHomepage`
- * in src/lib/home-cache.ts), so a newly added service or dentist shows up
- * immediately rather than after the revalidation window.
- */
-export const revalidate = 300;
+// Clinic content depends on the request host; never share a static page across tenants.
+export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,7 +151,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Do you accept HMO or other insurance?",
-    a: "HMO coverage can be applied to eligible services. Send us your provider and member details by phone or email ahead of your visit and we\u2019ll confirm exactly what\u2019s covered before you come in.",
+    a: "Contact the clinic before your visit to confirm accepted insurance providers and coverage for your requested treatment.",
   },
   {
     q: "What payment options are available?",
@@ -235,11 +218,12 @@ const toJsonLd = (value: unknown): string => JSON.stringify(value).replace(/</g,
 // ---------------------------------------------------------------------------
 
 export default async function HomePage() {
+  const tenant = await getRequestTenant();
   const [serviceRows, dentistRows, clinic, appointmentsCount, patientsCount] =
     await Promise.all([
       prisma.service.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" } }),
       prisma.dentist.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" } }),
-      prisma.clinicSetting.findUnique({ where: { id: "singleton" } }),
+      prisma.clinicSetting.findFirst({ where: {} }),
       prisma.appointment.count(),
       prisma.patient.count(),
     ]);
@@ -272,9 +256,9 @@ export default async function HomePage() {
   const dentistJsonLd = {
     "@context": "https://schema.org",
     "@type": ["Dentist", "LocalBusiness"],
-    name: clinic?.name ?? "Aether Dental",
+    name: clinic?.name ?? tenant.name,
     description:
-      "Dental clinic offering online appointment booking for general and specialty dental care in Taguig, Metro Manila.",
+      "Dental clinic offering online appointment booking for dental care.",
     ...(clinic?.address ? { address: { "@type": "PostalAddress", streetAddress: clinic.address } } : {}),
     ...(clinic?.phone ? { telephone: clinic.phone } : {}),
     ...(clinic?.email ? { email: clinic.email } : {}),
@@ -380,7 +364,7 @@ export default async function HomePage() {
         </section>
 
         {/* ── Trust bar ── */}
-        <section aria-label="Why patients trust Aether Dental" className="border-b border-border bg-surface/60">
+        <section aria-label={`Why patients trust ${clinic?.name ?? tenant.name}`} className="border-b border-border bg-surface/60">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
             <TrustItem value={serviceRows.length} label="services" />
             <span className="text-text-muted" aria-hidden>·</span>
@@ -390,11 +374,11 @@ export default async function HomePage() {
             <span className="text-text-muted" aria-hidden>·</span>
             <TrustItem value={patientsCount} label="patients" />
             <span className="text-text-muted" aria-hidden>·</span>
-            <span className="text-xs text-text-muted">HMO accepted</span>
+            {tenant.slug === "aether" && <span className="text-xs text-text-muted">HMO accepted</span>}
             <span className="text-text-muted" aria-hidden>·</span>
             <span className="text-xs text-text-muted">Strict sterilization</span>
             <span className="text-text-muted" aria-hidden>·</span>
-            <span className="text-xs text-text-muted">Member, Philippine Dental Association</span>
+            {tenant.slug === "aether" && <span className="text-xs text-text-muted">Member, Philippine Dental Association</span>}
           </div>
         </section>
 
@@ -444,7 +428,7 @@ export default async function HomePage() {
         <section id="why-aether" className="scroll-mt-24 bg-background">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
-              <p className="home-eyebrow">Why Aether</p>
+              <p className="home-eyebrow">Why {clinic?.name ?? tenant.name}</p>
               <h2 className="home-display home-display-lg mt-3 text-text">Dental care built around your day</h2>
               <p className="mt-3 text-text-muted">The things that make booking (and visiting) easier.</p>
             </div>
@@ -502,6 +486,7 @@ export default async function HomePage() {
         </section>
 
         {/* ── Testimonials ── */}
+        {tenant.slug === "aether" && (
         <section id="testimonials" className="scroll-mt-24 bg-background">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
             <div className="text-center">
@@ -530,6 +515,7 @@ export default async function HomePage() {
             </Reveal>
           </div>
         </section>
+        )}
 
         {/* ── FAQ ── */}
         <section id="faq" className="scroll-mt-24 bg-background-alt">
@@ -660,7 +646,7 @@ export default async function HomePage() {
             </nav>
           </div>
           <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-border pt-4 text-xs text-text-muted sm:flex-row">
-            <div>© {new Date().getFullYear()} Aether Dental Clinic. All rights reserved.</div>
+            <div>© {new Date().getFullYear()} {clinic?.name ?? tenant.name}. All rights reserved.</div>
             <Link href="/privacy-policy" className="home-nav-link transition-colors duration-(--dur-fast) hover:text-accent">
               Privacy Policy
             </Link>
