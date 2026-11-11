@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 // GET /api/clinic - public clinic info for booking display
 export async function GET() {
   try {
-    const clinic = await prisma.clinicSetting.findUnique({
-      where: { id: "singleton" },
+    const clinic = await prisma.clinicSetting.findFirst({
+      where: {},
       select: {
         name: true,
         address: true,
