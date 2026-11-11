@@ -1,3 +1,4 @@
+import { clinicRequest } from "../helpers/clinic-request";
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
@@ -13,7 +14,7 @@ test.describe("authenticated staff regressions", () => {
     expect(["localhost", "127.0.0.1", "[::1]"]).toContain(url.hostname);
     prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
     const marker = randomUUID();
-    const user = await prisma.user.create({ data: { name: "Browser Test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } });
+    const user = await prisma.user.create({ data: { tenantId: "aether", name: "Browser Test", email: `${marker}@example.test`, passwordHash: "not-a-login", role: "ADMIN" } });
     staffId = user.id;
   });
   test.afterAll(async () => {
@@ -23,8 +24,8 @@ test.describe("authenticated staff regressions", () => {
   });
   test.beforeEach(async ({ context, page }) => {
     const name = "authjs.session-token";
-    const value = await encode({ token: { id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
-    await context.addCookies([{ name, value, url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Lax" }]);
+    const value = await encode({ token: { tenantId: "aether", id: staffId, role: "ADMIN" }, secret: process.env.NEXTAUTH_SECRET || "isolated-browser-regression-secret", salt: name });
+    await context.addCookies([{ name, value, url: "http://aether.localhost:3100", httpOnly: true, sameSite: "Lax" }]);
     await page.route("**/api/notifications**", route => route.fulfill({ json: { success: true, data: { items: [], unreadCount: 0, count: 0 } } }));
   });
 
@@ -85,11 +86,11 @@ test.describe("authenticated staff regressions", () => {
 
   test("a previously issued staff session immediately loses demoted and deactivated privileges", async ({ context, page }) => {
     try {
-      expect((await context.request.post("/api/services", { data: {} })).status()).toBe(422);
+      expect((await clinicRequest(context, "/api/services", { method: "POST", data: {} })).status()).toBe(422);
       await prisma.user.update({ where: { id: staffId }, data: { role: "RECEPTIONIST" } });
-      expect((await context.request.post("/api/services", { data: {} })).status()).toBe(403);
+      expect((await clinicRequest(context, "/api/services", { method: "POST", data: {} })).status()).toBe(403);
       await prisma.user.update({ where: { id: staffId }, data: { active: false } });
-      expect((await context.request.get("/api/patients")).status()).toBe(401);
+      expect((await clinicRequest(context, "/api/patients")).status()).toBe(401);
       await page.goto("/admin/appointments");
       await expect(page).toHaveURL(/\/login$/);
     } finally {
